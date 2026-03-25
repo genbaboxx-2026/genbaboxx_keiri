@@ -13,6 +13,7 @@ create table if not exists contracts (
   id uuid primary key default gen_random_uuid(),
   company_id uuid not null references companies(id) on delete cascade,
   product_type text not null check (product_type in ('bakusoq', 'ninkuboxx', 'other')),
+  billing_type text not null default 'monthly' check (billing_type in ('monthly', 'lump_sum')),
   contract_start_date date not null,
   billing_month text not null,           -- YYYY-MM形式
   billing_day text not null check (billing_day in ('1', '16')),

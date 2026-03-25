@@ -160,6 +160,7 @@ function MonthlyRevenueTable({
             const io = c.has_initial_fee
               ? calcPayOffset(c.initial_close, c.initial_pay)
               : 0;
+            const isLump = c.billing_type === "lump_sum";
             return (
               <tr key={c.id}>
                 <td className="px-3 py-2.5 font-semibold border-b border-slate-100 sticky left-0 bg-white whitespace-nowrap z-10">
@@ -167,9 +168,13 @@ function MonthlyRevenueTable({
                 </td>
                 {allMonths.map((month) => {
                   let amt = 0;
-                  ms.forEach((bm) => {
-                    if (shiftMonth(bm, mo) === month) amt += c.monthly_fee;
-                  });
+                  if (isLump) {
+                    if (ms.length > 0 && shiftMonth(ms[0], mo) === month) amt += c.monthly_fee;
+                  } else {
+                    ms.forEach((bm) => {
+                      if (shiftMonth(bm, mo) === month) amt += c.monthly_fee;
+                    });
+                  }
                   if (c.has_option) {
                     ms.forEach((bm) => {
                       if (shiftMonth(bm, oo) === month) amt += c.option_fee;
@@ -325,6 +330,11 @@ function ContractDetailView({
                     </td>
                     <td className="px-3 py-2.5 font-semibold">
                       {formatYen(c.monthly_fee)}
+                      {c.billing_type === "lump_sum" && (
+                        <span className="ml-1 text-[10px] font-bold text-amber-600 bg-amber-50 px-1.5 py-0.5 rounded">
+                          一括
+                        </span>
+                      )}
                     </td>
                     <td className="px-3 py-2.5 text-[10px] text-slate-500">
                       {payDescription(c.monthly_close, c.monthly_pay, bm)}

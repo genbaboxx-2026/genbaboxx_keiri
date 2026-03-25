@@ -104,6 +104,7 @@ export function suggestBillingMonth(
 /** 全契約から表示対象の全月リスト(sorted)を生成 */
 export function getAllMonths(
   contracts: {
+    billing_type?: string;
     billing_month: string;
     billing_day: string;
     duration_months: number;
@@ -122,10 +123,20 @@ export function getAllMonths(
     const bs = makeBillingStart(c.billing_month, c.billing_day);
     const ms = billingMonths(bs, c.duration_months);
     const mo = calcPayOffset(c.monthly_close, c.monthly_pay);
-    ms.forEach((m) => {
-      set.add(m);
-      set.add(shiftMonth(m, mo));
-    });
+    const isLump = c.billing_type === "lump_sum";
+    if (isLump) {
+      // 一括: 初月のみ
+      if (ms.length > 0) {
+        set.add(ms[0]);
+        set.add(shiftMonth(ms[0], mo));
+      }
+    } else {
+      // 月額: 全月
+      ms.forEach((m) => {
+        set.add(m);
+        set.add(shiftMonth(m, mo));
+      });
+    }
     if (c.has_option) {
       const oo = calcPayOffset(c.option_close, c.option_pay);
       ms.forEach((m) => set.add(shiftMonth(m, oo)));
@@ -150,6 +161,7 @@ export function getAllMonths(
 export function getRevenue(
   month: string,
   contracts: {
+    billing_type?: string;
     billing_month: string;
     billing_day: string;
     duration_months: number;
@@ -175,9 +187,18 @@ export function getRevenue(
       const ms = billingMonths(bs, c.duration_months);
       let amt = 0;
       const mo = calcPayOffset(c.monthly_close, c.monthly_pay);
-      ms.forEach((m) => {
-        if (shiftMonth(m, mo) === month) amt += c.monthly_fee;
-      });
+      const isLump = c.billing_type === "lump_sum";
+      if (isLump) {
+        // 一括: 初月のみ計上
+        if (ms.length > 0 && shiftMonth(ms[0], mo) === month) {
+          amt += c.monthly_fee;
+        }
+      } else {
+        // 月額: 毎月計上
+        ms.forEach((m) => {
+          if (shiftMonth(m, mo) === month) amt += c.monthly_fee;
+        });
+      }
       if (c.has_option) {
         const oo = calcPayOffset(c.option_close, c.option_pay);
         ms.forEach((m) => {

@@ -8,6 +8,7 @@ import type {
   CloseOffset,
   PayType,
   BillingDay,
+  BillingType,
 } from "@/lib/database.types";
 import {
   makeBillingStart,
@@ -39,6 +40,9 @@ export function ContractForm({
   onClose,
 }: ContractFormProps) {
   const [companyId, setCompanyId] = useState(contract?.company_id || "");
+  const [billingType, setBillingType] = useState<BillingType>(
+    contract?.billing_type || "monthly"
+  );
   const [contractStartDate, setContractStartDate] = useState(
     contract?.contract_start_date || ""
   );
@@ -116,6 +120,7 @@ export function ContractForm({
     onSave({
       id: contract?.id || crypto.randomUUID(),
       product_type: productType,
+      billing_type: billingType,
       company_id: companyId,
       contract_start_date: contractStartDate,
       billing_month: billingMonth,
@@ -283,17 +288,41 @@ export function ContractForm({
         )}
       </div>
 
-      {/* 月額料金セクション */}
+      {/* 料金タイプ選択 + 料金セクション */}
       <div className="bg-slate-50 rounded-xl p-4">
-        <div className="text-sm font-bold text-slate-700 mb-2.5">
-          月額料金
+        <div className="text-sm font-bold text-slate-700 mb-3">
+          料金
+        </div>
+        <div className="flex gap-2 mb-3">
+          <button
+            type="button"
+            className={`flex-1 py-2 rounded-lg text-sm font-semibold cursor-pointer border-[1.5px] transition-colors ${
+              billingType === "monthly"
+                ? "bg-blue-600 text-white border-blue-600"
+                : "bg-white text-slate-500 border-slate-200 hover:border-slate-300"
+            }`}
+            onClick={() => setBillingType("monthly")}
+          >
+            月額
+          </button>
+          <button
+            type="button"
+            className={`flex-1 py-2 rounded-lg text-sm font-semibold cursor-pointer border-[1.5px] transition-colors ${
+              billingType === "lump_sum"
+                ? "bg-amber-500 text-white border-amber-500"
+                : "bg-white text-slate-500 border-slate-200 hover:border-slate-300"
+            }`}
+            onClick={() => setBillingType("lump_sum")}
+          >
+            一括
+          </button>
         </div>
         <div className="grid grid-cols-2 gap-3">
           <MoneyInput
-            label="月額料金（税別）*"
+            label={billingType === "monthly" ? "月額料金（税別）*" : "一括料金（税別）*"}
             value={monthlyFee}
             onChange={setMonthlyFee}
-            placeholder="30,000"
+            placeholder={billingType === "monthly" ? "30,000" : "360,000"}
           />
           <PayConfig
             label="お客様お振込日"
@@ -304,6 +333,11 @@ export function ContractForm({
             baseMonth={baseMonthNum}
           />
         </div>
+        {billingType === "lump_sum" && (
+          <div className="mt-2 text-[11px] text-amber-600 font-medium">
+            ※ 一括料金は起算月の入金月にのみ計上されます
+          </div>
+        )}
       </div>
 
       {/* 初期導入費セクション */}
