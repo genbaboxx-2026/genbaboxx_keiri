@@ -102,7 +102,7 @@ export function suggestBillingMonth(
   return `${ny}-${String(nmm).padStart(2, "0")}`;
 }
 
-/** 自動更新中の契約は当月まで期間を延長 */
+/** 自動更新中の契約は翌月まで期間を延長 */
 export function effectiveDuration(
   billingMonth: string,
   billingDay: string,
@@ -114,8 +114,9 @@ export function effectiveDuration(
   if (!bs) return durationMonths;
   const [sy, sm] = bs.split("-").map(Number);
   const now = new Date();
-  const monthsToNow = (now.getFullYear() - sy) * 12 + (now.getMonth() + 1 - sm) + 1;
-  return Math.max(durationMonths, monthsToNow);
+  // 翌月まで延長（当月+1）
+  const monthsToNext = (now.getFullYear() - sy) * 12 + (now.getMonth() + 1 - sm) + 2;
+  return Math.max(durationMonths, monthsToNext);
 }
 
 /** 全契約から表示対象の全月リスト(sorted)を生成 */
