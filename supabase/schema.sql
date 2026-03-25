@@ -19,6 +19,7 @@ create table if not exists contracts (
   billing_day text not null check (billing_day in ('1', '16')),
   duration_months integer not null,
   monthly_fee integer not null default 0,
+  fee_months integer not null default 1,
   monthly_close text not null default '0' check (monthly_close in ('-1', '0', '1')),
   monthly_pay text not null default 'same_end' check (monthly_pay in ('same_end', 'next_end', 'next_10', 'next2_10')),
   has_initial_fee boolean not null default false,

@@ -56,6 +56,7 @@ export function ContractForm({
     contract?.duration_months || 12
   );
   const [monthlyFee, setMonthlyFee] = useState(contract?.monthly_fee || 0);
+  const [feeMonths, setFeeMonths] = useState(contract?.fee_months || 1);
   const [monthlyClose, setMonthlyClose] = useState<CloseOffset>(
     contract?.monthly_close || "0"
   );
@@ -127,6 +128,7 @@ export function ContractForm({
       billing_day: billingDay,
       duration_months: durationMonths,
       monthly_fee: monthlyFee,
+      fee_months: productType === "ninkuboxx" ? feeMonths : 1,
       monthly_close: monthlyClose,
       monthly_pay: monthlyPay,
       has_initial_fee: hasInitialFee,
@@ -318,12 +320,33 @@ export function ContractForm({
           </button>
         </div>
         <div className="grid grid-cols-2 gap-3">
-          <MoneyInput
-            label={billingType === "monthly" ? "月額料金（税別）*" : "月額単価（税別）*"}
-            value={monthlyFee}
-            onChange={setMonthlyFee}
-            placeholder="30,000"
-          />
+          <div>
+            <MoneyInput
+              label={billingType === "monthly" ? "月額料金（税別）*" : "月額単価（税別）*"}
+              value={monthlyFee}
+              onChange={setMonthlyFee}
+              placeholder="30,000"
+            />
+            {productType === "ninkuboxx" && billingType === "monthly" && (
+              <div className="flex items-center gap-1.5 mt-1.5">
+                <span className="text-[11px] text-slate-500">×</span>
+                <input
+                  className="w-16 px-2 py-1 border-[1.5px] border-slate-200 rounded-lg text-[13px] text-center outline-none focus:border-blue-400"
+                  inputMode="numeric"
+                  value={feeMonths || ""}
+                  onChange={(e) =>
+                    setFeeMonths(parseInt(e.target.value.replace(/[^0-9]/g, "")) || 0)
+                  }
+                />
+                <span className="text-[11px] text-slate-500">ヶ月分</span>
+                {feeMonths > 1 && (
+                  <span className="text-[11px] text-blue-600 font-medium">
+                    = ¥{formatNumber(monthlyFee * feeMonths)}/月
+                  </span>
+                )}
+              </div>
+            )}
+          </div>
           <PayConfig
             label="お客様お振込日"
             close={monthlyClose}

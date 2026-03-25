@@ -23,6 +23,7 @@ export interface Contract {
   billing_day: BillingDay;
   duration_months: number;
   monthly_fee: number;
+  fee_months: number;
   monthly_close: CloseOffset;
   monthly_pay: PayType;
   has_initial_fee: boolean;

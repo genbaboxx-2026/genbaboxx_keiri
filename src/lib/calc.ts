@@ -167,6 +167,7 @@ export function getRevenue(
     billing_day: string;
     duration_months: number;
     monthly_fee: number;
+    fee_months: number;
     monthly_close: CloseOffset;
     monthly_pay: PayType;
     has_initial_fee: boolean;
@@ -189,6 +190,7 @@ export function getRevenue(
       let amt = 0;
       const mo = calcPayOffset(c.monthly_close, c.monthly_pay);
       const isLump = c.billing_type === "lump_sum";
+      const unitFee = c.monthly_fee * (c.fee_months || 1);
       if (isLump) {
         // 一括: 支払い月に総額を計上
         if (ms.length > 0 && shiftMonth(ms[0], mo) === month) {
@@ -197,7 +199,7 @@ export function getRevenue(
       } else {
         // 月額: 毎月計上
         ms.forEach((m) => {
-          if (shiftMonth(m, mo) === month) amt += c.monthly_fee;
+          if (shiftMonth(m, mo) === month) amt += unitFee;
         });
       }
       if (c.has_option) {
