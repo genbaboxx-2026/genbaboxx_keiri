@@ -1,0 +1,31 @@
+@import "tailwindcss";
+
+/* スクロールバーのスタイリング */
+.overflow-x-auto::-webkit-scrollbar {
+  height: 8px;
+}
+.overflow-x-auto::-webkit-scrollbar-track {
+  background: #f1f5f9;
+  border-radius: 4px;
+}
+.overflow-x-auto::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 4px;
+}
+.overflow-x-auto::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}
+
+/* sticky列の右シャドウ */
+td[class*="sticky"],
+th[class*="sticky"] {
+  box-shadow: 4px 0 8px -2px rgba(0, 0, 0, 0.06);
+}
+
+/* 当月列ハイライト */
+.month-current {
+  background: #fffbeb !important;
+}
+thead .month-current {
+  background: #fef3c7 !important;
+}

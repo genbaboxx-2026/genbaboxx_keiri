@@ -1,0 +1,411 @@
+"use client";
+
+import { useState, useEffect } from "react";
+import type {
+  Company,
+  Contract,
+  ProductType,
+  CloseOffset,
+  PayType,
+  BillingDay,
+} from "@/lib/database.types";
+import {
+  makeBillingStart,
+  calcEndDate,
+  formatDate,
+  formatNumber,
+  suggestBillingMonth,
+} from "@/lib/calc";
+import { MoneyInput } from "./MoneyInput";
+import { PayConfig } from "./PayConfig";
+
+interface ContractFormProps {
+  contract?: Contract;
+  productType: ProductType;
+  companies: Company[];
+  onSave: (contract: Omit<Contract, "created_at" | "updated_at">) => void;
+  onAddCompany: (
+    company: Omit<Company, "created_at" | "updated_at">
+  ) => void;
+  onClose: () => void;
+}
+
+export function ContractForm({
+  contract,
+  productType,
+  companies,
+  onSave,
+  onAddCompany,
+  onClose,
+}: ContractFormProps) {
+  const [companyId, setCompanyId] = useState(contract?.company_id || "");
+  const [contractStartDate, setContractStartDate] = useState(
+    contract?.contract_start_date || ""
+  );
+  const [billingMonth, setBillingMonth] = useState(
+    contract?.billing_month || ""
+  );
+  const [billingDay, setBillingDay] = useState<BillingDay>(
+    contract?.billing_day || "1"
+  );
+  const [durationMonths, setDurationMonths] = useState(
+    contract?.duration_months || 12
+  );
+  const [monthlyFee, setMonthlyFee] = useState(contract?.monthly_fee || 0);
+  const [monthlyClose, setMonthlyClose] = useState<CloseOffset>(
+    contract?.monthly_close || "0"
+  );
+  const [monthlyPay, setMonthlyPay] = useState<PayType>(
+    contract?.monthly_pay || "same_end"
+  );
+  const [hasInitialFee, setHasInitialFee] = useState(
+    contract?.has_initial_fee || false
+  );
+  const [initialFee, setInitialFee] = useState(contract?.initial_fee || 0);
+  const [initialClose, setInitialClose] = useState<CloseOffset>(
+    contract?.initial_close || "0"
+  );
+  const [initialPay, setInitialPay] = useState<PayType>(
+    contract?.initial_pay || "same_end"
+  );
+  const [hasOption, setHasOption] = useState(contract?.has_option || false);
+  const [optionName, setOptionName] = useState(contract?.option_name || "");
+  const [optionFee, setOptionFee] = useState(contract?.option_fee || 0);
+  const [optionClose, setOptionClose] = useState<CloseOffset>(
+    contract?.option_close || "0"
+  );
+  const [optionPay, setOptionPay] = useState<PayType>(
+    contract?.option_pay || "same_end"
+  );
+  const [note, setNote] = useState(contract?.note || "");
+
+  // 新規企業インライン登録
+  const [showNewCompany, setShowNewCompany] = useState(false);
+  const [newCompanyName, setNewCompanyName] = useState("");
+  const [newCompanyContact, setNewCompanyContact] = useState("");
+
+  // 起算月の自動提案
+  useEffect(() => {
+    if (!contractStartDate || billingMonth) return;
+    setBillingMonth(suggestBillingMonth(contractStartDate, billingDay));
+  }, [contractStartDate, billingDay, billingMonth]);
+
+  const billingStart = makeBillingStart(billingMonth, billingDay);
+  const endDate = calcEndDate(billingStart, durationMonths);
+  const baseMonthNum = billingMonth
+    ? parseInt(billingMonth.split("-")[1])
+    : 0;
+  const valid = companyId && contractStartDate && billingMonth && durationMonths > 0;
+
+  const handleAddCompany = () => {
+    if (!newCompanyName.trim()) return;
+    const co = {
+      id: crypto.randomUUID(),
+      name: newCompanyName.trim(),
+      contact: newCompanyContact.trim(),
+      note: "",
+    };
+    onAddCompany(co);
+    setCompanyId(co.id);
+    setShowNewCompany(false);
+    setNewCompanyName("");
+    setNewCompanyContact("");
+  };
+
+  const handleSave = () => {
+    onSave({
+      id: contract?.id || crypto.randomUUID(),
+      product_type: productType,
+      company_id: companyId,
+      contract_start_date: contractStartDate,
+      billing_month: billingMonth,
+      billing_day: billingDay,
+      duration_months: durationMonths,
+      monthly_fee: monthlyFee,
+      monthly_close: monthlyClose,
+      monthly_pay: monthlyPay,
+      has_initial_fee: hasInitialFee,
+      initial_fee: hasInitialFee ? initialFee : 0,
+      initial_close: initialClose,
+      initial_pay: initialPay,
+      has_option: hasOption,
+      option_name: hasOption ? optionName : "",
+      option_fee: hasOption ? optionFee : 0,
+      option_close: optionClose,
+      option_pay: optionPay,
+      note,
+    });
+  };
+
+  return (
+    <div className="flex flex-col gap-4">
+      {/* 契約企業選択 */}
+      <div>
+        <label className="block text-[13px] font-semibold text-slate-600 mb-1.5">
+          契約企業 *
+        </label>
+        {!showNewCompany ? (
+          <div className="flex gap-2">
+            <select
+              className="flex-1 px-3.5 py-2.5 border-[1.5px] border-slate-200 rounded-[10px] text-sm outline-none focus:border-blue-400"
+              value={companyId}
+              onChange={(e) => setCompanyId(e.target.value)}
+            >
+              <option value="">-- 選択 --</option>
+              {companies.map((co) => (
+                <option key={co.id} value={co.id}>
+                  {co.name}
+                </option>
+              ))}
+            </select>
+            <button
+              className="px-4 py-2.5 bg-green-50 text-emerald-600 border-[1.5px] border-green-200 rounded-[10px] text-[13px] font-bold cursor-pointer whitespace-nowrap hover:bg-green-100"
+              onClick={() => setShowNewCompany(true)}
+            >
+              + 新規企業
+            </button>
+          </div>
+        ) : (
+          <div className="bg-green-50 border-[1.5px] border-green-200 rounded-xl p-4 flex flex-col gap-2.5">
+            <div className="text-[13px] font-bold text-emerald-600">
+              新しい企業を登録
+            </div>
+            <input
+              className="w-full px-3.5 py-2.5 border-[1.5px] border-slate-200 rounded-[10px] text-sm outline-none focus:border-blue-400"
+              placeholder="会社名 *"
+              value={newCompanyName}
+              onChange={(e) => setNewCompanyName(e.target.value)}
+            />
+            <input
+              className="w-full px-3.5 py-2.5 border-[1.5px] border-slate-200 rounded-[10px] text-sm outline-none focus:border-blue-400"
+              placeholder="担当者（任意）"
+              value={newCompanyContact}
+              onChange={(e) => setNewCompanyContact(e.target.value)}
+            />
+            <div className="flex gap-2 justify-end">
+              <button
+                className="px-4 py-2 bg-slate-100 text-slate-700 rounded-[10px] text-[13px] font-medium cursor-pointer"
+                onClick={() => {
+                  setShowNewCompany(false);
+                  setNewCompanyName("");
+                  setNewCompanyContact("");
+                }}
+              >
+                キャンセル
+              </button>
+              <button
+                className="px-4 py-2 bg-emerald-600 text-white rounded-[10px] text-[13px] font-semibold cursor-pointer disabled:opacity-40"
+                disabled={!newCompanyName.trim()}
+                onClick={handleAddCompany}
+              >
+                登録して選択
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* 契約期間セクション */}
+      <div className="bg-blue-50 border border-blue-200 rounded-xl p-4">
+        <div className="text-sm font-bold text-blue-800 mb-3.5">
+          契約期間
+        </div>
+        <div>
+          <label className="block text-[13px] font-semibold text-slate-600 mb-1.5">
+            契約開始日 *
+          </label>
+          <input
+            type="date"
+            className="w-full px-3.5 py-2.5 border-[1.5px] border-slate-200 rounded-[10px] text-sm outline-none focus:border-blue-400"
+            value={contractStartDate}
+            onChange={(e) => {
+              setContractStartDate(e.target.value);
+              setBillingMonth("");
+            }}
+          />
+        </div>
+        <div className="grid grid-cols-2 gap-3 mt-3">
+          <div>
+            <label className="block text-[13px] font-semibold text-slate-600 mb-1.5">
+              起算月 *
+            </label>
+            <input
+              type="month"
+              className="w-full px-3.5 py-2.5 border-[1.5px] border-slate-200 rounded-[10px] text-sm outline-none focus:border-blue-400"
+              value={billingMonth}
+              onChange={(e) => setBillingMonth(e.target.value)}
+            />
+          </div>
+          <div>
+            <label className="block text-[13px] font-semibold text-slate-600 mb-1.5">
+              起算日 *
+            </label>
+            <select
+              className="w-full px-3.5 py-2.5 border-[1.5px] border-slate-200 rounded-[10px] text-sm outline-none focus:border-blue-400"
+              value={billingDay}
+              onChange={(e) => setBillingDay(e.target.value as BillingDay)}
+            >
+              <option value="1">1日</option>
+              <option value="16">16日</option>
+            </select>
+          </div>
+        </div>
+        <div className="grid grid-cols-2 gap-3 mt-3">
+          <div>
+            <label className="block text-[13px] font-semibold text-slate-600 mb-1.5">
+              契約期間（ヶ月）*
+            </label>
+            <input
+              className="w-full px-3.5 py-2.5 border-[1.5px] border-slate-200 rounded-[10px] text-sm outline-none focus:border-blue-400"
+              inputMode="numeric"
+              value={durationMonths || ""}
+              onChange={(e) =>
+                setDurationMonths(
+                  parseInt(e.target.value.replace(/[^0-9]/g, "")) || 0
+                )
+              }
+            />
+          </div>
+          <div>
+            <label className="block text-[13px] font-semibold text-slate-600 mb-1.5">
+              契約完了日（自動計算）
+            </label>
+            <div className="w-full px-3.5 py-2.5 bg-indigo-100 text-blue-800 font-bold rounded-[10px] text-sm flex items-center">
+              {endDate ? formatDate(endDate) : "—"}
+            </div>
+          </div>
+        </div>
+        {billingStart && (
+          <div className="mt-2.5 text-xs text-blue-500">
+            起算日: {formatDate(billingStart)} → 完了日:{" "}
+            {endDate ? formatDate(endDate) : "—"}
+          </div>
+        )}
+      </div>
+
+      {/* 月額料金セクション */}
+      <div className="bg-slate-50 rounded-xl p-4">
+        <div className="text-sm font-bold text-slate-700 mb-2.5">
+          月額料金
+        </div>
+        <div className="grid grid-cols-2 gap-3">
+          <MoneyInput
+            label="月額料金（税別）*"
+            value={monthlyFee}
+            onChange={setMonthlyFee}
+            placeholder="30,000"
+          />
+          <PayConfig
+            label="お客様お振込日"
+            close={monthlyClose}
+            pay={monthlyPay}
+            onCloseChange={setMonthlyClose}
+            onPayChange={setMonthlyPay}
+            baseMonth={baseMonthNum}
+          />
+        </div>
+      </div>
+
+      {/* 初期導入費セクション */}
+      <div className="bg-slate-50 rounded-xl p-4">
+        <label className="flex items-center gap-2 cursor-pointer text-sm font-semibold">
+          <input
+            type="checkbox"
+            checked={hasInitialFee}
+            onChange={(e) => setHasInitialFee(e.target.checked)}
+          />
+          初期導入費あり
+        </label>
+        {hasInitialFee && (
+          <div className="grid grid-cols-2 gap-3 mt-3">
+            <MoneyInput
+              label="初期導入費（税別）"
+              value={initialFee}
+              onChange={setInitialFee}
+              placeholder="200,000"
+            />
+            <PayConfig
+              label="初月お客様お振込日"
+              close={initialClose}
+              pay={initialPay}
+              onCloseChange={setInitialClose}
+              onPayChange={setInitialPay}
+              baseMonth={baseMonthNum}
+            />
+          </div>
+        )}
+      </div>
+
+      {/* オプションセクション */}
+      <div className="bg-slate-50 rounded-xl p-4">
+        <label className="flex items-center gap-2 cursor-pointer text-sm font-semibold">
+          <input
+            type="checkbox"
+            checked={hasOption}
+            onChange={(e) => setHasOption(e.target.checked)}
+          />
+          オプションあり
+        </label>
+        {hasOption && (
+          <div className="mt-3 flex flex-col gap-2.5">
+            <div>
+              <label className="block text-[13px] font-semibold text-slate-600 mb-1.5">
+                オプション名
+              </label>
+              <input
+                className="w-full px-3.5 py-2.5 border-[1.5px] border-slate-200 rounded-[10px] text-sm outline-none focus:border-blue-400"
+                value={optionName}
+                onChange={(e) => setOptionName(e.target.value)}
+                placeholder="追加機能名"
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <MoneyInput
+                label="オプション月額（税別）"
+                value={optionFee}
+                onChange={setOptionFee}
+              />
+              <PayConfig
+                label="お客様お振込日"
+                close={optionClose}
+                pay={optionPay}
+                onCloseChange={setOptionClose}
+                onPayChange={setOptionPay}
+                baseMonth={baseMonthNum}
+              />
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* メモ */}
+      <div>
+        <label className="block text-[13px] font-semibold text-slate-600 mb-1.5">
+          メモ
+        </label>
+        <textarea
+          className="w-full px-3.5 py-2.5 border-[1.5px] border-slate-200 rounded-[10px] text-sm outline-none focus:border-blue-400 min-h-[50px] resize-y"
+          value={note}
+          onChange={(e) => setNote(e.target.value)}
+        />
+      </div>
+
+      {/* ボタン */}
+      <div className="flex gap-2.5 justify-end mt-2">
+        <button
+          className="px-5 py-2.5 bg-slate-100 text-slate-700 rounded-[10px] text-sm font-medium cursor-pointer hover:bg-slate-200"
+          onClick={onClose}
+        >
+          キャンセル
+        </button>
+        <button
+          className="px-7 py-2.5 bg-slate-800 text-white rounded-[10px] text-sm font-semibold cursor-pointer hover:bg-slate-700 disabled:opacity-40"
+          disabled={!valid}
+          onClick={handleSave}
+        >
+          {contract ? "更新" : "登録"}
+        </button>
+      </div>
+    </div>
+  );
+}

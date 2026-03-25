@@ -1,0 +1,64 @@
+export type ProductType = "bakusoq" | "ninkuboxx" | "other";
+export type CloseOffset = "-1" | "0" | "1";
+export type PayType = "same_end" | "next_end" | "next_10";
+export type BillingDay = "1" | "16";
+
+export interface Company {
+  id: string;
+  name: string;
+  contact: string;
+  note: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface Contract {
+  id: string;
+  company_id: string;
+  product_type: ProductType;
+  contract_start_date: string;
+  billing_month: string;
+  billing_day: BillingDay;
+  duration_months: number;
+  monthly_fee: number;
+  monthly_close: CloseOffset;
+  monthly_pay: PayType;
+  has_initial_fee: boolean;
+  initial_fee: number;
+  initial_close: CloseOffset;
+  initial_pay: PayType;
+  has_option: boolean;
+  option_name: string;
+  option_fee: number;
+  option_close: CloseOffset;
+  option_pay: PayType;
+  note: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface Database {
+  public: {
+    Tables: {
+      companies: {
+        Row: Company;
+        Insert: Omit<Company, "created_at" | "updated_at">;
+        Update: Partial<Omit<Company, "id" | "created_at" | "updated_at">>;
+      };
+      contracts: {
+        Row: Contract;
+        Insert: Omit<Contract, "created_at" | "updated_at">;
+        Update: Partial<Omit<Contract, "id" | "created_at" | "updated_at">>;
+      };
+    };
+    Views: Record<string, never>;
+    Functions: Record<string, never>;
+    Enums: {
+      product_type: ProductType;
+      close_offset: CloseOffset;
+      pay_type: PayType;
+      billing_day: BillingDay;
+    };
+    CompositeTypes: Record<string, never>;
+  };
+}
