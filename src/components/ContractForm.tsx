@@ -9,6 +9,7 @@ import type {
   PayType,
   BillingDay,
   BillingType,
+  ContractStatus,
 } from "@/lib/database.types";
 import {
   makeBillingStart,
@@ -42,6 +43,9 @@ export function ContractForm({
   const [companyId, setCompanyId] = useState(contract?.company_id || "");
   const [billingType, setBillingType] = useState<BillingType>(
     contract?.billing_type || "monthly"
+  );
+  const [contractStatus, setContractStatus] = useState<ContractStatus>(
+    contract?.contract_status || "initial"
   );
   const [contractStartDate, setContractStartDate] = useState(
     contract?.contract_start_date || ""
@@ -122,6 +126,7 @@ export function ContractForm({
       id: contract?.id || crypto.randomUUID(),
       product_type: productType,
       billing_type: billingType,
+      contract_status: contractStatus,
       company_id: companyId,
       contract_start_date: contractStartDate,
       billing_month: billingMonth,
@@ -217,6 +222,36 @@ export function ContractForm({
         <div className="text-sm font-bold text-blue-800 mb-3.5">
           契約期間
         </div>
+        {/* 契約ステータス */}
+        <div className="flex gap-1.5 mb-3">
+          {([
+            { value: "initial", label: "初回契約", color: "blue" },
+            { value: "renewed", label: "継続契約中", color: "emerald" },
+            { value: "auto_renewing", label: "自動更新中", color: "amber" },
+          ] as const).map((s) => {
+            const active = contractStatus === s.value;
+            const colors = {
+              blue: active ? "bg-blue-600 text-white border-blue-600" : "bg-white text-slate-500 border-slate-200 hover:border-slate-300",
+              emerald: active ? "bg-emerald-600 text-white border-emerald-600" : "bg-white text-slate-500 border-slate-200 hover:border-slate-300",
+              amber: active ? "bg-amber-500 text-white border-amber-500" : "bg-white text-slate-500 border-slate-200 hover:border-slate-300",
+            };
+            return (
+              <button
+                key={s.value}
+                type="button"
+                className={`flex-1 py-1.5 rounded-lg text-[12px] font-semibold cursor-pointer border-[1.5px] transition-colors ${colors[s.color]}`}
+                onClick={() => setContractStatus(s.value)}
+              >
+                {s.label}
+              </button>
+            );
+          })}
+        </div>
+        {contractStatus === "auto_renewing" && (
+          <div className="mb-3 text-[11px] text-amber-600 font-medium">
+            ※ 自動更新中：当月まで自動的に請求月が延長されます
+          </div>
+        )}
         <div>
           <label className="block text-[13px] font-semibold text-slate-600 mb-1.5">
             契約開始日 *

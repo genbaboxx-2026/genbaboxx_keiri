@@ -1,4 +1,4 @@
-import type { CloseOffset, PayType } from "./database.types";
+import type { CloseOffset, PayType, ContractStatus } from "./database.types";
 
 /** 締め+払いから入金月オフセットを計算 */
 export function calcPayOffset(close: CloseOffset, pay: PayType): number {
@@ -102,10 +102,27 @@ export function suggestBillingMonth(
   return `${ny}-${String(nmm).padStart(2, "0")}`;
 }
 
+/** 自動更新中の契約は当月まで期間を延長 */
+export function effectiveDuration(
+  billingMonth: string,
+  billingDay: string,
+  durationMonths: number,
+  contractStatus?: ContractStatus
+): number {
+  if (contractStatus !== "auto_renewing") return durationMonths;
+  const bs = makeBillingStart(billingMonth, billingDay);
+  if (!bs) return durationMonths;
+  const [sy, sm] = bs.split("-").map(Number);
+  const now = new Date();
+  const monthsToNow = (now.getFullYear() - sy) * 12 + (now.getMonth() + 1 - sm) + 1;
+  return Math.max(durationMonths, monthsToNow);
+}
+
 /** 全契約から表示対象の全月リスト(sorted)を生成 */
 export function getAllMonths(
   contracts: {
     billing_type?: string;
+    contract_status?: ContractStatus;
     billing_month: string;
     billing_day: string;
     duration_months: number;
@@ -122,7 +139,8 @@ export function getAllMonths(
   const set = new Set<string>();
   contracts.forEach((c) => {
     const bs = makeBillingStart(c.billing_month, c.billing_day);
-    const ms = billingMonths(bs, c.duration_months);
+    const dur = effectiveDuration(c.billing_month, c.billing_day, c.duration_months, c.contract_status);
+    const ms = billingMonths(bs, dur);
     const mo = calcPayOffset(c.monthly_close, c.monthly_pay);
     const isLump = c.billing_type === "lump_sum";
     if (isLump) {
@@ -163,6 +181,7 @@ export function getRevenue(
   month: string,
   contracts: {
     billing_type?: string;
+    contract_status?: ContractStatus;
     billing_month: string;
     billing_day: string;
     duration_months: number;
@@ -186,7 +205,8 @@ export function getRevenue(
     .filter((c) => !productFilter || c.product_type === productFilter)
     .reduce((sum, c) => {
       const bs = makeBillingStart(c.billing_month, c.billing_day);
-      const ms = billingMonths(bs, c.duration_months);
+      const dur = effectiveDuration(c.billing_month, c.billing_day, c.duration_months, c.contract_status);
+      const ms = billingMonths(bs, dur);
       let amt = 0;
       const mo = calcPayOffset(c.monthly_close, c.monthly_pay);
       const isLump = c.billing_type === "lump_sum";

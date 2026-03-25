@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import type { Contract, ProductType } from "@/lib/database.types";
+import type { Contract, ProductType, ContractStatus } from "@/lib/database.types";
 import { PRODUCTS } from "@/lib/constants";
 import {
   makeBillingStart,
@@ -14,6 +14,7 @@ import {
   formatYen,
   payDescription,
   getCurrentMonth,
+  effectiveDuration,
 } from "@/lib/calc";
 
 interface ContractPageProps {
@@ -152,7 +153,8 @@ function MonthlyRevenueTable({
         <tbody>
           {contracts.map((c) => {
             const bs = makeBillingStart(c.billing_month, c.billing_day);
-            const ms = billingMonths(bs, c.duration_months);
+            const dur = effectiveDuration(c.billing_month, c.billing_day, c.duration_months, c.contract_status);
+            const ms = billingMonths(bs, dur);
             const mo = calcPayOffset(c.monthly_close, c.monthly_pay);
             const oo = c.has_option
               ? calcPayOffset(c.option_close, c.option_pay)
@@ -284,6 +286,7 @@ function ContractDetailView({
               <tr className="bg-slate-50">
                 {[
                   "企業名",
+                  "状態",
                   "開始",
                   "起算",
                   "期間",
@@ -318,6 +321,21 @@ function ContractDetailView({
                   >
                     <td className="px-3 py-2.5 font-semibold">
                       {getCompanyName(c.company_id)}
+                    </td>
+                    <td className="px-3 py-2.5">
+                      {(() => {
+                        const st = c.contract_status || "initial";
+                        const cfg = {
+                          initial: { label: "初回", cls: "text-blue-600 bg-blue-50 border-blue-200" },
+                          renewed: { label: "継続", cls: "text-emerald-600 bg-emerald-50 border-emerald-200" },
+                          auto_renewing: { label: "自動更新", cls: "text-amber-600 bg-amber-50 border-amber-200" },
+                        }[st] || { label: "初回", cls: "text-blue-600 bg-blue-50 border-blue-200" };
+                        return (
+                          <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded border ${cfg.cls}`}>
+                            {cfg.label}
+                          </span>
+                        );
+                      })()}
                     </td>
                     <td className="px-3 py-2.5 text-xs">
                       {formatDate(c.contract_start_date)}
