@@ -319,10 +319,10 @@ export function ContractForm({
         </div>
         <div className="grid grid-cols-2 gap-3">
           <MoneyInput
-            label={billingType === "monthly" ? "月額料金（税別）*" : "一括料金（税別）*"}
+            label={billingType === "monthly" ? "月額料金（税別）*" : "月額単価（税別）*"}
             value={monthlyFee}
             onChange={setMonthlyFee}
-            placeholder={billingType === "monthly" ? "30,000" : "360,000"}
+            placeholder="30,000"
           />
           <PayConfig
             label="お客様お振込日"
@@ -335,7 +335,7 @@ export function ContractForm({
         </div>
         {billingType === "lump_sum" && (
           <div className="mt-2 text-[11px] text-amber-600 font-medium">
-            ※ 一括料金は起算月の入金月にのみ計上されます
+            ※ 一括総額: ¥{formatNumber(monthlyFee * durationMonths)}（月額 ¥{formatNumber(monthlyFee)} × {durationMonths}ヶ月）→ お支払い月にのみ計上
           </div>
         )}
       </div>

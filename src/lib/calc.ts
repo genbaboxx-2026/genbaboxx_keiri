@@ -189,9 +189,9 @@ export function getRevenue(
       const mo = calcPayOffset(c.monthly_close, c.monthly_pay);
       const isLump = c.billing_type === "lump_sum";
       if (isLump) {
-        // 一括: 初月のみ計上
+        // 一括: 支払い月に総額を計上
         if (ms.length > 0 && shiftMonth(ms[0], mo) === month) {
-          amt += c.monthly_fee;
+          amt += c.monthly_fee * c.duration_months;
         }
       } else {
         // 月額: 毎月計上
