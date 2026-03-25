@@ -13,6 +13,7 @@ const PAY_OPTIONS: { value: PayType; label: string }[] = [
   { value: "same_end", label: "当月末" },
   { value: "next_end", label: "翌月末" },
   { value: "next_10", label: "翌月10日" },
+  { value: "next2_10", label: "翌々月10日" },
 ];
 
 interface PayConfigProps {
@@ -62,7 +63,9 @@ export function PayConfig({
             const pm = clM
               ? o.value === "same_end"
                 ? clM
-                : monthAt(clM, 1)
+                : o.value === "next2_10"
+                  ? monthAt(clM, 2)
+                  : monthAt(clM, 1)
               : 0;
             const dayLabel = o.value.includes("10") ? "10日" : "末";
             return (

@@ -1,6 +1,6 @@
 export type ProductType = "bakusoq" | "ninkuboxx" | "other";
 export type CloseOffset = "-1" | "0" | "1";
-export type PayType = "same_end" | "next_end" | "next_10";
+export type PayType = "same_end" | "next_end" | "next_10" | "next2_10";
 export type BillingDay = "1" | "16";
 export type BillingType = "monthly" | "lump_sum";
 

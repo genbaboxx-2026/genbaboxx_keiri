@@ -2,7 +2,8 @@ import type { CloseOffset, PayType } from "./database.types";
 
 /** 締め+払いから入金月オフセットを計算 */
 export function calcPayOffset(close: CloseOffset, pay: PayType): number {
-  return parseInt(close) + (pay.startsWith("next") ? 1 : 0);
+  const payOffset = pay === "next2_10" ? 2 : pay.startsWith("next") ? 1 : 0;
+  return parseInt(close) + payOffset;
 }
 
 /** base月にoffsetを足した月番号(1-12)を返す */
@@ -19,7 +20,7 @@ export function payDescription(
 ): string {
   if (!baseMonth) return "";
   const clM = monthAt(baseMonth, parseInt(close));
-  const pyM = pay === "same_end" ? clM : monthAt(clM, 1);
+  const pyM = pay === "same_end" ? clM : pay === "next2_10" ? monthAt(clM, 2) : monthAt(clM, 1);
   const dayLabel = pay.includes("10") ? "10日" : "末";
   return `${clM}月締${pyM}月${dayLabel}払`;
 }
@@ -28,7 +29,7 @@ export function payDescription(
 export function payDescriptionGeneric(close: CloseOffset, pay: PayType): string {
   const closeLabel = close === "-1" ? "前月" : close === "0" ? "当月" : "翌月";
   const payLabel =
-    pay === "same_end" ? "当月末" : pay === "next_end" ? "翌月末" : "翌月10日";
+    pay === "same_end" ? "当月末" : pay === "next_end" ? "翌月末" : pay === "next2_10" ? "翌々月10日" : "翌月10日";
   return `${closeLabel}締${payLabel}払い`;
 }
 
