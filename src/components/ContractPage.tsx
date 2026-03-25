@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import type { Contract, ProductType, ContractStatus } from "@/lib/database.types";
 import { PRODUCTS } from "@/lib/constants";
 import {
@@ -128,8 +128,26 @@ function MonthlyRevenueTable({
   product: (typeof PRODUCTS)[number];
 }) {
   const currentMonth = getCurrentMonth();
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const prevMonthRef = useRef<HTMLTableCellElement>(null);
+
+  useEffect(() => {
+    if (prevMonthRef.current && scrollRef.current) {
+      const container = scrollRef.current;
+      const cell = prevMonthRef.current;
+      container.scrollLeft = cell.offsetLeft - container.offsetLeft - 130;
+    }
+  }, [allMonths]);
+
+  // 1ヶ月前のYYYY-MM
+  const prevMonth = (() => {
+    const now = new Date();
+    const d = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+  })();
+
   return (
-    <div className="overflow-x-auto rounded-xl border border-slate-200">
+    <div ref={scrollRef} className="overflow-x-auto rounded-xl border border-slate-200">
       <table className="w-full border-collapse text-xs">
         <thead>
           <tr className="bg-slate-50">
@@ -139,6 +157,7 @@ function MonthlyRevenueTable({
             {allMonths.map((m) => (
               <th
                 key={m}
+                ref={m === prevMonth ? prevMonthRef : undefined}
                 className={`px-2 py-2.5 text-right font-semibold text-slate-500 border-b-2 border-slate-200 whitespace-nowrap min-w-[85px] ${m === currentMonth ? "month-current" : ""}`}
               >
                 {parseInt(m.split("-")[1])}月
