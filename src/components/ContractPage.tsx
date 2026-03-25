@@ -129,15 +129,6 @@ function MonthlyRevenueTable({
 }) {
   const currentMonth = getCurrentMonth();
   const scrollRef = useRef<HTMLDivElement>(null);
-  const prevMonthRef = useRef<HTMLTableCellElement>(null);
-
-  useEffect(() => {
-    if (prevMonthRef.current && scrollRef.current) {
-      const container = scrollRef.current;
-      const cell = prevMonthRef.current;
-      container.scrollLeft = cell.offsetLeft - container.offsetLeft - 130;
-    }
-  }, [allMonths]);
 
   // 1ヶ月前のYYYY-MM
   const prevMonth = (() => {
@@ -145,6 +136,15 @@ function MonthlyRevenueTable({
     const d = new Date(now.getFullYear(), now.getMonth() - 1, 1);
     return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
   })();
+
+  useEffect(() => {
+    const container = scrollRef.current;
+    if (!container) return;
+    const cell = container.querySelector<HTMLElement>("[data-scroll-target]");
+    if (cell) {
+      container.scrollLeft = cell.offsetLeft - 130;
+    }
+  }, [allMonths, contracts]);
 
   return (
     <div ref={scrollRef} className="overflow-x-auto rounded-xl border border-slate-200">
@@ -157,7 +157,7 @@ function MonthlyRevenueTable({
             {allMonths.map((m) => (
               <th
                 key={m}
-                ref={m === prevMonth ? prevMonthRef : undefined}
+                {...(m === prevMonth ? { "data-scroll-target": true } : {})}
                 className={`px-2 py-2.5 text-right font-semibold text-slate-500 border-b-2 border-slate-200 whitespace-nowrap min-w-[85px] ${m === currentMonth ? "month-current" : ""}`}
               >
                 {parseInt(m.split("-")[1])}月
