@@ -202,6 +202,11 @@ export function CashflowPage({
               })}
             </tr>
 
+            {/* スペーサー */}
+            <tr>
+              <td colSpan={allMonths.length + 1} className="h-4 bg-white border-none" />
+            </tr>
+
             {/* 支出ヘッダー */}
             <tr>
               <td className="px-3.5 py-2 bg-slate-100 font-bold text-sm text-slate-600 sticky left-0 z-10">
