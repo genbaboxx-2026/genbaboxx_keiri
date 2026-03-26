@@ -483,8 +483,8 @@ function InvoicePreview({
   const padding = large ? "p-8" : "p-4";
 
   return (
-    <div className={`border border-slate-300 rounded bg-white shadow-sm ${large ? "" : "sticky top-4"} ${baseText} leading-relaxed`} style={{ aspectRatio: "210/297" }}>
-      <div className={`${padding} h-full flex flex-col overflow-hidden`}>
+    <div className={`border border-slate-300 rounded bg-white shadow-sm ${large ? "" : "sticky top-4 max-h-[85vh] overflow-y-auto"} ${baseText} leading-relaxed`}>
+      <div className={`${padding} flex flex-col`}>
         {/* タイトル */}
         <div className="text-center mb-4">
           <div className={`${titleSize} font-bold`}>請求書</div>
@@ -562,7 +562,7 @@ function InvoicePreview({
         </table>
 
         {/* 下部: 振込先 + 合計 */}
-        <div className="flex justify-between mt-auto">
+        <div className="flex justify-between mt-4">
           {/* 左: 振込先 */}
           <div className={baseText}>
             {settings.bank_info && (
