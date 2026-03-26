@@ -218,3 +218,53 @@ export async function generateInvoicePDF(
     document.body.removeChild(container);
   }
 }
+
+/**
+ * 単一企業のPDFをbase64で生成（メール添付用）
+ */
+export async function generateInvoicePDFBase64(
+  settings: Settings,
+  inv: CompanyInvoice,
+  invoiceMonth: string,
+  templateNotes?: string,
+  dueDate?: string
+): Promise<string> {
+  const [{ jsPDF }, { default: html2canvas }] = await Promise.all([
+    import("jspdf"),
+    import("html2canvas-pro"),
+  ]);
+
+  const today = new Date();
+  const issueDate = `${today.getFullYear()}/${String(today.getMonth() + 1).padStart(2, "0")}/${String(today.getDate()).padStart(2, "0")}`;
+
+  const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
+
+  const container = document.createElement("div");
+  container.style.position = "absolute";
+  container.style.left = "-9999px";
+  container.style.top = "0";
+  document.body.appendChild(container);
+
+  try {
+    const invoiceNumber = generateInvoiceNumber();
+    const html = buildInvoiceHTML(inv, settings, issueDate, invoiceNumber, dueDate, templateNotes);
+    container.innerHTML = html;
+
+    const canvas = await html2canvas(container.firstElementChild as HTMLElement, {
+      scale: 2,
+      useCORS: true,
+      backgroundColor: "#ffffff",
+      width: 700,
+      height: 990,
+    });
+
+    const imgData = canvas.toDataURL("image/png");
+    doc.addImage(imgData, "PNG", 0, 0, 210, 297);
+
+    // base64でPDFデータを返す（data:application/pdf;base64,... のプレフィックスなし）
+    const pdfOutput = doc.output("datauristring");
+    return pdfOutput.split(",")[1]; // base64部分のみ
+  } finally {
+    document.body.removeChild(container);
+  }
+}

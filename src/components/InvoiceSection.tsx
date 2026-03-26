@@ -52,6 +52,8 @@ export function InvoiceSection({
   const [emailSubject, setEmailSubject] = useState("");
   const [emailBody, setEmailBody] = useState("");
   const [sendChecked, setSendChecked] = useState<Set<string>>(new Set());
+  const [sending, setSending] = useState(false);
+  const [sendResults, setSendResults] = useState<{ companyName: string; email: string; success: boolean; error?: string }[] | null>(null);
   const [viewMode, setViewMode] = useState<"list" | "preview">("list");
   const [previewIndex, setPreviewIndex] = useState(0);
 
@@ -249,6 +251,57 @@ export function InvoiceSection({
       alert("PDF生成に失敗しました");
     } finally {
       setGenerating(false);
+    }
+  };
+
+  const handleSendInvoices = async () => {
+    if (!settings || sendChecked.size === 0) return;
+    setSending(true);
+    setSendResults(null);
+    try {
+      const { generateInvoicePDFBase64 } = await import("@/lib/invoice");
+      const invoicesToSend = selectedInvoices.filter((i) => sendChecked.has(i.companyId));
+
+      const recipients = [];
+      for (const inv of invoicesToSend) {
+        const co = getCompany(inv.companyId);
+        const email = co?.invoice_email || "";
+        if (!email) {
+          recipients.push({ companyName: inv.companyName, email: "", contactName: "", pdfBase64: "" });
+          continue;
+        }
+        const pdfBase64 = await generateInvoicePDFBase64(settings, inv, selectedMonth, invoiceTemplate?.notes, dueDate);
+        recipients.push({
+          companyName: inv.companyName,
+          email,
+          contactName: co?.invoice_contact_name || "",
+          pdfBase64,
+        });
+      }
+
+      const res = await fetch("/api/send-invoice", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          recipients,
+          subject: emailSubject,
+          body: emailBody,
+          senderName: settings.company_name || "",
+          invoiceMonth: selectedMonth,
+        }),
+      });
+
+      const data = await res.json();
+      if (data.results) {
+        setSendResults(data.results);
+      } else {
+        alert(data.error || "送信エラー");
+      }
+    } catch (e) {
+      console.error(e);
+      alert("送信に失敗しました");
+    } finally {
+      setSending(false);
     }
   };
 
@@ -639,13 +692,35 @@ export function InvoiceSection({
                 戻る
               </button>
               <button
-                className="px-7 py-2.5 bg-slate-800 text-white rounded-[10px] text-sm font-semibold cursor-pointer hover:bg-slate-700 disabled:opacity-40"
+                className="px-7 py-2.5 bg-slate-100 border border-slate-300 text-slate-700 rounded-[10px] text-sm font-semibold cursor-pointer hover:bg-slate-200 disabled:opacity-40"
                 disabled={generating || !settings?.company_name || sendChecked.size === 0}
                 onClick={handleGenerate}
               >
-                {generating ? "生成中..." : `${sendChecked.size}社の請求書を作成`}
+                {generating ? "生成中..." : `${sendChecked.size}社のPDFをダウンロード`}
+              </button>
+              <button
+                className="px-7 py-2.5 bg-blue-600 text-white rounded-[10px] text-sm font-semibold cursor-pointer hover:bg-blue-700 disabled:opacity-40"
+                disabled={sending || !settings?.company_name || sendChecked.size === 0}
+                onClick={handleSendInvoices}
+              >
+                {sending ? "送信中..." : `${sendChecked.size}社にメール送信`}
               </button>
             </div>
+
+            {/* 送信結果 */}
+            {sendResults && (
+              <div className="px-6 pb-4">
+                <div className="text-sm font-bold text-slate-700 mb-2">送信結果</div>
+                <div className="space-y-1">
+                  {sendResults.map((r, i) => (
+                    <div key={i} className={`text-xs px-3 py-2 rounded ${r.success ? "bg-green-50 text-green-700" : "bg-red-50 text-red-700"}`}>
+                      {r.companyName}: {r.success ? "送信成功" : `失敗 - ${r.error}`}
+                      {r.email && <span className="text-slate-400 ml-2">({r.email})</span>}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
         </div>
       )}
