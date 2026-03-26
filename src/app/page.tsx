@@ -224,37 +224,41 @@ export default function Home() {
   // ブラウザの戻る/進む対応
   useEffect(() => {
     const handlePopState = () => {
-      const params = new URLSearchParams(window.location.search);
-      const urlTab = params.get("tab") as TabId | null;
-      const companyId = params.get("company");
-      const view = params.get("view");
-      if (urlTab) {
-        const validTabs = TABS.map((t) => t.id) as string[];
-        if (validTabs.includes(urlTab)) {
-          setTabState(urlTab as TabId);
-        }
-      }
-      setViewListState(view === "list");
-      // company-detail モーダルのみURL連動で復元/閉じる
-      // contract/company モーダルは戻るで閉じない
-      if (companyId) {
-        const company = companies.find((c) => c.id === companyId);
-        if (company) {
-          const pf = params.get("product") as ProductType | null;
-          setModalState({
-            type: "company-detail",
-            company,
-            productFilter: pf || undefined,
-          });
-        }
-      } else {
-        setModalState((prev) => {
-          // company-detailだけURLで管理しているので、それだけ閉じる
-          if (prev?.type === "company-detail") return null;
-          // contract/company モーダルはそのまま維持
+      setModalState((prev) => {
+        // company/contract モーダルが開いている場合はナビゲーションを無視
+        if (prev?.type === "company" || prev?.type === "contract") {
+          // URLを現在の状態に戻す（戻るボタンによるURL変更を打ち消す）
+          window.history.pushState(null, "", window.location.href);
           return prev;
-        });
-      }
+        }
+
+        const params = new URLSearchParams(window.location.search);
+        const urlTab = params.get("tab") as TabId | null;
+        const companyId = params.get("company");
+        const view = params.get("view");
+        if (urlTab) {
+          const validTabs = TABS.map((t) => t.id) as string[];
+          if (validTabs.includes(urlTab)) {
+            setTabState(urlTab as TabId);
+          }
+        }
+        setViewListState(view === "list");
+
+        if (companyId) {
+          const company = companies.find((c) => c.id === companyId);
+          if (company) {
+            const pf = params.get("product") as ProductType | null;
+            return {
+              type: "company-detail" as const,
+              company,
+              productFilter: pf || undefined,
+            };
+          }
+        }
+        // company-detailだけURLで管理しているので、それだけ閉じる
+        if (prev?.type === "company-detail") return null;
+        return prev;
+      });
     };
     window.addEventListener("popstate", handlePopState);
     return () => window.removeEventListener("popstate", handlePopState);
