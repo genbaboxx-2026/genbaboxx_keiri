@@ -131,21 +131,18 @@ function TemplateCard({
           <table className="w-full text-sm">
             <thead>
               <tr className="bg-slate-50 border-b border-slate-200">
-                <th className="px-3 py-2 text-left text-xs font-bold text-slate-600">
-                  月額料金の表示名
+                <th className="px-3 py-2 text-left text-xs font-bold text-slate-600 w-28">
+                  種類
                 </th>
                 <th className="px-3 py-2 text-left text-xs font-bold text-slate-600">
-                  初期導入費の表示名
-                </th>
-                <th className="px-3 py-2 text-left text-xs font-bold text-slate-600">
-                  オプションの表示名
+                  表示名
                 </th>
                 <th className="w-8" />
               </tr>
             </thead>
             <tbody>
-              {/* デフォルト行 */}
               <tr className="border-b border-slate-100">
+                <td className="px-3 py-2 text-xs text-slate-500">月額料金</td>
                 <td className="px-3 py-1.5">
                   <input
                     className="w-full px-2 py-1.5 border border-slate-200 rounded text-sm outline-none focus:border-blue-400"
@@ -153,6 +150,10 @@ function TemplateCard({
                     onChange={(e) => setMonthlyLabel(e.target.value)}
                   />
                 </td>
+                <td />
+              </tr>
+              <tr className="border-b border-slate-100">
+                <td className="px-3 py-2 text-xs text-slate-500">初期導入費</td>
                 <td className="px-3 py-1.5">
                   <input
                     className="w-full px-2 py-1.5 border border-slate-200 rounded text-sm outline-none focus:border-blue-400"
@@ -160,6 +161,10 @@ function TemplateCard({
                     onChange={(e) => setInitialLabel(e.target.value)}
                   />
                 </td>
+                <td />
+              </tr>
+              <tr className="border-b border-slate-100">
+                <td className="px-3 py-2 text-xs text-slate-500">オプション</td>
                 <td className="px-3 py-1.5">
                   <input
                     className="w-full px-2 py-1.5 border border-slate-200 rounded text-sm outline-none focus:border-blue-400"
@@ -173,30 +178,31 @@ function TemplateCard({
               {/* カスタム行 */}
               {presetItems.map((item, i) => (
                 <tr key={i} className="border-b border-slate-100">
-                  <td colSpan={2} className="px-3 py-1.5">
-                    <input
-                      className="w-full px-2 py-1.5 border border-slate-200 rounded text-sm outline-none focus:border-blue-400"
-                      value={item.description}
-                      onChange={(e) =>
-                        updatePresetItem(i, "description", e.target.value)
-                      }
-                      placeholder="項目名（例: 交通費）"
-                    />
-                  </td>
+                  <td className="px-3 py-2 text-xs text-blue-500">カスタム</td>
                   <td className="px-3 py-1.5">
-                    <input
-                      className="w-full px-2 py-1.5 border border-slate-200 rounded text-sm text-right outline-none focus:border-blue-400"
-                      type="number"
-                      value={item.defaultUnitPrice || ""}
-                      onChange={(e) =>
-                        updatePresetItem(
-                          i,
-                          "defaultUnitPrice",
-                          Number(e.target.value) || 0
-                        )
-                      }
-                      placeholder="デフォルト単価"
-                    />
+                    <div className="flex gap-2">
+                      <input
+                        className="flex-1 px-2 py-1.5 border border-slate-200 rounded text-sm outline-none focus:border-blue-400"
+                        value={item.description}
+                        onChange={(e) =>
+                          updatePresetItem(i, "description", e.target.value)
+                        }
+                        placeholder="項目名（例: 交通費）"
+                      />
+                      <input
+                        className="w-28 px-2 py-1.5 border border-slate-200 rounded text-sm text-right outline-none focus:border-blue-400"
+                        type="number"
+                        value={item.defaultUnitPrice || ""}
+                        onChange={(e) =>
+                          updatePresetItem(
+                            i,
+                            "defaultUnitPrice",
+                            Number(e.target.value) || 0
+                          )
+                        }
+                        placeholder="デフォルト単価"
+                      />
+                    </div>
                   </td>
                   <td className="px-2 py-2">
                     <button
