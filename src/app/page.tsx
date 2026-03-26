@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback, useMemo, useRef } from "react";
-import type { Company, Contract, ProductType, Profile, Expense, Settings } from "@/lib/database.types";
+import type { Company, Contract, ProductType, Profile, Expense, Settings, InvoiceTemplate } from "@/lib/database.types";
 import {
   fetchCompanies,
   fetchContracts,
@@ -14,6 +14,8 @@ import {
   deleteExpense,
   fetchSettings,
   upsertSettings,
+  fetchInvoiceTemplates,
+  upsertInvoiceTemplate,
 } from "@/lib/api";
 import { PRODUCTS, TABS, type TabId } from "@/lib/constants";
 import { getAllMonths, getRevenue } from "@/lib/calc";
@@ -26,6 +28,7 @@ import { ContractPage } from "@/components/ContractPage";
 import { CashflowPage } from "@/components/CashflowPage";
 import { LoginPage } from "@/components/LoginPage";
 import { SettingsPage } from "@/components/SettingsPage";
+import { InvoiceSettingsPage } from "@/components/InvoiceSettingsPage";
 import { supabase } from "@/lib/supabase";
 import type { User } from "@supabase/supabase-js";
 
@@ -43,6 +46,7 @@ export default function Home() {
   const [contracts, setContracts] = useState<Contract[]>([]);
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [settings, setSettings] = useState<Settings | null>(null);
+  const [invoiceTemplates, setInvoiceTemplates] = useState<InvoiceTemplate[]>([]);
   const [tab, setTabState] = useState<TabId>("bakusoq");
   const [modal, setModalState] = useState<ModalState>(null);
   const [viewList, setViewListState] = useState(false);
@@ -174,6 +178,9 @@ export default function Home() {
       .catch(() => {});
     fetchSettings()
       .then(setSettings)
+      .catch(() => {});
+    fetchInvoiceTemplates()
+      .then(setInvoiceTemplates)
       .catch(() => {});
   }, [user]);
 
@@ -354,6 +361,21 @@ export default function Home() {
     }
   };
 
+  const handleSaveInvoiceTemplate = async (
+    t: Omit<InvoiceTemplate, "created_at" | "updated_at">
+  ) => {
+    try {
+      const saved = await upsertInvoiceTemplate(t);
+      setInvoiceTemplates((prev) => {
+        const filtered = prev.filter((x) => x.id !== saved.id);
+        return [...filtered, saved];
+      });
+    } catch (e) {
+      console.error(e);
+      alert("テンプレートの保存に失敗しました");
+    }
+  };
+
   const handleLogout = async () => {
     await supabase.auth.signOut();
     setUser(null);
@@ -364,7 +386,7 @@ export default function Home() {
   const visibleTabs = useMemo(
     () =>
       profile?.role === "member"
-        ? TABS.filter((t) => t.id !== "cashflow" && t.id !== "settings")
+        ? TABS.filter((t) => t.id !== "cashflow" && t.id !== "settings" && t.id !== "invoice_settings")
         : TABS,
     [profile]
   );
@@ -405,6 +427,13 @@ export default function Home() {
         onDeleteExpense={handleDeleteExpense}
       />
     );
+  } else if (tab === "invoice_settings") {
+    content = (
+      <InvoiceSettingsPage
+        templates={invoiceTemplates}
+        onSave={handleSaveInvoiceTemplate}
+      />
+    );
   } else if (tab === "settings") {
     content = (
       <SettingsPage settings={settings} onSave={handleSaveSettings} />
@@ -426,6 +455,7 @@ export default function Home() {
         contracts={contractsFor(tab)}
         companies={companies}
         settings={settings}
+        invoiceTemplates={invoiceTemplates}
         allMonths={allMonths}
         getCompanyName={getCompanyName}
         revenueFor={revenueFor}

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useMemo, useCallback } from "react";
-import type { Contract, Company, Settings } from "@/lib/database.types";
+import type { Contract, Company, Settings, InvoiceTemplate } from "@/lib/database.types";
 import {
   getInvoicesForMonth,
   type CompanyInvoice,
@@ -13,6 +13,7 @@ interface InvoiceSectionProps {
   contracts: Contract[];
   companies: Company[];
   settings: Settings | null;
+  invoiceTemplate?: InvoiceTemplate;
   allMonths: string[];
 }
 
@@ -20,6 +21,7 @@ export function InvoiceSection({
   contracts,
   companies,
   settings,
+  invoiceTemplate,
   allMonths,
 }: InvoiceSectionProps) {
   const currentMonth = getCurrentMonth();
@@ -33,8 +35,8 @@ export function InvoiceSection({
   const [initialized, setInitialized] = useState(false);
 
   const baseInvoices = useMemo(
-    () => getInvoicesForMonth(selectedMonth, contracts, companies),
-    [selectedMonth, contracts, companies]
+    () => getInvoicesForMonth(selectedMonth, contracts, companies, invoiceTemplate),
+    [selectedMonth, contracts, companies, invoiceTemplate]
   );
 
   // カスタム項目を反映した請求データ
@@ -60,7 +62,7 @@ export function InvoiceSection({
     setCustomItems({});
     setExpandedId(null);
     setTimeout(() => {
-      const inv = getInvoicesForMonth(m, contracts, companies);
+      const inv = getInvoicesForMonth(m, contracts, companies, invoiceTemplate);
       setChecked(new Set(inv.map((i) => i.companyId)));
     }, 0);
   };

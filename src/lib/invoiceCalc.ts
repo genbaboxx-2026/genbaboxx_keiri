@@ -1,4 +1,4 @@
-import type { Contract, Company } from "./database.types";
+import type { Contract, Company, InvoiceTemplate } from "./database.types";
 import {
   makeBillingStart,
   billingMonths,
@@ -30,8 +30,12 @@ export interface CompanyInvoice {
 export function getInvoicesForMonth(
   month: string,
   contracts: Contract[],
-  companies: Company[]
+  companies: Company[],
+  template?: InvoiceTemplate
 ): CompanyInvoice[] {
+  const monthlyLabel = template?.monthly_label || "月額料金";
+  const initialLabel = template?.initial_label || "初期導入費";
+  const optionLabel = template?.option_label || "オプション";
   const companyMap = new Map(companies.map((c) => [c.id, c.name]));
   const byCompany = new Map<string, InvoiceLineItem[]>();
 
@@ -55,7 +59,7 @@ export function getInvoicesForMonth(
     if (isLump) {
       if (ms.length > 0 && shiftMonth(ms[0], mo) === month) {
         items.push({
-          description: `月額料金（${c.duration_months}ヶ月一括）`,
+          description: `${monthlyLabel}（${c.duration_months}ヶ月一括）`,
           quantity: c.duration_months,
           unitPrice: c.monthly_fee,
           amount: c.monthly_fee * c.duration_months,
@@ -67,7 +71,7 @@ export function getInvoicesForMonth(
       );
       if (matchingMonths.length > 0) {
         items.push({
-          description: "月額料金",
+          description: monthlyLabel,
           quantity: matchingMonths.length,
           unitPrice: c.monthly_fee,
           amount: c.monthly_fee * matchingMonths.length,
@@ -80,7 +84,7 @@ export function getInvoicesForMonth(
       const io = calcPayOffset(c.initial_close, c.initial_pay);
       if (shiftMonth(ms[0], io) === month) {
         items.push({
-          description: "初期導入費",
+          description: initialLabel,
           quantity: 1,
           unitPrice: c.initial_fee,
           amount: c.initial_fee,
@@ -94,7 +98,7 @@ export function getInvoicesForMonth(
       const optMonths = ms.filter((bm) => shiftMonth(bm, oo) === month);
       if (optMonths.length > 0) {
         items.push({
-          description: c.option_name || "オプション",
+          description: c.option_name || optionLabel,
           quantity: optMonths.length,
           unitPrice: c.option_fee,
           amount: c.option_fee * optMonths.length,

@@ -42,6 +42,17 @@ export interface Contract {
   updated_at: string;
 }
 
+export interface InvoiceTemplate {
+  id: string;
+  product_type: ProductType;
+  monthly_label: string;
+  initial_label: string;
+  option_label: string;
+  notes: string;
+  created_at: string;
+  updated_at: string;
+}
+
 export interface Settings {
   id: string;
   company_name: string;

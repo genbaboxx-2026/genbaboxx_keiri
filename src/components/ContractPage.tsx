@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import type { Contract, Company, ProductType, ContractStatus, Settings } from "@/lib/database.types";
+import type { Contract, Company, ProductType, ContractStatus, Settings, InvoiceTemplate } from "@/lib/database.types";
 import { PRODUCTS } from "@/lib/constants";
 import { InvoiceSection } from "./InvoiceSection";
 import {
@@ -23,6 +23,7 @@ interface ContractPageProps {
   contracts: Contract[];
   companies: Company[];
   settings: Settings | null;
+  invoiceTemplates: InvoiceTemplate[];
   allMonths: string[];
   getCompanyName: (id: string) => string;
   revenueFor: (month: string, productFilter?: string) => number;
@@ -38,6 +39,7 @@ export function ContractPage({
   contracts,
   companies,
   settings,
+  invoiceTemplates,
   allMonths,
   getCompanyName,
   revenueFor,
@@ -117,6 +119,7 @@ export function ContractPage({
             contracts={contracts}
             companies={companies}
             settings={settings}
+            invoiceTemplate={invoiceTemplates.find((t) => t.product_type === productType)}
             allMonths={allMonths}
           />
         </div>

@@ -40,6 +40,7 @@ export const TABS = [
   { id: "other" as const, label: "その他契約", icon: "📄" },
   { id: "cashflow" as const, label: "資金繰り表", icon: "📊" },
   { id: "companies" as const, label: "企業マスタ", icon: "🏢" },
+  { id: "invoice_settings" as const, label: "請求書設定", icon: "📝" },
   { id: "settings" as const, label: "設定", icon: "⚙" },
 ] as const;
 
