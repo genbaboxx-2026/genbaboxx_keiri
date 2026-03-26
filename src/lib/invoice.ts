@@ -8,7 +8,10 @@ async function loadJapaneseFont(
   doc: any
 ) {
   if (!cachedFontBase64) {
-    const res = await fetch("/fonts/NotoSansJP-Regular.ttf");
+    // Google Fonts の静的ホスティングからTTFを取得
+    const res = await fetch(
+      "https://raw.githubusercontent.com/google/fonts/main/ofl/notosansjp/NotoSansJP%5Bwght%5D.ttf"
+    );
     const buffer = await res.arrayBuffer();
     const bytes = new Uint8Array(buffer);
     let binary = "";
