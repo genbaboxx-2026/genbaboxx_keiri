@@ -335,7 +335,7 @@ export function InvoiceSection({
                         isExpanded={isExpanded}
                         isChecked={checked.has(inv.companyId)}
                         extras={extras}
-                        companyDueDate={dueDates[inv.companyId] || ""}
+                        companyDueDate={dueDates[inv.companyId] ?? dueDate}
                         onDueDateChange={(v) => setDueDates((prev) => ({ ...prev, [inv.companyId]: v }))}
                         onToggleCheck={() => toggleCheck(inv.companyId)}
                         onToggleExpand={() =>
