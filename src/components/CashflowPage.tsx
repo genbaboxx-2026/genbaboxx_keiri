@@ -210,15 +210,7 @@ export function CashflowPage({
             {/* 支出ヘッダー */}
             <tr>
               <td className="px-3.5 py-2 bg-slate-100 font-bold text-sm text-slate-600 sticky left-0 z-10">
-                <span className="flex items-center justify-between">
-                  支出
-                  <button
-                    className="text-[11px] font-semibold text-blue-600 hover:text-blue-800 cursor-pointer bg-transparent border-none"
-                    onClick={() => setShowNewRow(true)}
-                  >
-                    + 行を追加
-                  </button>
-                </span>
+                支出
               </td>
               {allMonths.map((m) => (
                 <td key={m} className="bg-slate-100" />
@@ -276,6 +268,23 @@ export function CashflowPage({
                 })}
               </tr>
             ))}
+
+            {/* 行を追加ボタン */}
+            {!showNewRow && (
+              <tr>
+                <td className="px-3.5 py-1.5 sticky left-0 bg-white z-10">
+                  <button
+                    className="text-[11px] font-semibold text-blue-600 hover:text-blue-800 cursor-pointer bg-transparent border-none"
+                    onClick={() => setShowNewRow(true)}
+                  >
+                    + 行を追加
+                  </button>
+                </td>
+                {allMonths.map((m) => (
+                  <td key={m} />
+                ))}
+              </tr>
+            )}
 
             {/* 新規行入力 */}
             {showNewRow && (
