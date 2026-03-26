@@ -329,24 +329,37 @@ export function InvoiceSection({
               </table>
             </div>
 
-            <div className="mt-4 flex items-center justify-between">
-              <div className="text-sm text-slate-600">
+            <div className="mt-4 flex items-start justify-between">
+              <div className="text-sm text-slate-600 pt-2">
                 {selectedInvoices.length}社選択 / 合計{" "}
                 <span className="font-bold text-slate-800">
                   ¥{formatNumber(selectedTotal)}
                 </span>
                 （税込）
               </div>
-              <button
-                className="px-6 py-2.5 bg-slate-800 text-white rounded-[10px] text-sm font-semibold cursor-pointer hover:bg-slate-700 disabled:opacity-40"
-                disabled={
-                  selectedInvoices.length === 0 ||
-                  !settings?.company_name
-                }
-                onClick={handleOpenConfirm}
-              >
-                {`選択した${selectedInvoices.length}社の請求書送付を確認`}
-              </button>
+              <div className="flex flex-col items-end gap-2">
+                <button
+                  className="px-5 py-2 bg-white border border-slate-200 rounded-lg text-sm font-medium text-slate-700 cursor-pointer hover:bg-slate-50 disabled:opacity-40"
+                  disabled={
+                    generating ||
+                    selectedInvoices.length === 0 ||
+                    !settings?.company_name
+                  }
+                  onClick={handleGenerate}
+                >
+                  {generating ? "生成中..." : `全${selectedInvoices.length}社を一括PDFダウンロード`}
+                </button>
+                <button
+                  className="px-6 py-2.5 bg-slate-800 text-white rounded-[10px] text-sm font-semibold cursor-pointer hover:bg-slate-700 disabled:opacity-40"
+                  disabled={
+                    selectedInvoices.length === 0 ||
+                    !settings?.company_name
+                  }
+                  onClick={handleOpenConfirm}
+                >
+                  {`選択した${selectedInvoices.length}社の請求書送付を確認`}
+                </button>
+              </div>
             </div>
           </div>
 
@@ -412,6 +425,8 @@ export function InvoiceSection({
           onChangeIndex={setPreviewIndex}
           onDownloadSingle={handleGenerateSingle}
           onDownloadAll={() => handleGenerate()}
+          onOpenConfirm={handleOpenConfirm}
+          selectedCount={selectedInvoices.length}
           generating={generating}
         />
       )}
@@ -540,6 +555,8 @@ function PreviewGallery({
   onChangeIndex,
   onDownloadSingle,
   onDownloadAll,
+  onOpenConfirm,
+  selectedCount,
   generating,
 }: {
   invoices: CompanyInvoice[];
@@ -551,6 +568,8 @@ function PreviewGallery({
   onChangeIndex: (i: number) => void;
   onDownloadSingle: (inv: CompanyInvoice) => void;
   onDownloadAll: () => void;
+  onOpenConfirm: () => void;
+  selectedCount: number;
   generating: boolean;
 }) {
   const [touchStart, setTouchStart] = useState<number | null>(null);
@@ -737,20 +756,27 @@ function PreviewGallery({
       </div>
 
       {/* ボタン */}
-      <div className="flex items-center justify-between mt-5">
+      <div className="flex flex-col items-end gap-2 mt-5">
         <button
-          className="px-4 py-2 bg-white border border-slate-200 rounded-lg text-sm font-medium text-slate-700 cursor-pointer hover:bg-slate-50 disabled:opacity-40"
+          className="px-5 py-2 bg-white border border-slate-200 rounded-lg text-sm font-medium text-slate-700 cursor-pointer hover:bg-slate-50 disabled:opacity-40"
           disabled={generating}
           onClick={() => onDownloadSingle(current)}
         >
           {generating ? "生成中..." : "この請求書をPDFダウンロード"}
         </button>
         <button
-          className="px-6 py-2.5 bg-slate-800 text-white rounded-[10px] text-sm font-semibold cursor-pointer hover:bg-slate-700 disabled:opacity-40"
+          className="px-5 py-2 bg-white border border-slate-200 rounded-lg text-sm font-medium text-slate-700 cursor-pointer hover:bg-slate-50 disabled:opacity-40"
           disabled={generating}
           onClick={onDownloadAll}
         >
           {generating ? "生成中..." : `全${invoices.length}社を一括PDFダウンロード`}
+        </button>
+        <button
+          className="px-6 py-2.5 bg-slate-800 text-white rounded-[10px] text-sm font-semibold cursor-pointer hover:bg-slate-700 disabled:opacity-40"
+          disabled={selectedCount === 0 || !settings?.company_name}
+          onClick={onOpenConfirm}
+        >
+          {`選択した${selectedCount}社の請求書送付を確認`}
         </button>
       </div>
 
