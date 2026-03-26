@@ -215,14 +215,25 @@ export function InvoiceSection({
     return `いつもお世話になっております。\n${companyName}です。\n\n${monthLabel}分の請求書を添付にてお送りいたします。\nご確認のほど、よろしくお願いいたします。\n\n何かご不明な点がございましたら、お気軽にお問い合わせください。\n\n${companyName}`;
   }, [settings, monthLabel]);
 
+  const applyTemplateVars = useCallback((tpl: string) => {
+    return tpl
+      .replace(/\{会社名\}/g, settings?.company_name || "")
+      .replace(/\{月\}/g, monthLabel)
+      .replace(/○○/g, settings?.company_name || "○○")
+      .replace(/○月/g, monthLabel);
+  }, [settings, monthLabel]);
+
   const handleOpenConfirm = () => {
+    const subjectTpl = settings?.email_subject_template;
+    const bodyTpl = settings?.email_body_template;
     setEmailSubject(
-      settings?.email_subject_template || `【${settings?.company_name || ""}】${monthLabel}分 請求書送付のご案内`
+      subjectTpl ? applyTemplateVars(subjectTpl) : `【${settings?.company_name || ""}】${monthLabel}分 請求書送付のご案内`
     );
     setEmailBody(
-      settings?.email_body_template || buildDefaultEmailBody()
+      bodyTpl ? applyTemplateVars(bodyTpl) : buildDefaultEmailBody()
     );
     setSendChecked(new Set(selectedInvoices.map((i) => i.companyId)));
+    setSendResults(null);
     setShowSendConfirm(true);
   };
 
