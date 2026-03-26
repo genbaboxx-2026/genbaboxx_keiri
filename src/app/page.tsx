@@ -37,6 +37,7 @@ export default function Home() {
   const [contracts, setContracts] = useState<Contract[]>([]);
   const [tab, setTabState] = useState<TabId>("bakusoq");
   const [modal, setModalState] = useState<ModalState>(null);
+  const [viewList, setViewListState] = useState(false);
   const [sideOpen, setSideOpen] = useState(true);
   const [loading, setLoading] = useState(true);
   const skipUrlSync = useRef(false);
@@ -51,22 +52,30 @@ export default function Home() {
   }, []);
 
   // 状態 → URLの更新
-  const updateUrl = useCallback(
-    (t: TabId, m: ModalState, replace = false) => {
+  const buildUrl = useCallback(
+    (t: TabId, m: ModalState, list = false) => {
       const params = new URLSearchParams();
       params.set("tab", t);
+      if (list) params.set("view", "list");
       if (m?.type === "company-detail") {
         params.set("company", m.company.id);
         if (m.productFilter) params.set("product", m.productFilter);
       }
-      const url = `?${params.toString()}`;
+      return `?${params.toString()}`;
+    },
+    []
+  );
+
+  const pushUrl = useCallback(
+    (t: TabId, m: ModalState, list = false, replace = false) => {
+      const url = buildUrl(t, m, list);
       if (replace) {
         window.history.replaceState(null, "", url);
       } else {
         window.history.pushState(null, "", url);
       }
     },
-    []
+    [buildUrl]
   );
 
   // タブ変更（URL同期）
@@ -74,9 +83,19 @@ export default function Home() {
     (t: TabId) => {
       setTabState(t);
       setModalState(null);
-      updateUrl(t, null);
+      setViewListState(false);
+      pushUrl(t, null, false);
     },
-    [updateUrl]
+    [pushUrl]
+  );
+
+  // ビュー切替（URL同期）
+  const setViewList = useCallback(
+    (show: boolean) => {
+      setViewListState(show);
+      pushUrl(tab, null, show);
+    },
+    [tab, pushUrl]
   );
 
   // モーダル変更（URL同期）
@@ -84,12 +103,12 @@ export default function Home() {
     (m: ModalState) => {
       setModalState(m);
       if (m?.type === "company-detail") {
-        updateUrl(tab, m);
+        pushUrl(tab, m, viewList);
       } else if (m === null) {
-        updateUrl(tab, null, true);
+        pushUrl(tab, null, viewList, true);
       }
     },
-    [tab, updateUrl]
+    [tab, viewList, pushUrl]
   );
 
   // 認証状態の監視
@@ -144,45 +163,22 @@ export default function Home() {
       .finally(() => setLoading(false));
   }, [user]);
 
-  // URLからの初期状態復元（データ読み込み後）
-  useEffect(() => {
-    if (loading || companies.length === 0) return;
-    const { tab: urlTab, companyId } = readUrl();
-    if (urlTab) {
-      const validTabs = TABS.map((t) => t.id) as string[];
-      if (validTabs.includes(urlTab)) {
-        setTabState(urlTab as TabId);
-      }
-    }
-    if (companyId) {
-      const company = companies.find((c) => c.id === companyId);
-      if (company) {
-        const params = new URLSearchParams(window.location.search);
-        const pf = params.get("product") as ProductType | null;
-        setModalState({
-          type: "company-detail",
-          company,
-          productFilter: pf || undefined,
-        });
-      }
-    }
-  }, [loading, companies, readUrl]);
-
-  // ブラウザの戻る/進む対応
-  useEffect(() => {
-    const handlePopState = () => {
-      const { tab: urlTab, companyId } = readUrl();
-      skipUrlSync.current = true;
+  // URLパラメータからの状態復元ヘルパー
+  const restoreFromParams = useCallback(
+    (params: URLSearchParams) => {
+      const urlTab = params.get("tab") as TabId | null;
+      const companyId = params.get("company");
+      const view = params.get("view");
       if (urlTab) {
         const validTabs = TABS.map((t) => t.id) as string[];
         if (validTabs.includes(urlTab)) {
           setTabState(urlTab as TabId);
         }
       }
+      setViewListState(view === "list");
       if (companyId) {
         const company = companies.find((c) => c.id === companyId);
         if (company) {
-          const params = new URLSearchParams(window.location.search);
           const pf = params.get("product") as ProductType | null;
           setModalState({
             type: "company-detail",
@@ -193,11 +189,24 @@ export default function Home() {
       } else {
         setModalState(null);
       }
-      skipUrlSync.current = false;
+    },
+    [companies]
+  );
+
+  // URLからの初期状態復元（データ読み込み後）
+  useEffect(() => {
+    if (loading || companies.length === 0) return;
+    restoreFromParams(new URLSearchParams(window.location.search));
+  }, [loading, companies, restoreFromParams]);
+
+  // ブラウザの戻る/進む対応
+  useEffect(() => {
+    const handlePopState = () => {
+      restoreFromParams(new URLSearchParams(window.location.search));
     };
     window.addEventListener("popstate", handlePopState);
     return () => window.removeEventListener("popstate", handlePopState);
-  }, [companies, readUrl]);
+  }, [restoreFromParams]);
 
   const allMonths = useMemo(() => getAllMonths(contracts), [contracts]);
 
@@ -354,6 +363,8 @@ export default function Home() {
         allMonths={allMonths}
         getCompanyName={getCompanyName}
         revenueFor={revenueFor}
+        showList={viewList}
+        onShowList={setViewList}
         onAdd={() => setModal({ type: "contract", productType: tab })}
         onEdit={(cn) => {
           const company = companies.find((c) => c.id === cn.company_id);

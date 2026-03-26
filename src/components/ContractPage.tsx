@@ -23,6 +23,8 @@ interface ContractPageProps {
   allMonths: string[];
   getCompanyName: (id: string) => string;
   revenueFor: (month: string, productFilter?: string) => number;
+  showList: boolean;
+  onShowList: (show: boolean) => void;
   onAdd: () => void;
   onEdit: (contract: Contract) => void;
   onDelete: (id: string) => void;
@@ -34,21 +36,22 @@ export function ContractPage({
   allMonths,
   getCompanyName,
   revenueFor,
+  showList,
+  onShowList,
   onAdd,
   onEdit,
   onDelete,
 }: ContractPageProps) {
-  const [showDetail, setShowDetail] = useState(false);
   const product = PRODUCTS.find((p) => p.id === productType)!;
 
-  if (showDetail) {
+  if (showList) {
     return (
       <ContractDetailView
         product={product}
         productType={productType}
         contracts={contracts}
         getCompanyName={getCompanyName}
-        onBack={() => setShowDetail(false)}
+        onBack={() => onShowList(false)}
         onAdd={onAdd}
         onEdit={onEdit}
         onDelete={onDelete}
@@ -66,7 +69,7 @@ export function ContractPage({
           <button
             className="px-5 py-2.5 bg-white rounded-[10px] text-sm font-semibold cursor-pointer hover:bg-slate-50 border-[1.5px]"
             style={{ color: product.hex, borderColor: product.hex }}
-            onClick={() => setShowDetail(true)}
+            onClick={() => onShowList(true)}
           >
             契約一覧
           </button>
