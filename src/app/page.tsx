@@ -119,6 +119,7 @@ export default function Home() {
       } else if (m === null) {
         pushUrl(tab, null, viewList, true);
       }
+      // contract/company モーダルはURLに反映しないが、replaceで現在URLを維持
     },
     [tab, viewList, pushUrl]
   );
@@ -223,11 +224,41 @@ export default function Home() {
   // ブラウザの戻る/進む対応
   useEffect(() => {
     const handlePopState = () => {
-      restoreFromParams(new URLSearchParams(window.location.search));
+      const params = new URLSearchParams(window.location.search);
+      const urlTab = params.get("tab") as TabId | null;
+      const companyId = params.get("company");
+      const view = params.get("view");
+      if (urlTab) {
+        const validTabs = TABS.map((t) => t.id) as string[];
+        if (validTabs.includes(urlTab)) {
+          setTabState(urlTab as TabId);
+        }
+      }
+      setViewListState(view === "list");
+      // company-detail モーダルのみURL連動で復元/閉じる
+      // contract/company モーダルは戻るで閉じない
+      if (companyId) {
+        const company = companies.find((c) => c.id === companyId);
+        if (company) {
+          const pf = params.get("product") as ProductType | null;
+          setModalState({
+            type: "company-detail",
+            company,
+            productFilter: pf || undefined,
+          });
+        }
+      } else {
+        setModalState((prev) => {
+          // company-detailだけURLで管理しているので、それだけ閉じる
+          if (prev?.type === "company-detail") return null;
+          // contract/company モーダルはそのまま維持
+          return prev;
+        });
+      }
     };
     window.addEventListener("popstate", handlePopState);
     return () => window.removeEventListener("popstate", handlePopState);
-  }, [restoreFromParams]);
+  }, [companies]);
 
   const allMonths = useMemo(() => getAllMonths(contracts), [contracts]);
 
