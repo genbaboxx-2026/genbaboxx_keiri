@@ -26,7 +26,7 @@ import type { User } from "@supabase/supabase-js";
 type ModalState =
   | null
   | { type: "company"; item?: Company }
-  | { type: "company-detail"; company: Company }
+  | { type: "company-detail"; company: Company; productFilter?: ProductType }
   | { type: "contract"; productType: ProductType; item?: Contract; companyId?: string };
 
 export default function Home() {
@@ -251,7 +251,7 @@ export default function Home() {
         onEdit={(cn) => {
           const company = companies.find((c) => c.id === cn.company_id);
           if (company) {
-            setModal({ type: "company-detail", company });
+            setModal({ type: "company-detail", company, productFilter: tab as ProductType });
           }
         }}
         onDelete={handleDeleteContract}
@@ -365,6 +365,7 @@ export default function Home() {
           <CompanyDetailModal
             company={modal.company}
             contracts={contracts}
+            productFilter={modal.productFilter}
             onSave={handleSaveCompany}
             onAddContract={(productType) =>
               setModal({

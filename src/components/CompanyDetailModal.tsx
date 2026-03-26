@@ -14,6 +14,7 @@ import { formatDate, formatNumber, calcEndDate, makeBillingStart } from "@/lib/c
 interface CompanyDetailModalProps {
   company: Company;
   contracts: Contract[];
+  productFilter?: ProductType;
   onSave: (company: Omit<Company, "created_at" | "updated_at">) => void;
   onAddContract: (productType: ProductType) => void;
   onEditContract: (contract: Contract) => void;
@@ -167,6 +168,7 @@ function HistoryContracts({
 export function CompanyDetailModal({
   company,
   contracts,
+  productFilter,
   onSave,
   onAddContract,
   onEditContract,
@@ -178,7 +180,13 @@ export function CompanyDetailModal({
   const [note, setNote] = useState(company.note);
   const [showProductSelect, setShowProductSelect] = useState(false);
 
-  const companyContracts = contracts.filter((c) => c.company_id === company.id);
+  const companyContracts = contracts.filter(
+    (c) => c.company_id === company.id && (!productFilter || c.product_type === productFilter)
+  );
+
+  const filteredProducts = productFilter
+    ? PRODUCTS.filter((p) => p.id === productFilter)
+    : PRODUCTS;
 
   const handleSave = () => {
     onSave({
@@ -244,34 +252,46 @@ export function CompanyDetailModal({
             </span>
           </div>
           <div className="relative">
-            <button
-              type="button"
-              className="px-4 py-2 bg-blue-600 text-white rounded-lg text-[13px] font-semibold cursor-pointer hover:bg-blue-700"
-              onClick={() => setShowProductSelect(!showProductSelect)}
-            >
-              + 契約追加
-            </button>
-            {showProductSelect && (
+            {productFilter ? (
+              <button
+                type="button"
+                className="px-4 py-2 bg-blue-600 text-white rounded-lg text-[13px] font-semibold cursor-pointer hover:bg-blue-700"
+                onClick={() => handleAddContract(productFilter)}
+              >
+                + 契約追加
+              </button>
+            ) : (
               <>
-                <div
-                  className="fixed inset-0 z-10"
-                  onClick={() => setShowProductSelect(false)}
-                />
-                <div className="absolute right-0 top-full mt-1 bg-white border border-slate-200 rounded-lg shadow-lg z-20 py-1 min-w-[160px]">
-                  {PRODUCTS.map((p) => (
-                    <button
-                      key={p.id}
-                      type="button"
-                      className="w-full px-4 py-2.5 text-left text-sm hover:bg-slate-50 cursor-pointer flex items-center gap-2"
-                      onClick={() => handleAddContract(p.id)}
-                    >
-                      <span
-                        className={`w-2 h-2 rounded-full ${p.bgClass} border ${p.borderClass}`}
-                      />
-                      {p.label}
-                    </button>
-                  ))}
-                </div>
+                <button
+                  type="button"
+                  className="px-4 py-2 bg-blue-600 text-white rounded-lg text-[13px] font-semibold cursor-pointer hover:bg-blue-700"
+                  onClick={() => setShowProductSelect(!showProductSelect)}
+                >
+                  + 契約追加
+                </button>
+                {showProductSelect && (
+                  <>
+                    <div
+                      className="fixed inset-0 z-10"
+                      onClick={() => setShowProductSelect(false)}
+                    />
+                    <div className="absolute right-0 top-full mt-1 bg-white border border-slate-200 rounded-lg shadow-lg z-20 py-1 min-w-[160px]">
+                      {PRODUCTS.map((p) => (
+                        <button
+                          key={p.id}
+                          type="button"
+                          className="w-full px-4 py-2.5 text-left text-sm hover:bg-slate-50 cursor-pointer flex items-center gap-2"
+                          onClick={() => handleAddContract(p.id)}
+                        >
+                          <span
+                            className={`w-2 h-2 rounded-full ${p.bgClass} border ${p.borderClass}`}
+                          />
+                          {p.label}
+                        </button>
+                      ))}
+                    </div>
+                  </>
+                )}
               </>
             )}
           </div>
@@ -288,7 +308,7 @@ export function CompanyDetailModal({
         ) : (
           <div className="flex flex-col gap-4">
             {/* プロダクトごとにグループ化 */}
-            {PRODUCTS.map((product) => {
+            {filteredProducts.map((product) => {
               const productContracts = companyContracts
                 .filter((c) => c.product_type === product.id)
                 .sort(
