@@ -392,9 +392,9 @@ export function InvoiceSection({
             </div>
           </div>
 
-          {/* 右: プレビュー */}
-          {previewInvoice && settings && (
-            <div className="w-[340px] flex-shrink-0">
+          {/* 右: プレビュー（常にスペース確保） */}
+          <div className="w-[340px] flex-shrink-0">
+            {previewInvoice && settings ? (
               <div className="relative">
                 <button
                   className="absolute top-2 right-2 z-10 w-7 h-7 flex items-center justify-center bg-white border border-slate-300 rounded text-slate-500 hover:text-slate-800 cursor-pointer text-xs shadow-sm"
@@ -412,8 +412,12 @@ export function InvoiceSection({
                   dueDate={dueDate}
                 />
               </div>
-            </div>
-          )}
+            ) : (
+              <div className="border border-dashed border-slate-200 rounded-xl flex items-center justify-center text-slate-300 text-xs" style={{ aspectRatio: "210/297" }}>
+                企業を選択するとプレビュー表示
+              </div>
+            )}
+          </div>
 
           {/* 拡大プレビューモーダル */}
           {showFullPreview && previewInvoice && settings && (
