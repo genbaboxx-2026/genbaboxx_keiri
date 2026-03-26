@@ -591,6 +591,11 @@ function PreviewGallery({
     setTouchStart(null);
   };
 
+  const hasPrev = safeIndex > 0;
+  const hasNext = safeIndex < invoices.length - 1;
+  const prevInv = hasPrev ? invoices[safeIndex - 1] : null;
+  const nextInv = hasNext ? invoices[safeIndex + 1] : null;
+
   return (
     <div>
       {/* 上部: 企業名 + ページ */}
@@ -606,37 +611,39 @@ function PreviewGallery({
         </div>
       </div>
 
-      {/* スライド領域 */}
+      {/* カードスタック領域 */}
       <div
         className="relative flex items-center justify-center"
+        style={{ minHeight: "calc(70vh + 48px)" }}
         onTouchStart={handleTouchStart}
         onTouchEnd={handleTouchEnd}
       >
         {/* 左ボタン */}
         <button
-          className="absolute left-0 z-10 w-10 h-10 flex items-center justify-center bg-white border border-slate-200 rounded-full shadow-sm text-slate-500 hover:text-slate-800 cursor-pointer disabled:opacity-20 disabled:cursor-default"
-          disabled={safeIndex === 0}
+          className="absolute left-2 z-20 w-10 h-10 flex items-center justify-center bg-white border border-slate-200 rounded-full shadow text-slate-500 hover:text-slate-800 cursor-pointer disabled:opacity-20 disabled:cursor-default"
+          style={{ top: "50%" , transform: "translateY(-50%)" }}
+          disabled={!hasPrev}
           onClick={goPrev}
         >
           ←
         </button>
 
-        {/* カード */}
-        <div className="flex justify-center w-full px-14">
-          <div
-            className={`transition-all duration-300 ease-out ${
-              slideDir === "left"
-                ? "animate-slide-left"
-                : slideDir === "right"
-                ? "animate-slide-right"
-                : ""
-            }`}
-            style={{ maxHeight: "70vh", width: "auto" }}
-          >
-            <div className="bg-slate-100 rounded-2xl p-6 shadow-inner">
-              <div style={{ height: "70vh", aspectRatio: "210/297" }}>
+        {/* カードスタック */}
+        <div className="relative" style={{ height: "70vh", aspectRatio: "210/297" }}>
+          {/* 左後ろのカード（前のページ） */}
+          {prevInv && (
+            <div
+              className="absolute inset-0 transition-all duration-300 ease-out cursor-pointer"
+              style={{
+                transform: "translateX(-24px) scale(0.94)",
+                zIndex: 1,
+                filter: "brightness(0.97)",
+              }}
+              onClick={goPrev}
+            >
+              <div className="h-full w-full rounded-lg shadow-md overflow-hidden opacity-60 pointer-events-none">
                 <InvoicePreview
-                  inv={current}
+                  inv={prevInv}
                   settings={settings}
                   issueDate={issueDate}
                   month={month}
@@ -645,13 +652,56 @@ function PreviewGallery({
                 />
               </div>
             </div>
+          )}
+
+          {/* 右後ろのカード（次のページ） */}
+          {nextInv && (
+            <div
+              className="absolute inset-0 transition-all duration-300 ease-out cursor-pointer"
+              style={{
+                transform: "translateX(24px) scale(0.94)",
+                zIndex: 1,
+                filter: "brightness(0.97)",
+              }}
+              onClick={goNext}
+            >
+              <div className="h-full w-full rounded-lg shadow-md overflow-hidden opacity-60 pointer-events-none">
+                <InvoicePreview
+                  inv={nextInv}
+                  settings={settings}
+                  issueDate={issueDate}
+                  month={month}
+                  notes={notes}
+                  large
+                />
+              </div>
+            </div>
+          )}
+
+          {/* メインカード（現在のページ） */}
+          <div
+            key={safeIndex}
+            className="absolute inset-0 transition-all duration-300 ease-out animate-card-appear"
+            style={{ zIndex: 10 }}
+          >
+            <div className="h-full w-full rounded-lg shadow-xl overflow-hidden">
+              <InvoicePreview
+                inv={current}
+                settings={settings}
+                issueDate={issueDate}
+                month={month}
+                notes={notes}
+                large
+              />
+            </div>
           </div>
         </div>
 
         {/* 右ボタン */}
         <button
-          className="absolute right-0 z-10 w-10 h-10 flex items-center justify-center bg-white border border-slate-200 rounded-full shadow-sm text-slate-500 hover:text-slate-800 cursor-pointer disabled:opacity-20 disabled:cursor-default"
-          disabled={safeIndex === invoices.length - 1}
+          className="absolute right-2 z-20 w-10 h-10 flex items-center justify-center bg-white border border-slate-200 rounded-full shadow text-slate-500 hover:text-slate-800 cursor-pointer disabled:opacity-20 disabled:cursor-default"
+          style={{ top: "50%", transform: "translateY(-50%)" }}
+          disabled={!hasNext}
           onClick={goNext}
         >
           →
@@ -692,16 +742,11 @@ function PreviewGallery({
       </div>
 
       <style>{`
-        @keyframes slideLeft {
-          from { opacity: 0; transform: translateX(40px); }
-          to { opacity: 1; transform: translateX(0); }
+        @keyframes cardAppear {
+          from { opacity: 0.8; transform: scale(0.96); }
+          to { opacity: 1; transform: scale(1); }
         }
-        @keyframes slideRight {
-          from { opacity: 0; transform: translateX(-40px); }
-          to { opacity: 1; transform: translateX(0); }
-        }
-        .animate-slide-left { animation: slideLeft 0.3s ease-out; }
-        .animate-slide-right { animation: slideRight 0.3s ease-out; }
+        .animate-card-appear { animation: cardAppear 0.3s ease-out; }
       `}</style>
     </div>
   );
