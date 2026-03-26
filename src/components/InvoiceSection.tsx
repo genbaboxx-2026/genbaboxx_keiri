@@ -423,7 +423,7 @@ export function InvoiceSection({
           {/* 右: プレビュー（常にスペース確保） */}
           <div className="w-[340px] flex-shrink-0">
             {previewInvoice && settings ? (
-              <div className="relative">
+              <div className="relative" style={{ aspectRatio: "210/297" }}>
                 <button
                   className="absolute top-2 right-2 z-10 w-7 h-7 flex items-center justify-center bg-white border border-slate-300 rounded text-slate-500 hover:text-slate-800 cursor-pointer text-xs shadow-sm"
                   onClick={() => setShowFullPreview(true)}
@@ -1141,19 +1141,20 @@ function InvoicePreview({
   const visibleItems = inv.items.filter((it) => it.amount > 0 || it.description);
   const emptyRows = Math.max(0, 8 - visibleItems.length);
 
-  // Scale factor: large = 700x990 base, small = proportionally scaled
-  const scale = large ? 1 : 0.486; // ~340/700
-
-  const containerStyle: React.CSSProperties = large
-    ? { width: 700, height: 990 }
-    : { width: 700 * scale, height: 990 * scale };
-
   return (
     <div
       className={`border border-slate-300 rounded bg-white shadow-sm ${large ? "" : "sticky top-4"}`}
-      style={containerStyle}
+      style={{ width: "100%", height: "100%", overflow: "hidden", position: "relative" }}
     >
-      <div style={{ width: 700, height: 990, transform: `scale(${scale})`, transformOrigin: "top left", fontFamily: "'Noto Sans JP', sans-serif", padding: "42px 48px 34px", boxSizing: "border-box", fontSize: 13, color: "#1a1a1a", lineHeight: 1.65, overflow: "hidden", display: "flex", flexDirection: "column" }}>
+      <div style={{ width: 700, height: 990, transform: "scale(var(--inv-scale))", transformOrigin: "top left", fontFamily: "'Noto Sans JP', sans-serif", padding: "42px 48px 34px", boxSizing: "border-box", fontSize: 13, color: "#1a1a1a", lineHeight: 1.65, overflow: "hidden", display: "flex", flexDirection: "column", position: "absolute", top: 0, left: 0 } as React.CSSProperties}
+        ref={(el) => {
+          if (!el) return;
+          const parent = el.parentElement;
+          if (!parent) return;
+          const s = Math.min(parent.clientWidth / 700, parent.clientHeight / 990);
+          el.style.setProperty("--inv-scale", String(s));
+        }}
+      >
         {/* タイトル */}
         <div style={{ textAlign: "center", marginBottom: 28 }}>
           <div style={{ fontSize: 24, fontWeight: 700, letterSpacing: 8, display: "inline-block" }}>
