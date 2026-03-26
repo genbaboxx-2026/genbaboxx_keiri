@@ -257,7 +257,7 @@ export function CashflowPage({
                   return (
                     <td
                       key={m}
-                      className={`px-0 py-0 text-right tabular-nums border-b border-slate-100 ${m === currentMonth ? "month-current" : ""} ${!isEditing ? "cursor-pointer hover:bg-blue-50" : ""}`}
+                      className={`px-0 py-0 text-right tabular-nums border-b border-slate-100 ${!isEditing ? "cursor-pointer hover:bg-blue-50" : ""}`}
                       onClick={() => !isEditing && startEdit(name, m)}
                     >
                       {isEditing ? (
