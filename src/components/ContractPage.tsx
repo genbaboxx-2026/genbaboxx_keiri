@@ -232,11 +232,8 @@ function MonthlyRevenueTable({
             );
           })}
           {/* 合計行 */}
-          <tr style={{ background: product.id === "bakusoq" ? "#dbeafe" : product.id === "ninkuboxx" ? "#ede9fe" : "#d1fae5" }}>
-            <td
-              className="px-3 py-2.5 font-extrabold sticky left-0 z-10"
-              style={{ background: product.id === "bakusoq" ? "#dbeafe" : product.id === "ninkuboxx" ? "#ede9fe" : "#d1fae5" }}
-            >
+          <tr className="bg-slate-50">
+            <td className="px-3 py-2.5 font-extrabold sticky left-0 bg-slate-50 z-10">
               合計
             </td>
             {allMonths.map((m) => {
@@ -244,11 +241,8 @@ function MonthlyRevenueTable({
               return (
                 <td
                   key={m}
-                  className="px-2 py-2.5 text-right font-extrabold tabular-nums"
-                  style={{
-                    color: product.hex,
-                    background: m === currentMonth ? "#bfdbfe" : undefined,
-                  }}
+                  className={`px-2 py-2.5 text-right font-extrabold tabular-nums ${m === currentMonth ? "month-current" : ""}`}
+                  style={{ color: product.hex }}
                 >
                   {total > 0 ? formatNumber(total) : "—"}
                 </td>
