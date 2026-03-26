@@ -65,7 +65,8 @@ export async function generateInvoicePDF(
   settings: Settings,
   invoices: CompanyInvoice[],
   invoiceMonth: string,
-  templateNotes?: string
+  templateNotes?: string,
+  dueDate?: string
 ) {
   const { jsPDF } = await import("jspdf");
 
@@ -118,6 +119,13 @@ export async function generateInvoicePDF(
     doc.setTextColor(30, 30, 30);
     doc.text(issueDate, pageW - mR, ry, { align: "right" });
     ry += 6;
+    if (dueDate) {
+      doc.setTextColor(80, 80, 80);
+      doc.text("入金期日", rightBlockX, ry);
+      doc.setTextColor(30, 30, 30);
+      doc.text(dueDate.replace(/-/g, "/"), pageW - mR, ry, { align: "right" });
+      ry += 6;
+    }
     if (settings.invoice_number) {
       doc.setTextColor(80, 80, 80);
       doc.text("登録番号", rightBlockX, ry);

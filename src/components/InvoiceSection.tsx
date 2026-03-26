@@ -37,6 +37,7 @@ export function InvoiceSection({
   >({});
   const [generating, setGenerating] = useState(false);
   const [initialized, setInitialized] = useState(false);
+  const [dueDate, setDueDate] = useState("");
   const [showSendConfirm, setShowSendConfirm] = useState(false);
   const [emailSubject, setEmailSubject] = useState("");
   const [emailBody, setEmailBody] = useState("");
@@ -195,7 +196,7 @@ export function InvoiceSection({
     setGenerating(true);
     try {
       const { generateInvoicePDF } = await import("@/lib/invoice");
-      await generateInvoicePDF(settings, selectedInvoices, selectedMonth, invoiceTemplate?.notes);
+      await generateInvoicePDF(settings, selectedInvoices, selectedMonth, invoiceTemplate?.notes, dueDate);
       setShowSendConfirm(false);
     } catch (e) {
       console.error(e);
@@ -210,7 +211,7 @@ export function InvoiceSection({
     setGenerating(true);
     try {
       const { generateInvoicePDF } = await import("@/lib/invoice");
-      await generateInvoicePDF(settings, [inv], selectedMonth, invoiceTemplate?.notes);
+      await generateInvoicePDF(settings, [inv], selectedMonth, invoiceTemplate?.notes, dueDate);
     } catch (e) {
       console.error(e);
       alert("PDF生成に失敗しました");
@@ -252,19 +253,30 @@ export function InvoiceSection({
         )}
       </div>
 
-      <div className="mb-4 flex items-center gap-3">
-        <label className="text-sm font-semibold text-slate-600">対象月:</label>
-        <select
-          className="px-3 py-2 border border-slate-200 rounded-lg text-sm"
-          value={selectedMonth}
-          onChange={(e) => handleMonthChange(e.target.value)}
-        >
-          {allMonths.map((m) => (
-            <option key={m} value={m}>
-              {m.split("-")[0]}年{parseInt(m.split("-")[1])}月
-            </option>
-          ))}
-        </select>
+      <div className="mb-4 flex items-center gap-6">
+        <div className="flex items-center gap-3">
+          <label className="text-sm font-semibold text-slate-600">対象月:</label>
+          <select
+            className="px-3 py-2 border border-slate-200 rounded-lg text-sm"
+            value={selectedMonth}
+            onChange={(e) => handleMonthChange(e.target.value)}
+          >
+            {allMonths.map((m) => (
+              <option key={m} value={m}>
+                {m.split("-")[0]}年{parseInt(m.split("-")[1])}月
+              </option>
+            ))}
+          </select>
+        </div>
+        <div className="flex items-center gap-3">
+          <label className="text-sm font-semibold text-slate-600">入金期日:</label>
+          <input
+            type="date"
+            className="px-3 py-2 border border-slate-200 rounded-lg text-sm outline-none focus:border-blue-400"
+            value={dueDate}
+            onChange={(e) => setDueDate(e.target.value)}
+          />
+        </div>
       </div>
 
       {!settings?.company_name && (
@@ -384,6 +396,7 @@ export function InvoiceSection({
                   issueDate={issueDate}
                   month={selectedMonth}
                   notes={invoiceTemplate?.notes}
+                  dueDate={dueDate}
                 />
               </div>
             </div>
@@ -411,6 +424,7 @@ export function InvoiceSection({
                   issueDate={issueDate}
                   month={selectedMonth}
                   notes={invoiceTemplate?.notes}
+                  dueDate={dueDate}
                   large
                 />
               </div>
@@ -425,6 +439,7 @@ export function InvoiceSection({
           issueDate={issueDate}
           month={selectedMonth}
           notes={invoiceTemplate?.notes}
+          dueDate={dueDate}
           currentIndex={previewIndex}
           onChangeIndex={setPreviewIndex}
           onDownloadSingle={handleGenerateSingle}
@@ -599,6 +614,7 @@ function PreviewGallery({
   issueDate,
   month,
   notes,
+  dueDate,
   currentIndex,
   onChangeIndex,
   onDownloadSingle,
@@ -612,6 +628,7 @@ function PreviewGallery({
   issueDate: string;
   month: string;
   notes?: string;
+  dueDate?: string;
   currentIndex: number;
   onChangeIndex: (i: number) => void;
   onDownloadSingle: (inv: CompanyInvoice) => void;
@@ -733,6 +750,7 @@ function PreviewGallery({
                   issueDate={issueDate}
                   month={month}
                   notes={notes}
+                  dueDate={dueDate}
                   large
                 />
               </div>
@@ -763,6 +781,7 @@ function PreviewGallery({
                   issueDate={issueDate}
                   month={month}
                   notes={notes}
+                  dueDate={dueDate}
                   large
                 />
               </div>
@@ -786,6 +805,7 @@ function PreviewGallery({
                 issueDate={issueDate}
                 month={month}
                 notes={notes}
+                dueDate={dueDate}
                 large
               />
             </div>
@@ -953,12 +973,14 @@ function CompanyRow({
                       <td className="px-0.5 py-1">
                         <input
                           className="w-full px-1 py-1 border border-slate-200 rounded bg-white text-xs text-center outline-none focus:border-blue-400 min-w-0"
-                          type="number"
+                          inputMode="numeric"
                           value={item.quantity || ""}
-                          onChange={(e) => isBase
-                            ? onUpdateBaseItem(i, "quantity", e.target.value)
-                            : onUpdateItem(i, "quantity", e.target.value)
-                          }
+                          onChange={(e) => {
+                            const v = e.target.value.replace(/[^0-9]/g, "");
+                            isBase
+                              ? onUpdateBaseItem(i, "quantity", v)
+                              : onUpdateItem(i, "quantity", v);
+                          }}
                         />
                       </td>
                       <td className="px-0.5 py-1">
@@ -974,12 +996,14 @@ function CompanyRow({
                       <td className="px-0.5 py-1">
                         <input
                           className="w-full px-1 py-1 border border-slate-200 rounded bg-white text-xs text-right outline-none focus:border-blue-400 min-w-0"
-                          type="number"
-                          value={item.unitPrice || ""}
-                          onChange={(e) => isBase
-                            ? onUpdateBaseItem(i, "unitPrice", e.target.value)
-                            : onUpdateItem(i, "unitPrice", e.target.value)
-                          }
+                          inputMode="numeric"
+                          value={item.unitPrice ? formatNumber(item.unitPrice) : ""}
+                          onChange={(e) => {
+                            const v = e.target.value.replace(/[^0-9]/g, "");
+                            isBase
+                              ? onUpdateBaseItem(i, "unitPrice", v)
+                              : onUpdateItem(i, "unitPrice", v);
+                          }}
                         />
                       </td>
                       <td className="px-0.5 py-1">
@@ -1041,6 +1065,7 @@ function InvoicePreview({
   issueDate,
   month,
   notes,
+  dueDate,
   large,
 }: {
   inv: CompanyInvoice;
@@ -1048,6 +1073,7 @@ function InvoicePreview({
   issueDate: string;
   month: string;
   notes?: string;
+  dueDate?: string;
   large?: boolean;
 }) {
   const visibleItems = inv.items.filter((it) => it.amount > 0 || it.description);
@@ -1077,6 +1103,7 @@ function InvoicePreview({
           </div>
           <div className={`text-right ${baseText} text-slate-600`}>
             <div>請求日　{issueDate}</div>
+            {dueDate && <div>入金期日　{dueDate.replace(/-/g, "/")}</div>}
             {settings.invoice_number && (
               <div>登録番号　{settings.invoice_number}</div>
             )}
