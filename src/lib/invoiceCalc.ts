@@ -1,4 +1,4 @@
-import type { Contract, Company, InvoiceTemplate } from "./database.types";
+import type { Contract, Company, InvoiceTemplate, PresetItem } from "./database.types";
 import {
   makeBillingStart,
   billingMonths,
@@ -112,14 +112,34 @@ export function getInvoicesForMonth(
     }
   }
 
+  // プリセットカスタム項目を各企業に追加
+  let presets: PresetItem[] = [];
+  try {
+    if (template?.preset_items) {
+      presets = JSON.parse(template.preset_items);
+    }
+  } catch { /* ignore */ }
+
   const invoices: CompanyInvoice[] = [];
   for (const [companyId, items] of byCompany) {
-    const subtotal = items.reduce((s, i) => s + i.amount, 0);
+    // プリセット項目を追加（金額が設定されているもののみ）
+    const allItems = [...items];
+    for (const preset of presets) {
+      if (preset.description && preset.defaultUnitPrice > 0) {
+        allItems.push({
+          description: preset.description,
+          quantity: preset.defaultQuantity || 1,
+          unitPrice: preset.defaultUnitPrice,
+          amount: (preset.defaultQuantity || 1) * preset.defaultUnitPrice,
+        });
+      }
+    }
+    const subtotal = allItems.reduce((s, i) => s + i.amount, 0);
     const tax = Math.floor(subtotal * 0.1);
     invoices.push({
       companyId,
       companyName: companyMap.get(companyId) || "不明",
-      items,
+      items: allItems,
       subtotal,
       tax,
       total: subtotal + tax,

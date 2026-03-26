@@ -42,6 +42,12 @@ export interface Contract {
   updated_at: string;
 }
 
+export interface PresetItem {
+  description: string;
+  defaultQuantity: number;
+  defaultUnitPrice: number;
+}
+
 export interface InvoiceTemplate {
   id: string;
   product_type: ProductType;
@@ -49,6 +55,7 @@ export interface InvoiceTemplate {
   initial_label: string;
   option_label: string;
   notes: string;
+  preset_items: string; // JSON string of PresetItem[]
   created_at: string;
   updated_at: string;
 }
