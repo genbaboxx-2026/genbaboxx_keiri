@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import type { Company, Contract, ProductType, Expense } from "@/lib/database.types";
 import { PRODUCTS } from "@/lib/constants";
 import {
@@ -76,6 +76,23 @@ export function CashflowPage({
   const [showNewRow, setShowNewRow] = useState(false);
 
   const currentMonth = getCurrentMonth();
+  const scrollRef = useRef<HTMLDivElement>(null);
+
+  // 1ヶ月前の位置へ自動スクロール
+  const prevMonth = (() => {
+    const now = new Date();
+    const d = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+  })();
+
+  useEffect(() => {
+    const container = scrollRef.current;
+    if (!container) return;
+    const cell = container.querySelector<HTMLElement>("[data-scroll-target]");
+    if (cell) {
+      container.scrollLeft = cell.offsetLeft - 160;
+    }
+  }, [allMonths]);
 
   const toggleProduct = (pid: string) => {
     setExpandedProducts((prev) => {
@@ -147,7 +164,7 @@ export function CashflowPage({
         ))}
       </div>
 
-      <div className="overflow-x-auto rounded-xl border border-slate-200">
+      <div ref={scrollRef} className="overflow-x-auto rounded-xl border border-slate-200">
         <table className="w-full border-collapse text-xs">
           <thead>
             <tr className="bg-slate-50">
@@ -157,6 +174,7 @@ export function CashflowPage({
               {allMonths.map((m) => (
                 <th
                   key={m}
+                  {...(m === prevMonth ? { "data-scroll-target": true } : {})}
                   className={`px-2 py-2.5 text-right font-semibold text-slate-500 border-b-2 border-slate-200 whitespace-nowrap min-w-[90px] ${m === currentMonth ? "month-current" : ""}`}
                 >
                   {parseInt(m.split("-")[1])}月<br />
