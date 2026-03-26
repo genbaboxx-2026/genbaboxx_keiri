@@ -32,6 +32,9 @@ export function InvoiceSection({
   const [customItems, setCustomItems] = useState<
     Record<string, InvoiceLineItem[]>
   >({});
+  const [baseOverrides, setBaseOverrides] = useState<
+    Record<string, Record<number, Partial<InvoiceLineItem>>>
+  >({});
   const [generating, setGenerating] = useState(false);
   const [initialized, setInitialized] = useState(false);
 
@@ -44,13 +47,23 @@ export function InvoiceSection({
   const invoices: CompanyInvoice[] = useMemo(
     () =>
       baseInvoices.map((inv) => {
+        const overrides = baseOverrides[inv.companyId] || {};
+        const baseItems = inv.items.map((item, idx) => {
+          const ov = overrides[idx];
+          if (!ov) return item;
+          const merged = { ...item, ...ov };
+          if (ov.quantity !== undefined || ov.unitPrice !== undefined) {
+            merged.amount = (merged.quantity || 0) * (merged.unitPrice || 0);
+          }
+          return merged;
+        });
         const extra = customItems[inv.companyId] || [];
-        const allItems = [...inv.items, ...extra];
+        const allItems = [...baseItems, ...extra];
         const subtotal = allItems.reduce((s, i) => s + i.amount, 0);
         const tax = allItems.reduce((s, i) => s + Math.floor(i.amount * ((i.taxRate ?? 10) / 100)), 0);
         return { ...inv, items: allItems, subtotal, tax, total: subtotal + tax };
       }),
-    [baseInvoices, customItems]
+    [baseInvoices, customItems, baseOverrides]
   );
 
   if (!initialized && invoices.length > 0) {
@@ -61,6 +74,7 @@ export function InvoiceSection({
   const handleMonthChange = (m: string) => {
     setSelectedMonth(m);
     setCustomItems({});
+    setBaseOverrides({});
     setExpandedId(null);
     setTimeout(() => {
       const inv = getInvoicesForMonth(m, contracts, companies, invoiceTemplate);
@@ -116,6 +130,25 @@ export function InvoiceSection({
       }
       items[index] = item;
       return { ...prev, [companyId]: items };
+    });
+  };
+
+  const updateBaseItem = (
+    companyId: string,
+    index: number,
+    field: keyof InvoiceLineItem,
+    value: string | number
+  ) => {
+    setBaseOverrides((prev) => {
+      const companyOv = { ...(prev[companyId] || {}) };
+      const itemOv = { ...(companyOv[index] || {}) };
+      if (field === "description" || field === "unit") {
+        (itemOv as Record<string, unknown>)[field] = value;
+      } else {
+        (itemOv as Record<string, unknown>)[field] = Number(value) || 0;
+      }
+      companyOv[index] = itemOv;
+      return { ...prev, [companyId]: companyOv };
     });
   };
 
@@ -219,6 +252,9 @@ export function InvoiceSection({
                         onAddItem={() => addCustomItem(inv.companyId)}
                         onUpdateItem={(i, f, v) =>
                           updateCustomItem(inv.companyId, i, f, v)
+                        }
+                        onUpdateBaseItem={(i, f, v) =>
+                          updateBaseItem(inv.companyId, i, f, v)
                         }
                         onRemoveItem={(i) =>
                           removeCustomItem(inv.companyId, i)
@@ -333,6 +369,11 @@ function CompanyRow({
     field: keyof InvoiceLineItem,
     value: string | number
   ) => void;
+  onUpdateBaseItem: (
+    index: number,
+    field: keyof InvoiceLineItem,
+    value: string | number
+  ) => void;
   onRemoveItem: (index: number) => void;
 }) {
   const baseItemCount = inv.items.length - extras.length;
@@ -377,85 +418,90 @@ function CompanyRow({
                 <thead>
                   <tr className="bg-slate-50 border-b border-slate-200">
                     <th className="w-8 px-2 py-2 text-center text-slate-400">#</th>
-                    <th className="px-3 py-2 text-left font-semibold text-slate-500">摘要</th>
-                    <th className="px-3 py-2 text-right font-semibold text-slate-500 w-14">数量</th>
-                    <th className="px-3 py-2 text-center font-semibold text-slate-500 w-14">単位</th>
-                    <th className="px-3 py-2 text-right font-semibold text-slate-500 w-22">単価</th>
-                    <th className="px-3 py-2 text-center font-semibold text-slate-500 w-16">税率</th>
-                    <th className="px-3 py-2 text-right font-semibold text-slate-500 w-24">金額</th>
-                    <th className="w-8" />
+                    <th className="px-3 py-2 text-left font-semibold text-slate-500" style={{ width: "40%" }}>摘要</th>
+                    <th className="px-2 py-2 text-center font-semibold text-slate-500" style={{ width: "8%" }}>数量</th>
+                    <th className="px-2 py-2 text-center font-semibold text-slate-500" style={{ width: "8%" }}>単位</th>
+                    <th className="px-2 py-2 text-right font-semibold text-slate-500" style={{ width: "14%" }}>単価</th>
+                    <th className="px-2 py-2 text-center font-semibold text-slate-500" style={{ width: "8%" }}>税率</th>
+                    <th className="px-2 py-2 text-right font-semibold text-slate-500" style={{ width: "14%" }}>金額</th>
+                    <th className="w-7" />
                   </tr>
                 </thead>
                 <tbody>
-                  {inv.items.slice(0, baseItemCount).map((item, i) => (
-                    <tr key={i} className="border-b border-slate-100">
-                      <td className="px-2 py-2.5 text-center text-slate-300">{i + 1}</td>
-                      <td className="px-3 py-2.5 text-slate-700">{item.description}</td>
-                      <td className="px-3 py-2.5 text-right tabular-nums">{item.quantity}</td>
-                      <td className="px-3 py-2.5 text-center text-slate-500">{item.unit}</td>
-                      <td className="px-3 py-2.5 text-right tabular-nums">¥{formatNumber(item.unitPrice)}</td>
-                      <td className="px-3 py-2.5 text-center text-slate-500">{item.taxRate}%</td>
-                      <td className="px-3 py-2.5 text-right tabular-nums font-semibold">¥{formatNumber(item.amount)}</td>
-                      <td />
-                    </tr>
-                  ))}
-                  {extras.map((item, i) => (
-                    <tr key={`custom-${i}`} className="border-b border-slate-100 bg-blue-50/30">
-                      <td className="px-2 py-1.5 text-center text-blue-400">{baseItemCount + i + 1}</td>
+                  {[...inv.items.slice(0, baseItemCount).map((item, i) => ({ item, i, isBase: true })),
+                    ...extras.map((item, i) => ({ item, i, isBase: false }))].map(({ item, i, isBase }) => (
+                    <tr key={isBase ? i : `c-${i}`} className={`border-b border-slate-100 ${!isBase ? "bg-blue-50/30" : ""}`}>
+                      <td className={`px-2 py-1.5 text-center ${isBase ? "text-slate-300" : "text-blue-400"}`}>
+                        {isBase ? i + 1 : baseItemCount + i + 1}
+                      </td>
                       <td className="px-2 py-1.5">
                         <input
                           className="w-full px-2 py-1.5 border border-slate-200 rounded bg-white text-xs outline-none focus:border-blue-400"
-                          placeholder="品目名"
                           value={item.description}
-                          onChange={(e) => onUpdateItem(i, "description", e.target.value)}
+                          onChange={(e) => isBase
+                            ? onUpdateBaseItem(i, "description", e.target.value)
+                            : onUpdateItem(i, "description", e.target.value)
+                          }
                         />
                       </td>
-                      <td className="px-2 py-1.5">
-                        <input
-                          className="w-full px-2 py-1.5 border border-slate-200 rounded bg-white text-xs text-right outline-none focus:border-blue-400"
-                          type="number"
-                          value={item.quantity || ""}
-                          onChange={(e) => onUpdateItem(i, "quantity", e.target.value)}
-                        />
-                      </td>
-                      <td className="px-2 py-1.5">
+                      <td className="px-1 py-1.5">
                         <input
                           className="w-full px-1 py-1.5 border border-slate-200 rounded bg-white text-xs text-center outline-none focus:border-blue-400"
-                          placeholder="単位"
-                          value={item.unit || ""}
-                          onChange={(e) => onUpdateItem(i, "unit", e.target.value)}
+                          type="number"
+                          value={item.quantity || ""}
+                          onChange={(e) => isBase
+                            ? onUpdateBaseItem(i, "quantity", e.target.value)
+                            : onUpdateItem(i, "quantity", e.target.value)
+                          }
                         />
                       </td>
-                      <td className="px-2 py-1.5">
+                      <td className="px-1 py-1.5">
+                        <input
+                          className="w-full px-1 py-1.5 border border-slate-200 rounded bg-white text-xs text-center outline-none focus:border-blue-400"
+                          value={item.unit || ""}
+                          onChange={(e) => isBase
+                            ? onUpdateBaseItem(i, "unit", e.target.value)
+                            : onUpdateItem(i, "unit", e.target.value)
+                          }
+                        />
+                      </td>
+                      <td className="px-1 py-1.5">
                         <input
                           className="w-full px-2 py-1.5 border border-slate-200 rounded bg-white text-xs text-right outline-none focus:border-blue-400"
                           type="number"
-                          placeholder="単価"
                           value={item.unitPrice || ""}
-                          onChange={(e) => onUpdateItem(i, "unitPrice", e.target.value)}
+                          onChange={(e) => isBase
+                            ? onUpdateBaseItem(i, "unitPrice", e.target.value)
+                            : onUpdateItem(i, "unitPrice", e.target.value)
+                          }
                         />
                       </td>
-                      <td className="px-2 py-1.5">
+                      <td className="px-1 py-1.5">
                         <select
-                          className="w-full px-1 py-1.5 border border-slate-200 rounded bg-white text-xs outline-none focus:border-blue-400"
+                          className="w-full px-0.5 py-1.5 border border-slate-200 rounded bg-white text-xs outline-none focus:border-blue-400"
                           value={item.taxRate ?? 10}
-                          onChange={(e) => onUpdateItem(i, "taxRate", Number(e.target.value))}
+                          onChange={(e) => isBase
+                            ? onUpdateBaseItem(i, "taxRate", Number(e.target.value))
+                            : onUpdateItem(i, "taxRate", Number(e.target.value))
+                          }
                         >
                           <option value={10}>10%</option>
                           <option value={8}>8%</option>
                           <option value={0}>0%</option>
                         </select>
                       </td>
-                      <td className="px-3 py-1.5 text-right tabular-nums font-semibold">
+                      <td className="px-2 py-1.5 text-right tabular-nums font-semibold text-nowrap">
                         ¥{formatNumber(item.amount)}
                       </td>
                       <td className="px-1 py-1.5">
-                        <button
-                          className="text-red-400 hover:text-red-600 cursor-pointer bg-transparent border-none"
-                          onClick={() => onRemoveItem(i)}
-                        >
-                          ✕
-                        </button>
+                        {!isBase && (
+                          <button
+                            className="text-red-400 hover:text-red-600 cursor-pointer bg-transparent border-none"
+                            onClick={() => onRemoveItem(i)}
+                          >
+                            ✕
+                          </button>
+                        )}
                       </td>
                     </tr>
                   ))}
