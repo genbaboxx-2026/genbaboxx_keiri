@@ -28,6 +28,7 @@ export function InvoiceSection({
   const [selectedMonth, setSelectedMonth] = useState(currentMonth);
   const [checked, setChecked] = useState<Set<string>>(new Set());
   const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [showFullPreview, setShowFullPreview] = useState(false);
   const [customItems, setCustomItems] = useState<
     Record<string, InvoiceLineItem[]>
   >({});
@@ -251,14 +252,51 @@ export function InvoiceSection({
 
           {/* 右: プレビュー */}
           {previewInvoice && settings && (
-            <div className="w-[380px] flex-shrink-0">
-              <InvoicePreview
-                inv={previewInvoice}
-                settings={settings}
-                issueDate={issueDate}
-                month={selectedMonth}
-                notes={invoiceTemplate?.notes}
-              />
+            <div className="w-[340px] flex-shrink-0">
+              <div className="relative">
+                <button
+                  className="absolute top-2 right-2 z-10 w-7 h-7 flex items-center justify-center bg-white border border-slate-300 rounded text-slate-500 hover:text-slate-800 cursor-pointer text-xs shadow-sm"
+                  onClick={() => setShowFullPreview(true)}
+                  title="拡大表示"
+                >
+                  ⛶
+                </button>
+                <InvoicePreview
+                  inv={previewInvoice}
+                  settings={settings}
+                  issueDate={issueDate}
+                  month={selectedMonth}
+                  notes={invoiceTemplate?.notes}
+                />
+              </div>
+            </div>
+          )}
+
+          {/* 拡大プレビューモーダル */}
+          {showFullPreview && previewInvoice && settings && (
+            <div
+              className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm"
+              onClick={() => setShowFullPreview(false)}
+            >
+              <div
+                className="w-[600px] max-h-[90vh] overflow-y-auto"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <button
+                  className="absolute top-4 right-4 w-8 h-8 flex items-center justify-center bg-white rounded-full text-slate-500 hover:text-slate-800 cursor-pointer text-lg shadow"
+                  onClick={() => setShowFullPreview(false)}
+                >
+                  ✕
+                </button>
+                <InvoicePreview
+                  inv={previewInvoice}
+                  settings={settings}
+                  issueDate={issueDate}
+                  month={selectedMonth}
+                  notes={invoiceTemplate?.notes}
+                  large
+                />
+              </div>
             </div>
           )}
         </div>
@@ -425,32 +463,41 @@ function InvoicePreview({
   issueDate,
   month,
   notes,
+  large,
 }: {
   inv: CompanyInvoice;
   settings: Settings;
   issueDate: string;
   month: string;
   notes?: string;
+  large?: boolean;
 }) {
   const visibleItems = inv.items.filter((it) => it.amount > 0 || it.description);
   const emptyRows = Math.max(0, 8 - visibleItems.length);
+  const baseText = large ? "text-[11px]" : "text-[8px]";
+  const titleSize = large ? "text-xl" : "text-base";
+  const nameSize = large ? "text-sm" : "text-[10px]";
+  const amountSize = large ? "text-xl" : "text-[14px]";
+  const companySize = large ? "text-[13px]" : "text-[9px]";
+  const smallText = large ? "text-[10px]" : "text-[7px]";
+  const padding = large ? "p-8" : "p-4";
 
   return (
-    <div className="border border-slate-300 rounded bg-white shadow-sm sticky top-4 text-[9px] leading-relaxed" style={{ aspectRatio: "210/297" }}>
-      <div className="p-5 h-full flex flex-col">
+    <div className={`border border-slate-300 rounded bg-white shadow-sm ${large ? "" : "sticky top-4"} ${baseText} leading-relaxed`} style={{ aspectRatio: "210/297" }}>
+      <div className={`${padding} h-full flex flex-col overflow-hidden`}>
         {/* タイトル */}
         <div className="text-center mb-4">
-          <div className="text-base font-bold">請求書</div>
+          <div className={`${titleSize} font-bold`}>請求書</div>
           <div className="w-10 mx-auto border-b border-slate-800 mt-1" />
         </div>
 
         {/* 上部: 請求先 + 自社情報 */}
         <div className="flex justify-between mb-4">
           <div>
-            <div className="text-[11px] font-bold">{inv.companyName} 御中</div>
+            <div className={`${nameSize} font-bold`}>{inv.companyName} 御中</div>
             <div className="border-b border-slate-800 mt-0.5 w-28" />
           </div>
-          <div className="text-right text-[8px] text-slate-600">
+          <div className={`text-right ${baseText} text-slate-600`}>
             <div>請求日　{issueDate}</div>
             {settings.invoice_number && (
               <div>登録番号　{settings.invoice_number}</div>
@@ -459,8 +506,8 @@ function InvoicePreview({
         </div>
 
         {/* 自社情報 右寄せ */}
-        <div className="text-right text-[8px] mb-3">
-          <div className="font-bold text-[10px]">{settings.company_name}</div>
+        <div className={`text-right ${baseText} mb-3`}>
+          <div className={`font-bold ${companySize}`}>{settings.company_name}</div>
           {settings.company_address && (
             <div className="whitespace-pre-line text-slate-600">{settings.company_address}</div>
           )}
@@ -470,14 +517,14 @@ function InvoicePreview({
         </div>
 
         {/* 「下記の通り...」 */}
-        <div className="text-[8px] text-slate-600 mb-3">
+        <div className={`${baseText} text-slate-600 mb-3`}>
           下記の通りご請求申し上げます。
         </div>
 
         {/* 請求金額 */}
         <div className="mb-4">
-          <div className="text-[8px] text-slate-500 mb-1">請求金額</div>
-          <div className="text-[16px] font-bold">
+          <div className={`${baseText} text-slate-500 mb-1`}>請求金額</div>
+          <div className={`${amountSize} font-bold`}>
             {formatNumber(inv.total)}円
           </div>
           <div className="border-b-2 border-slate-800 w-24 mt-0.5" />
@@ -517,7 +564,7 @@ function InvoicePreview({
         {/* 下部: 振込先 + 合計 */}
         <div className="flex justify-between mt-auto">
           {/* 左: 振込先 */}
-          <div className="text-[8px]">
+          <div className={baseText}>
             {settings.bank_info && (
               <div>
                 <div className="text-slate-500 mb-0.5">振込先</div>
@@ -527,7 +574,7 @@ function InvoicePreview({
           </div>
 
           {/* 右: 合計テーブル */}
-          <table className="border-collapse border border-slate-400 text-[8px]">
+          <table className={`border-collapse border border-slate-400 ${baseText}`}>
             <tbody>
               <tr>
                 <td className="border border-slate-400 px-2 py-0.5">小計</td>
@@ -542,12 +589,12 @@ function InvoicePreview({
                 <td className="border border-slate-400 px-2 py-0.5 text-right">{formatNumber(inv.total)}円</td>
               </tr>
               <tr>
-                <td className="border border-slate-400 px-2 py-0.5 text-[7px]">内訳 10%対象(税抜)</td>
-                <td className="border border-slate-400 px-2 py-0.5 text-right text-[7px]">{formatNumber(inv.subtotal)}円</td>
+                <td className={`border border-slate-400 px-2 py-0.5 ${smallText}`}>内訳 10%対象(税抜)</td>
+                <td className={`border border-slate-400 px-2 py-0.5 text-right ${smallText}`}>{formatNumber(inv.subtotal)}円</td>
               </tr>
               <tr>
-                <td className="border border-slate-400 px-2 py-0.5 text-[7px]">　　 10%消費税</td>
-                <td className="border border-slate-400 px-2 py-0.5 text-right text-[7px]">{formatNumber(inv.tax)}円</td>
+                <td className={`border border-slate-400 px-2 py-0.5 ${smallText}`}>　　 10%消費税</td>
+                <td className={`border border-slate-400 px-2 py-0.5 text-right ${smallText}`}>{formatNumber(inv.tax)}円</td>
               </tr>
             </tbody>
           </table>
@@ -555,7 +602,7 @@ function InvoicePreview({
 
         {/* 備考 */}
         {notes && (
-          <div className="mt-2 border border-slate-400 px-2 py-1.5 text-[8px]">
+          <div className={`mt-2 border border-slate-400 px-2 py-1.5 ${baseText}`}>
             <div className="text-slate-500 mb-0.5">備考</div>
             <div className="whitespace-pre-line">{notes}</div>
           </div>
