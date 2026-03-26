@@ -37,12 +37,15 @@ export function InvoiceSection({
   >({});
   const [generating, setGenerating] = useState(false);
   const [initialized, setInitialized] = useState(false);
-  const getLastDay = (month: string) => {
+  const getLastBusinessDay = (month: string) => {
     const [y, m] = month.split("-").map(Number);
-    const last = new Date(y, m, 0).getDate();
-    return `${y}-${String(m).padStart(2, "0")}-${String(last).padStart(2, "0")}`;
+    const d = new Date(y, m, 0); // 月末日
+    const dow = d.getDay();
+    if (dow === 0) d.setDate(d.getDate() - 2); // 日曜→金曜
+    if (dow === 6) d.setDate(d.getDate() - 1); // 土曜→金曜
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
   };
-  const [dueDate, setDueDate] = useState(() => getLastDay(currentMonth));
+  const [dueDate, setDueDate] = useState(() => getLastBusinessDay(currentMonth));
   const [dueDates, setDueDates] = useState<Record<string, string>>({});
   const [showSendConfirm, setShowSendConfirm] = useState(false);
   const [emailSubject, setEmailSubject] = useState("");
@@ -89,7 +92,7 @@ export function InvoiceSection({
     setCustomItems({});
     setBaseOverrides({});
     setExpandedId(null);
-    setDueDate(getLastDay(m));
+    setDueDate(getLastBusinessDay(m));
     setDueDates({});
     setTimeout(() => {
       const inv = getInvoicesForMonth(m, contracts, companies, invoiceTemplate);
