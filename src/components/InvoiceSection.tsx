@@ -367,86 +367,85 @@ function CompanyRow({
 
       {isExpanded && (
         <tr>
-          <td colSpan={3} className="px-6 py-3 bg-slate-50/70">
-            <div className="space-y-1.5">
-              {/* 自動計算された項目（読み取り専用） */}
-              {inv.items.slice(0, baseItemCount).map((item, i) => (
-                <div
-                  key={i}
-                  className="flex items-center gap-2 text-xs text-slate-600"
+          <td colSpan={3} className="p-0">
+            <div className="border-t border-slate-200">
+              <table className="w-full text-xs">
+                <thead>
+                  <tr className="bg-slate-50 border-b border-slate-200">
+                    <th className="w-8 px-2 py-2 text-center text-slate-400">#</th>
+                    <th className="px-3 py-2 text-left font-semibold text-slate-500">摘要</th>
+                    <th className="px-3 py-2 text-right font-semibold text-slate-500 w-16">数量</th>
+                    <th className="px-3 py-2 text-right font-semibold text-slate-500 w-24">単価</th>
+                    <th className="px-3 py-2 text-right font-semibold text-slate-500 w-28">金額</th>
+                    <th className="w-8" />
+                  </tr>
+                </thead>
+                <tbody>
+                  {inv.items.slice(0, baseItemCount).map((item, i) => (
+                    <tr key={i} className="border-b border-slate-100">
+                      <td className="px-2 py-2.5 text-center text-slate-300">{i + 1}</td>
+                      <td className="px-3 py-2.5 text-slate-700">{item.description}</td>
+                      <td className="px-3 py-2.5 text-right tabular-nums">{item.quantity}</td>
+                      <td className="px-3 py-2.5 text-right tabular-nums">¥{formatNumber(item.unitPrice)}</td>
+                      <td className="px-3 py-2.5 text-right tabular-nums font-semibold">¥{formatNumber(item.amount)}</td>
+                      <td />
+                    </tr>
+                  ))}
+                  {extras.map((item, i) => (
+                    <tr key={`custom-${i}`} className="border-b border-slate-100 bg-blue-50/30">
+                      <td className="px-2 py-1.5 text-center text-blue-400">{baseItemCount + i + 1}</td>
+                      <td className="px-2 py-1.5">
+                        <input
+                          className="w-full px-2 py-1.5 border border-slate-200 rounded bg-white text-xs outline-none focus:border-blue-400"
+                          placeholder="品目名"
+                          value={item.description}
+                          onChange={(e) => onUpdateItem(i, "description", e.target.value)}
+                        />
+                      </td>
+                      <td className="px-2 py-1.5">
+                        <input
+                          className="w-full px-2 py-1.5 border border-slate-200 rounded bg-white text-xs text-right outline-none focus:border-blue-400"
+                          type="number"
+                          value={item.quantity || ""}
+                          onChange={(e) => onUpdateItem(i, "quantity", e.target.value)}
+                        />
+                      </td>
+                      <td className="px-2 py-1.5">
+                        <input
+                          className="w-full px-2 py-1.5 border border-slate-200 rounded bg-white text-xs text-right outline-none focus:border-blue-400"
+                          type="number"
+                          placeholder="単価"
+                          value={item.unitPrice || ""}
+                          onChange={(e) => onUpdateItem(i, "unitPrice", e.target.value)}
+                        />
+                      </td>
+                      <td className="px-3 py-1.5 text-right tabular-nums font-semibold">
+                        ¥{formatNumber(item.amount)}
+                      </td>
+                      <td className="px-1 py-1.5">
+                        <button
+                          className="text-red-400 hover:text-red-600 cursor-pointer bg-transparent border-none"
+                          onClick={() => onRemoveItem(i)}
+                        >
+                          ✕
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+              <div className="flex items-center justify-between px-3 py-2 bg-slate-50/50 border-t border-slate-100">
+                <button
+                  className="text-[11px] text-blue-600 hover:text-blue-800 cursor-pointer bg-transparent border-none font-semibold"
+                  onClick={onAddItem}
                 >
-                  <span className="flex-1">{item.description}</span>
-                  <span className="w-12 text-right">{item.quantity}</span>
-                  <span className="w-20 text-right">
-                    ¥{formatNumber(item.unitPrice)}
-                  </span>
-                  <span className="w-24 text-right font-semibold">
-                    ¥{formatNumber(item.amount)}
-                  </span>
-                  <span className="w-6" />
+                  + 項目を追加
+                </button>
+                <div className="flex gap-5 text-xs">
+                  <span className="text-slate-500">小計 <span className="tabular-nums">¥{formatNumber(inv.subtotal)}</span></span>
+                  <span className="text-slate-500">消費税 <span className="tabular-nums">¥{formatNumber(inv.tax)}</span></span>
+                  <span className="font-bold">合計 <span className="tabular-nums">¥{formatNumber(inv.total)}</span></span>
                 </div>
-              ))}
-
-              {/* カスタム項目（編集可能） */}
-              {extras.map((item, i) => (
-                <div
-                  key={`custom-${i}`}
-                  className="flex items-center gap-2 text-xs"
-                >
-                  <input
-                    className="flex-1 px-2 py-1 border border-slate-200 rounded text-xs"
-                    placeholder="品目名"
-                    value={item.description}
-                    onChange={(e) =>
-                      onUpdateItem(i, "description", e.target.value)
-                    }
-                  />
-                  <input
-                    className="w-12 px-1 py-1 border border-slate-200 rounded text-xs text-right"
-                    type="number"
-                    value={item.quantity || ""}
-                    onChange={(e) =>
-                      onUpdateItem(i, "quantity", e.target.value)
-                    }
-                  />
-                  <input
-                    className="w-20 px-1 py-1 border border-slate-200 rounded text-xs text-right"
-                    type="number"
-                    placeholder="単価"
-                    value={item.unitPrice || ""}
-                    onChange={(e) =>
-                      onUpdateItem(i, "unitPrice", e.target.value)
-                    }
-                  />
-                  <span className="w-24 text-right font-semibold tabular-nums">
-                    ¥{formatNumber(item.amount)}
-                  </span>
-                  <button
-                    className="w-6 text-red-400 hover:text-red-600 cursor-pointer bg-transparent border-none text-xs"
-                    onClick={() => onRemoveItem(i)}
-                  >
-                    ✕
-                  </button>
-                </div>
-              ))}
-
-              <button
-                className="text-[11px] text-blue-600 hover:text-blue-800 cursor-pointer bg-transparent border-none mt-1"
-                onClick={onAddItem}
-              >
-                + 項目を追加
-              </button>
-
-              <div className="border-t border-slate-200 pt-2 mt-2 flex justify-end gap-6 text-xs">
-                <span className="text-slate-500">
-                  小計 ¥{formatNumber(inv.subtotal)}
-                </span>
-                <span className="text-slate-500">
-                  税 ¥{formatNumber(inv.tax)}
-                </span>
-                <span className="font-bold">
-                  合計 ¥{formatNumber(inv.total)}
-                </span>
               </div>
             </div>
           </td>
