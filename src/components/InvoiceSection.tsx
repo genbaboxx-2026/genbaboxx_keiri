@@ -39,6 +39,7 @@ export function InvoiceSection({
   const [initialized, setInitialized] = useState(false);
   const [showSendConfirm, setShowSendConfirm] = useState(false);
   const [emailBody, setEmailBody] = useState("");
+  const [sendChecked, setSendChecked] = useState<Set<string>>(new Set());
   const [viewMode, setViewMode] = useState<"list" | "preview">("list");
   const [previewIndex, setPreviewIndex] = useState(0);
 
@@ -183,6 +184,7 @@ export function InvoiceSection({
 
   const handleOpenConfirm = () => {
     setEmailBody(buildDefaultEmailBody());
+    setSendChecked(new Set(selectedInvoices.map((i) => i.companyId)));
     setShowSendConfirm(true);
   };
 
@@ -455,15 +457,29 @@ export function InvoiceSection({
               {/* 送付先一覧 */}
               <div>
                 <div className="text-sm font-bold text-slate-700 mb-3">
-                  送付先一覧（{selectedInvoices.length}社）
+                  送付先一覧（{sendChecked.size}/{selectedInvoices.length}社）
                 </div>
                 <div className="border border-slate-200 rounded-xl overflow-hidden">
                   <table className="w-full text-sm">
                     <thead>
                       <tr className="bg-slate-50 border-b border-slate-200">
-                        <th className="px-4 py-2.5 text-left font-semibold text-xs text-slate-500">企業名</th>
-                        <th className="px-4 py-2.5 text-left font-semibold text-xs text-slate-500">担当者</th>
-                        <th className="px-4 py-2.5 text-left font-semibold text-xs text-slate-500">メールアドレス</th>
+                        <th className="pl-4 pr-1 py-2.5 w-8">
+                          <input
+                            type="checkbox"
+                            checked={sendChecked.size === selectedInvoices.length}
+                            onChange={() => {
+                              if (sendChecked.size === selectedInvoices.length) {
+                                setSendChecked(new Set());
+                              } else {
+                                setSendChecked(new Set(selectedInvoices.map((i) => i.companyId)));
+                              }
+                            }}
+                            className="cursor-pointer"
+                          />
+                        </th>
+                        <th className="px-3 py-2.5 text-left font-semibold text-xs text-slate-500">企業名</th>
+                        <th className="px-3 py-2.5 text-left font-semibold text-xs text-slate-500">担当者</th>
+                        <th className="px-3 py-2.5 text-left font-semibold text-xs text-slate-500">メールアドレス</th>
                         <th className="px-4 py-2.5 text-right font-semibold text-xs text-slate-500">金額（税込）</th>
                       </tr>
                     </thead>
@@ -472,13 +488,33 @@ export function InvoiceSection({
                         const co = getCompany(inv.companyId);
                         const contactName = co?.invoice_contact_name || "";
                         const email = co?.invoice_email || "";
+                        const isSendChecked = sendChecked.has(inv.companyId);
                         return (
-                          <tr key={inv.companyId} className="border-b border-slate-100">
-                            <td className="px-4 py-2.5 font-medium">{inv.companyName}</td>
-                            <td className="px-4 py-2.5 text-slate-600">
+                          <tr
+                            key={inv.companyId}
+                            className={`border-b border-slate-100 cursor-pointer transition-colors ${isSendChecked ? "" : "opacity-40"}`}
+                            onClick={() => {
+                              setSendChecked((prev) => {
+                                const next = new Set(prev);
+                                if (next.has(inv.companyId)) next.delete(inv.companyId);
+                                else next.add(inv.companyId);
+                                return next;
+                              });
+                            }}
+                          >
+                            <td className="pl-4 pr-1 py-2.5">
+                              <input
+                                type="checkbox"
+                                checked={isSendChecked}
+                                onChange={() => {}}
+                                className="cursor-pointer"
+                              />
+                            </td>
+                            <td className="px-3 py-2.5 font-medium">{inv.companyName}</td>
+                            <td className="px-3 py-2.5 text-slate-600">
                               {contactName || <span className="text-slate-300">未設定</span>}
                             </td>
-                            <td className="px-4 py-2.5">
+                            <td className="px-3 py-2.5">
                               {email ? (
                                 <span className="text-blue-600">{email}</span>
                               ) : (
@@ -494,15 +530,15 @@ export function InvoiceSection({
                     </tbody>
                     <tfoot>
                       <tr className="bg-slate-50 border-t border-slate-200">
-                        <td colSpan={3} className="px-4 py-2.5 font-bold text-sm">合計</td>
+                        <td colSpan={4} className="px-4 py-2.5 font-bold text-sm">合計</td>
                         <td className="px-4 py-2.5 text-right tabular-nums font-bold text-sm">
-                          ¥{formatNumber(selectedTotal)}
+                          ¥{formatNumber(selectedInvoices.filter((i) => sendChecked.has(i.companyId)).reduce((s, i) => s + i.total, 0))}
                         </td>
                       </tr>
                     </tfoot>
                   </table>
                 </div>
-                {selectedInvoices.some((inv) => !getCompany(inv.companyId)?.invoice_email) && (
+                {selectedInvoices.filter((inv) => sendChecked.has(inv.companyId)).some((inv) => !getCompany(inv.companyId)?.invoice_email) && (
                   <div className="mt-2 text-xs text-amber-600 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
                     メールアドレスが未設定の企業があります。企業マスタから設定してください。
                   </div>
@@ -531,10 +567,10 @@ export function InvoiceSection({
               </button>
               <button
                 className="px-7 py-2.5 bg-slate-800 text-white rounded-[10px] text-sm font-semibold cursor-pointer hover:bg-slate-700 disabled:opacity-40"
-                disabled={generating || !settings?.company_name}
+                disabled={generating || !settings?.company_name || sendChecked.size === 0}
                 onClick={handleGenerate}
               >
-                {generating ? "生成中..." : `${selectedInvoices.length}社の請求書を作成`}
+                {generating ? "生成中..." : `${sendChecked.size}社の請求書を作成`}
               </button>
             </div>
           </div>
