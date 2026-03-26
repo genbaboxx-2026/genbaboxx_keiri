@@ -932,9 +932,6 @@ function CompanyRow({
             </span>
             <div>
               <div className="font-medium">{inv.companyName}</div>
-              <div className="text-[10px] text-slate-400">
-                {inv.items.map((it) => it.description).filter(Boolean).join("、")}
-              </div>
             </div>
           </div>
         </td>
