@@ -390,6 +390,16 @@ export default function Home() {
       <Modal
         open={modal?.type === "contract"}
         onClose={() => setModal(null)}
+        onBack={
+          modal?.type === "contract" && modal.companyId
+            ? () => {
+                const company = companies.find((c) => c.id === modal.companyId);
+                if (company) {
+                  setModal({ type: "company-detail", company, productFilter: modal.productType });
+                }
+              }
+            : undefined
+        }
         title={
           modal?.type === "contract" && modal.item
             ? "契約を編集"
