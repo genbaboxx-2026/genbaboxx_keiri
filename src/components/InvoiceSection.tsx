@@ -37,7 +37,12 @@ export function InvoiceSection({
   >({});
   const [generating, setGenerating] = useState(false);
   const [initialized, setInitialized] = useState(false);
-  const [dueDate, setDueDate] = useState("");
+  const getLastDay = (month: string) => {
+    const [y, m] = month.split("-").map(Number);
+    const last = new Date(y, m, 0).getDate();
+    return `${y}-${String(m).padStart(2, "0")}-${String(last).padStart(2, "0")}`;
+  };
+  const [dueDate, setDueDate] = useState(() => getLastDay(currentMonth));
   const [dueDates, setDueDates] = useState<Record<string, string>>({});
   const [showSendConfirm, setShowSendConfirm] = useState(false);
   const [emailSubject, setEmailSubject] = useState("");
@@ -84,6 +89,8 @@ export function InvoiceSection({
     setCustomItems({});
     setBaseOverrides({});
     setExpandedId(null);
+    setDueDate(getLastDay(m));
+    setDueDates({});
     setTimeout(() => {
       const inv = getInvoicesForMonth(m, contracts, companies, invoiceTemplate);
       setChecked(new Set(inv.map((i) => i.companyId)));
