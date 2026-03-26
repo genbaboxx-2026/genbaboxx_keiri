@@ -63,6 +63,8 @@ export function CompanyForm({ company, onSave, onClose }: CompanyFormProps) {
               name,
               contact,
               note,
+              invoice_contact_name: company?.invoice_contact_name || "",
+              invoice_email: company?.invoice_email || "",
             })
           }
         >

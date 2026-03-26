@@ -15,6 +15,7 @@ interface CompanyDetailModalProps {
   company: Company;
   contracts: Contract[];
   productFilter?: ProductType;
+  mode: "contract" | "master";
   onSave: (company: Omit<Company, "created_at" | "updated_at">) => void;
   onAddContract: (productType: ProductType) => void;
   onEditContract: (contract: Contract) => void;
@@ -169,6 +170,7 @@ export function CompanyDetailModal({
   company,
   contracts,
   productFilter,
+  mode,
   onSave,
   onAddContract,
   onEditContract,
@@ -178,6 +180,8 @@ export function CompanyDetailModal({
   const [name, setName] = useState(company.name);
   const [contact, setContact] = useState(company.contact);
   const [note, setNote] = useState(company.note);
+  const [invoiceContactName, setInvoiceContactName] = useState(company.invoice_contact_name);
+  const [invoiceEmail, setInvoiceEmail] = useState(company.invoice_email);
   const [showProductSelect, setShowProductSelect] = useState(false);
 
   const companyContracts = contracts.filter(
@@ -192,8 +196,10 @@ export function CompanyDetailModal({
     onSave({
       id: company.id,
       name,
-      contact,
-      note,
+      contact: mode === "master" ? contact : company.contact,
+      note: mode === "master" ? note : company.note,
+      invoice_contact_name: mode === "master" ? invoiceContactName : company.invoice_contact_name,
+      invoice_email: mode === "master" ? invoiceEmail : company.invoice_email,
     });
   };
 
@@ -205,42 +211,82 @@ export function CompanyDetailModal({
   return (
     <div className="flex flex-col gap-5">
       {/* 企業情報セクション */}
-      <div className="bg-slate-50 rounded-xl p-4">
-        <div className="text-sm font-bold text-slate-700 mb-3">企業情報</div>
-        <div className="flex flex-col gap-3">
-          <div>
-            <label className="block text-[13px] font-semibold text-slate-600 mb-1.5">
-              会社名 *
-            </label>
-            <input
-              className="w-full px-3.5 py-2.5 border-[1.5px] border-slate-200 rounded-[10px] text-sm outline-none focus:border-blue-400"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              placeholder="株式会社〇〇"
-            />
-          </div>
-          <div>
-            <label className="block text-[13px] font-semibold text-slate-600 mb-1.5">
-              担当者・連絡先
-            </label>
-            <input
-              className="w-full px-3.5 py-2.5 border-[1.5px] border-slate-200 rounded-[10px] text-sm outline-none focus:border-blue-400"
-              value={contact}
-              onChange={(e) => setContact(e.target.value)}
-            />
-          </div>
-          <div>
-            <label className="block text-[13px] font-semibold text-slate-600 mb-1.5">
-              メモ
-            </label>
-            <textarea
-              className="w-full px-3.5 py-2.5 border-[1.5px] border-slate-200 rounded-[10px] text-sm outline-none focus:border-blue-400 min-h-[50px] resize-y"
-              value={note}
-              onChange={(e) => setNote(e.target.value)}
-            />
+      {mode === "contract" ? (
+        /* 契約一覧からの表示: 会社名のみ */
+        <div className="bg-slate-50 rounded-xl p-4">
+          <div className="text-lg font-bold text-slate-800">{company.name}</div>
+        </div>
+      ) : (
+        /* 企業マスタからの表示: 全フィールド */
+        <div className="bg-slate-50 rounded-xl p-4">
+          <div className="text-sm font-bold text-slate-700 mb-3">企業情報</div>
+          <div className="flex flex-col gap-3">
+            <div>
+              <label className="block text-[13px] font-semibold text-slate-600 mb-1.5">
+                会社名 *
+              </label>
+              <input
+                className="w-full px-3.5 py-2.5 border-[1.5px] border-slate-200 rounded-[10px] text-sm outline-none focus:border-blue-400"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                placeholder="株式会社〇〇"
+              />
+            </div>
+            <div>
+              <label className="block text-[13px] font-semibold text-slate-600 mb-1.5">
+                担当者・連絡先
+              </label>
+              <input
+                className="w-full px-3.5 py-2.5 border-[1.5px] border-slate-200 rounded-[10px] text-sm outline-none focus:border-blue-400"
+                value={contact}
+                onChange={(e) => setContact(e.target.value)}
+              />
+            </div>
+            <div>
+              <label className="block text-[13px] font-semibold text-slate-600 mb-1.5">
+                メモ
+              </label>
+              <textarea
+                className="w-full px-3.5 py-2.5 border-[1.5px] border-slate-200 rounded-[10px] text-sm outline-none focus:border-blue-400 min-h-[50px] resize-y"
+                value={note}
+                onChange={(e) => setNote(e.target.value)}
+              />
+            </div>
           </div>
         </div>
-      </div>
+      )}
+
+      {/* 請求書送付先セクション（企業マスタのみ） */}
+      {mode === "master" && (
+        <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-4">
+          <div className="text-sm font-bold text-emerald-800 mb-3">請求書送付先</div>
+          <div className="flex flex-col gap-3">
+            <div>
+              <label className="block text-[13px] font-semibold text-slate-600 mb-1.5">
+                担当者名
+              </label>
+              <input
+                className="w-full px-3.5 py-2.5 border-[1.5px] border-slate-200 rounded-[10px] text-sm outline-none focus:border-blue-400 bg-white"
+                value={invoiceContactName}
+                onChange={(e) => setInvoiceContactName(e.target.value)}
+                placeholder="経理部 山田太郎"
+              />
+            </div>
+            <div>
+              <label className="block text-[13px] font-semibold text-slate-600 mb-1.5">
+                メールアドレス
+              </label>
+              <input
+                type="email"
+                className="w-full px-3.5 py-2.5 border-[1.5px] border-slate-200 rounded-[10px] text-sm outline-none focus:border-blue-400 bg-white"
+                value={invoiceEmail}
+                onChange={(e) => setInvoiceEmail(e.target.value)}
+                placeholder="keiri@example.com"
+              />
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* 契約一覧セクション */}
       <div className="bg-blue-50 border border-blue-200 rounded-xl p-4">
@@ -358,15 +404,17 @@ export function CompanyDetailModal({
           className="px-5 py-2.5 bg-slate-100 text-slate-700 rounded-[10px] text-sm font-medium cursor-pointer hover:bg-slate-200"
           onClick={onClose}
         >
-          キャンセル
+          {mode === "contract" ? "閉じる" : "キャンセル"}
         </button>
-        <button
-          className="px-7 py-2.5 bg-slate-800 text-white rounded-[10px] text-sm font-semibold cursor-pointer hover:bg-slate-700 disabled:opacity-40"
-          disabled={!name}
-          onClick={handleSave}
-        >
-          企業情報を更新
-        </button>
+        {mode === "master" && (
+          <button
+            className="px-7 py-2.5 bg-slate-800 text-white rounded-[10px] text-sm font-semibold cursor-pointer hover:bg-slate-700 disabled:opacity-40"
+            disabled={!name}
+            onClick={handleSave}
+          >
+            企業情報を更新
+          </button>
+        )}
       </div>
     </div>
   );

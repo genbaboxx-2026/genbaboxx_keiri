@@ -10,6 +10,8 @@ export interface Company {
   name: string;
   contact: string;
   note: string;
+  invoice_contact_name: string;
+  invoice_email: string;
   created_at: string;
   updated_at: string;
 }

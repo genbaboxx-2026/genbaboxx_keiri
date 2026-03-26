@@ -355,6 +355,7 @@ function CompanyRow({
   onToggleExpand,
   onAddItem,
   onUpdateItem,
+  onUpdateBaseItem,
   onRemoveItem,
 }: {
   inv: CompanyInvoice;
@@ -414,29 +415,39 @@ function CompanyRow({
         <tr>
           <td colSpan={3} className="p-0">
             <div className="border-t border-slate-200">
-              <table className="w-full text-xs">
+              <table className="w-full text-xs" style={{ tableLayout: "fixed" }}>
+                <colgroup>
+                  <col style={{ width: "28px" }} />
+                  <col />
+                  <col style={{ width: "60px" }} />
+                  <col style={{ width: "52px" }} />
+                  <col style={{ width: "90px" }} />
+                  <col style={{ width: "56px" }} />
+                  <col style={{ width: "100px" }} />
+                  <col style={{ width: "28px" }} />
+                </colgroup>
                 <thead>
                   <tr className="bg-slate-50 border-b border-slate-200">
-                    <th className="w-8 px-2 py-2 text-center text-slate-400">#</th>
-                    <th className="px-3 py-2 text-left font-semibold text-slate-500" style={{ width: "40%" }}>摘要</th>
-                    <th className="px-2 py-2 text-center font-semibold text-slate-500" style={{ width: "8%" }}>数量</th>
-                    <th className="px-2 py-2 text-center font-semibold text-slate-500" style={{ width: "8%" }}>単位</th>
-                    <th className="px-2 py-2 text-right font-semibold text-slate-500" style={{ width: "14%" }}>単価</th>
-                    <th className="px-2 py-2 text-center font-semibold text-slate-500" style={{ width: "8%" }}>税率</th>
-                    <th className="px-2 py-2 text-right font-semibold text-slate-500" style={{ width: "14%" }}>金額</th>
-                    <th className="w-7" />
+                    <th className="px-1 py-2 text-center text-slate-400">#</th>
+                    <th className="px-2 py-2 text-left font-semibold text-slate-500">摘要</th>
+                    <th className="px-1 py-2 text-center font-semibold text-slate-500">数量</th>
+                    <th className="px-1 py-2 text-center font-semibold text-slate-500">単位</th>
+                    <th className="px-1 py-2 text-right font-semibold text-slate-500">単価</th>
+                    <th className="px-1 py-2 text-center font-semibold text-slate-500">税率</th>
+                    <th className="px-1 py-2 text-right font-semibold text-slate-500">金額</th>
+                    <th />
                   </tr>
                 </thead>
                 <tbody>
                   {[...inv.items.slice(0, baseItemCount).map((item, i) => ({ item, i, isBase: true })),
                     ...extras.map((item, i) => ({ item, i, isBase: false }))].map(({ item, i, isBase }) => (
                     <tr key={isBase ? i : `c-${i}`} className={`border-b border-slate-100 ${!isBase ? "bg-blue-50/30" : ""}`}>
-                      <td className={`px-2 py-1.5 text-center ${isBase ? "text-slate-300" : "text-blue-400"}`}>
+                      <td className={`px-1 py-1 text-center ${isBase ? "text-slate-300" : "text-blue-400"}`}>
                         {isBase ? i + 1 : baseItemCount + i + 1}
                       </td>
-                      <td className="px-2 py-1.5">
+                      <td className="px-1 py-1 overflow-hidden">
                         <input
-                          className="w-full px-2 py-1.5 border border-slate-200 rounded bg-white text-xs outline-none focus:border-blue-400"
+                          className="w-full px-1.5 py-1 border border-slate-200 rounded bg-white text-xs outline-none focus:border-blue-400 min-w-0"
                           value={item.description}
                           onChange={(e) => isBase
                             ? onUpdateBaseItem(i, "description", e.target.value)
@@ -444,9 +455,9 @@ function CompanyRow({
                           }
                         />
                       </td>
-                      <td className="px-1 py-1.5">
+                      <td className="px-0.5 py-1">
                         <input
-                          className="w-full px-1 py-1.5 border border-slate-200 rounded bg-white text-xs text-center outline-none focus:border-blue-400"
+                          className="w-full px-1 py-1 border border-slate-200 rounded bg-white text-xs text-center outline-none focus:border-blue-400 min-w-0"
                           type="number"
                           value={item.quantity || ""}
                           onChange={(e) => isBase
@@ -455,9 +466,9 @@ function CompanyRow({
                           }
                         />
                       </td>
-                      <td className="px-1 py-1.5">
+                      <td className="px-0.5 py-1">
                         <input
-                          className="w-full px-1 py-1.5 border border-slate-200 rounded bg-white text-xs text-center outline-none focus:border-blue-400"
+                          className="w-full px-1 py-1 border border-slate-200 rounded bg-white text-xs text-center outline-none focus:border-blue-400 min-w-0"
                           value={item.unit || ""}
                           onChange={(e) => isBase
                             ? onUpdateBaseItem(i, "unit", e.target.value)
@@ -465,9 +476,9 @@ function CompanyRow({
                           }
                         />
                       </td>
-                      <td className="px-1 py-1.5">
+                      <td className="px-0.5 py-1">
                         <input
-                          className="w-full px-2 py-1.5 border border-slate-200 rounded bg-white text-xs text-right outline-none focus:border-blue-400"
+                          className="w-full px-1 py-1 border border-slate-200 rounded bg-white text-xs text-right outline-none focus:border-blue-400 min-w-0"
                           type="number"
                           value={item.unitPrice || ""}
                           onChange={(e) => isBase
@@ -476,9 +487,9 @@ function CompanyRow({
                           }
                         />
                       </td>
-                      <td className="px-1 py-1.5">
+                      <td className="px-0.5 py-1">
                         <select
-                          className="w-full px-0.5 py-1.5 border border-slate-200 rounded bg-white text-xs outline-none focus:border-blue-400"
+                          className="w-full px-0 py-1 border border-slate-200 rounded bg-white text-xs outline-none focus:border-blue-400 min-w-0"
                           value={item.taxRate ?? 10}
                           onChange={(e) => isBase
                             ? onUpdateBaseItem(i, "taxRate", Number(e.target.value))
@@ -490,13 +501,13 @@ function CompanyRow({
                           <option value={0}>0%</option>
                         </select>
                       </td>
-                      <td className="px-2 py-1.5 text-right tabular-nums font-semibold text-nowrap">
+                      <td className="px-1 py-1 text-right tabular-nums font-semibold whitespace-nowrap overflow-hidden">
                         ¥{formatNumber(item.amount)}
                       </td>
-                      <td className="px-1 py-1.5">
+                      <td className="px-0.5 py-1">
                         {!isBase && (
                           <button
-                            className="text-red-400 hover:text-red-600 cursor-pointer bg-transparent border-none"
+                            className="text-red-400 hover:text-red-600 cursor-pointer bg-transparent border-none text-xs"
                             onClick={() => onRemoveItem(i)}
                           >
                             ✕

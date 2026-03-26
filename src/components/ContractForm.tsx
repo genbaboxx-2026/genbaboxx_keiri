@@ -115,6 +115,8 @@ export function ContractForm({
       name: newCompanyName.trim(),
       contact: newCompanyContact.trim(),
       note: "",
+      invoice_contact_name: "",
+      invoice_email: "",
     };
     onAddCompany(co);
     setCompanyId(co.id);

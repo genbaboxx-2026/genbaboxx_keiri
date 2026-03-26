@@ -35,7 +35,7 @@ import type { User } from "@supabase/supabase-js";
 type ModalState =
   | null
   | { type: "company"; item?: Company }
-  | { type: "company-detail"; company: Company; productFilter?: ProductType }
+  | { type: "company-detail"; company: Company; productFilter?: ProductType; mode?: "contract" | "master" }
   | { type: "contract"; productType: ProductType; item?: Contract; companyId?: string };
 
 export default function Home() {
@@ -444,7 +444,7 @@ export default function Home() {
         companies={companies}
         contracts={contracts}
         onAdd={() => setModal({ type: "company" })}
-        onEdit={(co) => setModal({ type: "company-detail", company: co })}
+        onEdit={(co) => setModal({ type: "company-detail", company: co, mode: "master" })}
         onDelete={handleDeleteCompany}
       />
     );
@@ -465,7 +465,7 @@ export default function Home() {
         onEdit={(cn) => {
           const company = companies.find((c) => c.id === cn.company_id);
           if (company) {
-            setModal({ type: "company-detail", company, productFilter: tab as ProductType });
+            setModal({ type: "company-detail", company, productFilter: tab as ProductType, mode: "contract" });
           }
         }}
         onDelete={handleDeleteContract}
@@ -573,13 +573,14 @@ export default function Home() {
       <Modal
         open={modal?.type === "company-detail"}
         onClose={() => setModal(null)}
-        title="企業詳細"
+        title={modal?.type === "company-detail" && modal.mode === "contract" ? `${modal.company.name} の契約` : "企業詳細"}
       >
         {modal?.type === "company-detail" && (
           <CompanyDetailModal
             company={modal.company}
             contracts={contracts}
             productFilter={modal.productFilter}
+            mode={modal.mode || "master"}
             onSave={handleSaveCompany}
             onAddContract={(productType) =>
               setModal({
