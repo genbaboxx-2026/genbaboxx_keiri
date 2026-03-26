@@ -175,7 +175,7 @@ export function CashflowPage({
                 <th
                   key={m}
                   {...(m === prevMonth ? { "data-scroll-target": true } : {})}
-                  className={`px-2 py-2.5 text-right font-semibold text-slate-500 border-b-2 border-slate-200 whitespace-nowrap min-w-[90px] ${m === currentMonth ? "month-current" : ""}`}
+                  className={`px-2 py-2.5 text-right font-semibold text-slate-500 border-b-2 border-slate-200 whitespace-nowrap min-w-[90px]`}
                 >
                   {parseInt(m.split("-")[1])}月<br />
                   <span className="text-[10px] text-slate-400">{m.split("-")[0]}</span>
@@ -213,7 +213,7 @@ export function CashflowPage({
               {allMonths.map((m) => {
                 const v = revenueFor(m);
                 return (
-                  <td key={m} className={`px-2 py-3 text-right font-extrabold text-[13px] text-slate-800 tabular-nums ${m === currentMonth ? "!bg-blue-50" : ""}`}>
+                  <td key={m} className={`px-2 py-3 text-right font-extrabold text-[13px] text-slate-800 tabular-nums`}>
                     {v > 0 ? formatNumber(v) : "—"}
                   </td>
                 );
@@ -347,7 +347,7 @@ export function CashflowPage({
               {allMonths.map((m) => {
                 const v = expenseForMonth(m);
                 return (
-                  <td key={m} className={`px-2 py-3 text-right font-extrabold text-[13px] text-slate-800 tabular-nums ${m === currentMonth ? "!bg-blue-50" : ""}`}>
+                  <td key={m} className={`px-2 py-3 text-right font-extrabold text-[13px] text-slate-800 tabular-nums`}>
                     {v > 0 ? formatNumber(v) : "—"}
                   </td>
                 );
@@ -362,7 +362,7 @@ export function CashflowPage({
                 const exp = expenseForMonth(m);
                 const diff = rev - exp;
                 return (
-                  <td key={m} className={`px-2 py-3 text-right font-extrabold text-[13px] tabular-nums ${diff < 0 ? "text-red-600" : "text-slate-900"} ${m === currentMonth ? "!bg-blue-50" : ""}`}>
+                  <td key={m} className={`px-2 py-3 text-right font-extrabold text-[13px] tabular-nums ${diff < 0 ? "text-red-600" : "text-slate-900"}`}>
                     {diff !== 0 ? formatNumber(diff) : "—"}
                   </td>
                 );
@@ -400,7 +400,7 @@ function ProductRows({
         {allMonths.map((m) => {
           const v = revenueFor(m, product.id);
           return (
-            <td key={m} className={`px-2 py-2 text-right border-b border-slate-100 tabular-nums font-semibold ${v > 0 ? "text-slate-700" : "text-slate-200"} ${m === currentMonth ? "month-current" : ""}`}>
+            <td key={m} className={`px-2 py-2 text-right border-b border-slate-100 tabular-nums font-semibold ${v > 0 ? "text-slate-700" : "text-slate-200"}`}>
               {v > 0 ? formatNumber(v) : "—"}
             </td>
           );
@@ -416,7 +416,7 @@ function ProductRows({
             {allMonths.map((m) => {
               const v = companyRevenueForMonth(contracts, cid, m);
               return (
-                <td key={m} className={`px-2 py-1.5 text-right border-b border-slate-50 tabular-nums text-[11px] ${v > 0 ? "text-slate-500" : "text-slate-200"} ${m === currentMonth ? "month-current" : ""}`}>
+                <td key={m} className={`px-2 py-1.5 text-right border-b border-slate-50 tabular-nums text-[11px] ${v > 0 ? "text-slate-500" : "text-slate-200"}`}>
                   {v > 0 ? formatNumber(v) : "—"}
                 </td>
               );
