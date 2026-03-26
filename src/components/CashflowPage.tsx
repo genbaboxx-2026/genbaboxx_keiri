@@ -195,7 +195,7 @@ export function CashflowPage({
               {allMonths.map((m) => {
                 const v = revenueFor(m);
                 return (
-                  <td key={m} className={`px-2 py-3 text-right font-extrabold text-[13px] text-slate-800 tabular-nums ${m === currentMonth ? "!bg-amber-50" : ""}`}>
+                  <td key={m} className={`px-2 py-3 text-right font-extrabold text-[13px] text-slate-800 tabular-nums ${m === currentMonth ? "!bg-blue-50" : ""}`}>
                     {v > 0 ? formatNumber(v) : "—"}
                   </td>
                 );
@@ -320,7 +320,7 @@ export function CashflowPage({
               {allMonths.map((m) => {
                 const v = expenseForMonth(m);
                 return (
-                  <td key={m} className={`px-2 py-3 text-right font-extrabold text-[13px] text-slate-800 tabular-nums ${m === currentMonth ? "!bg-amber-50" : ""}`}>
+                  <td key={m} className={`px-2 py-3 text-right font-extrabold text-[13px] text-slate-800 tabular-nums ${m === currentMonth ? "!bg-blue-50" : ""}`}>
                     {v > 0 ? formatNumber(v) : "—"}
                   </td>
                 );
@@ -335,7 +335,7 @@ export function CashflowPage({
                 const exp = expenseForMonth(m);
                 const diff = rev - exp;
                 return (
-                  <td key={m} className={`px-2 py-3 text-right font-extrabold text-[13px] tabular-nums ${diff < 0 ? "text-red-600" : "text-slate-900"} ${m === currentMonth ? "!bg-amber-50" : ""}`}>
+                  <td key={m} className={`px-2 py-3 text-right font-extrabold text-[13px] tabular-nums ${diff < 0 ? "text-red-600" : "text-slate-900"} ${m === currentMonth ? "!bg-blue-50" : ""}`}>
                     {diff !== 0 ? formatNumber(diff) : "—"}
                   </td>
                 );

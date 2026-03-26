@@ -24,8 +24,8 @@ th[class*="sticky"] {
 
 /* 当月列ハイライト */
 .month-current {
-  background: #fffbeb !important;
+  background: #eff6ff !important;
 }
 thead .month-current {
-  background: #fef3c7 !important;
+  background: #dbeafe !important;
 }

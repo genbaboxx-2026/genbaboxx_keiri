@@ -220,10 +220,9 @@ function MonthlyRevenueTable({
                       key={month}
                       className={`px-2 py-2.5 text-right border-b tabular-nums ${
                         inService
-                          ? "bg-blue-50 border-b-blue-100"
+                          ? "bg-amber-50 border-b-amber-100"
                           : "border-b-slate-100"
                       } ${amt > 0 ? "text-slate-700" : "text-slate-300"} ${month === currentMonth ? "month-current" : ""}`}
-                      style={inService ? { boxShadow: "inset 0 0 0 1px rgba(59,130,246,0.1)" } : undefined}
                     >
                       {amt > 0 ? formatNumber(amt) : "—"}
                     </td>
