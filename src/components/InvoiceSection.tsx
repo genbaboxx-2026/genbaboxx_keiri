@@ -324,7 +324,7 @@ export function InvoiceSection({
       ) : viewMode === "list" ? (
         <div className="flex gap-4">
           {/* 左: 企業一覧 */}
-          <div className="min-w-0" style={{ flex: "1 1 0", maxWidth: "calc(100% - 420px)" }}>
+          <div className="min-w-0" style={{ flex: "1 1 0", maxWidth: "calc(100% - 520px)" }}>
             <div className="border border-slate-200 rounded-xl overflow-hidden">
               <table className="w-full text-sm">
                 <thead>
@@ -396,7 +396,7 @@ export function InvoiceSection({
           </div>
 
           {/* 右: プレビュー + ボタン */}
-          <div className="w-[400px] flex-shrink-0">
+          <div className="w-[500px] flex-shrink-0">
             {previewInvoice && settings ? (
               <div className="relative" style={{ aspectRatio: "210/297" }}>
                 <button
