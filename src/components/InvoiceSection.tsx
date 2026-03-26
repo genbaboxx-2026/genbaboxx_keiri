@@ -48,6 +48,7 @@ export function InvoiceSection({
   };
   const [dueDate, setDueDate] = useState(() => getLastBusinessDay(currentMonth));
   const [dueDates, setDueDates] = useState<Record<string, string>>({});
+  const [companyNotes, setCompanyNotes] = useState<Record<string, string>>({});
   const [showSendConfirm, setShowSendConfirm] = useState(false);
   const [emailSubject, setEmailSubject] = useState("");
   const [emailBody, setEmailBody] = useState("");
@@ -411,6 +412,8 @@ export function InvoiceSection({
                         extras={extras}
                         companyDueDate={dueDates[inv.companyId] ?? dueDate}
                         onDueDateChange={(v) => setDueDates((prev) => ({ ...prev, [inv.companyId]: v }))}
+                        companyNote={companyNotes[inv.companyId] ?? invoiceTemplate?.notes ?? ""}
+                        onNoteChange={(v) => setCompanyNotes((prev) => ({ ...prev, [inv.companyId]: v }))}
                         onToggleCheck={() => toggleCheck(inv.companyId)}
                         onToggleExpand={() =>
                           setExpandedId(isExpanded ? null : inv.companyId)
@@ -464,8 +467,8 @@ export function InvoiceSection({
                   settings={settings}
                   issueDate={issueDate}
                   month={selectedMonth}
-                  notes={invoiceTemplate?.notes}
-                  dueDate={dueDate}
+                  notes={companyNotes[previewInvoice.companyId] ?? invoiceTemplate?.notes}
+                  dueDate={dueDates[previewInvoice.companyId] ?? dueDate}
                   invoiceNumber={getInvoiceNumber(previewInvoice.companyId)}
                 />
               </div>
@@ -520,8 +523,8 @@ export function InvoiceSection({
                   settings={settings}
                   issueDate={issueDate}
                   month={selectedMonth}
-                  notes={invoiceTemplate?.notes}
-                  dueDate={dueDate}
+                  notes={companyNotes[previewInvoice.companyId] ?? invoiceTemplate?.notes}
+                  dueDate={dueDates[previewInvoice.companyId] ?? dueDate}
                   large
                   invoiceNumber={getInvoiceNumber(previewInvoice.companyId)}
                 />
@@ -537,7 +540,9 @@ export function InvoiceSection({
           issueDate={issueDate}
           month={selectedMonth}
           notes={invoiceTemplate?.notes}
+          companyNotes={companyNotes}
           dueDate={dueDate}
+          dueDates={dueDates}
           currentIndex={previewIndex}
           onChangeIndex={setPreviewIndex}
           onDownloadSingle={handleGenerateSingle}
@@ -735,7 +740,9 @@ function PreviewGallery({
   issueDate,
   month,
   notes,
+  companyNotes,
   dueDate,
+  dueDates,
   currentIndex,
   onChangeIndex,
   onDownloadSingle,
@@ -750,6 +757,8 @@ function PreviewGallery({
   issueDate: string;
   month: string;
   notes?: string;
+  companyNotes?: Record<string, string>;
+  dueDates?: Record<string, string>;
   dueDate?: string;
   currentIndex: number;
   onChangeIndex: (i: number) => void;
@@ -872,8 +881,8 @@ function PreviewGallery({
                   settings={settings}
                   issueDate={issueDate}
                   month={month}
-                  notes={notes}
-                  dueDate={dueDate}
+                  notes={companyNotes?.[prevInv.companyId] ?? notes}
+                  dueDate={dueDates?.[prevInv.companyId] ?? dueDate}
                   large
                   invoiceNumber={getInvoiceNumber(prevInv.companyId)}
                 />
@@ -904,8 +913,8 @@ function PreviewGallery({
                   settings={settings}
                   issueDate={issueDate}
                   month={month}
-                  notes={notes}
-                  dueDate={dueDate}
+                  notes={companyNotes?.[nextInv.companyId] ?? notes}
+                  dueDate={dueDates?.[nextInv.companyId] ?? dueDate}
                   large
                   invoiceNumber={getInvoiceNumber(nextInv.companyId)}
                 />
@@ -929,8 +938,8 @@ function PreviewGallery({
                 settings={settings}
                 issueDate={issueDate}
                 month={month}
-                notes={notes}
-                dueDate={dueDate}
+                notes={companyNotes?.[current.companyId] ?? notes}
+                dueDate={dueDates?.[current.companyId] ?? dueDate}
                 large
                 invoiceNumber={getInvoiceNumber(current.companyId)}
               />
@@ -994,6 +1003,8 @@ function CompanyRow({
   extras,
   companyDueDate,
   onDueDateChange,
+  companyNote,
+  onNoteChange,
   onToggleCheck,
   onToggleExpand,
   onAddItem,
@@ -1008,6 +1019,8 @@ function CompanyRow({
   extras: InvoiceLineItem[];
   companyDueDate: string;
   onDueDateChange: (v: string) => void;
+  companyNote: string;
+  onNoteChange: (v: string) => void;
   onToggleCheck: () => void;
   onToggleExpand: () => void;
   onAddItem: () => void;
@@ -1181,6 +1194,18 @@ function CompanyRow({
                   <span className="text-slate-500">小計 <span className="tabular-nums">¥{formatNumber(inv.subtotal)}</span></span>
                   <span className="text-slate-500">消費税 <span className="tabular-nums">¥{formatNumber(inv.tax)}</span></span>
                   <span className="font-bold">合計 <span className="tabular-nums">¥{formatNumber(inv.total)}</span></span>
+                </div>
+              </div>
+              <div className="px-4 py-2 border-t border-blue-100">
+                <div className="flex items-start gap-2">
+                  <span className="text-[10px] text-slate-500 pt-1.5 flex-shrink-0">備考:</span>
+                  <textarea
+                    className="flex-1 px-2 py-1 border border-slate-200 rounded text-[11px] outline-none focus:border-blue-400 bg-white resize-y min-h-[28px]"
+                    rows={1}
+                    value={companyNote}
+                    onChange={(e) => onNoteChange(e.target.value)}
+                    placeholder="備考を入力..."
+                  />
                 </div>
               </div>
             </div>
