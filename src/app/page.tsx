@@ -158,14 +158,16 @@ export default function Home() {
   // 初回データ取得
   useEffect(() => {
     if (!user) return;
-    Promise.all([fetchCompanies(), fetchContracts(), fetchExpenses()])
-      .then(([cos, cons, exps]) => {
+    Promise.all([fetchCompanies(), fetchContracts()])
+      .then(([cos, cons]) => {
         setCompanies(cos);
         setContracts(cons);
-        setExpenses(exps);
       })
       .catch(console.error)
       .finally(() => setLoading(false));
+    fetchExpenses()
+      .then(setExpenses)
+      .catch(() => {});
   }, [user]);
 
   // URLパラメータからの状態復元ヘルパー
