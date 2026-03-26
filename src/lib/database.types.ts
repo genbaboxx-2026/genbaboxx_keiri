@@ -42,6 +42,17 @@ export interface Contract {
   updated_at: string;
 }
 
+export interface Settings {
+  id: string;
+  company_name: string;
+  company_address: string;
+  company_phone: string;
+  bank_info: string;
+  invoice_number: string;
+  created_at: string;
+  updated_at: string;
+}
+
 export interface Expense {
   id: string;
   name: string;

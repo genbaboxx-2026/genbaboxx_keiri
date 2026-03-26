@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback, useMemo, useRef } from "react";
-import type { Company, Contract, ProductType, Profile, Expense } from "@/lib/database.types";
+import type { Company, Contract, ProductType, Profile, Expense, Settings } from "@/lib/database.types";
 import {
   fetchCompanies,
   fetchContracts,
@@ -12,6 +12,8 @@ import {
   fetchExpenses,
   upsertExpense,
   deleteExpense,
+  fetchSettings,
+  upsertSettings,
 } from "@/lib/api";
 import { PRODUCTS, TABS, type TabId } from "@/lib/constants";
 import { getAllMonths, getRevenue } from "@/lib/calc";
@@ -23,6 +25,7 @@ import { CompaniesPage } from "@/components/CompaniesPage";
 import { ContractPage } from "@/components/ContractPage";
 import { CashflowPage } from "@/components/CashflowPage";
 import { LoginPage } from "@/components/LoginPage";
+import { SettingsPage } from "@/components/SettingsPage";
 import { supabase } from "@/lib/supabase";
 import type { User } from "@supabase/supabase-js";
 
@@ -39,6 +42,7 @@ export default function Home() {
   const [companies, setCompanies] = useState<Company[]>([]);
   const [contracts, setContracts] = useState<Contract[]>([]);
   const [expenses, setExpenses] = useState<Expense[]>([]);
+  const [settings, setSettings] = useState<Settings | null>(null);
   const [tab, setTabState] = useState<TabId>("bakusoq");
   const [modal, setModalState] = useState<ModalState>(null);
   const [viewList, setViewListState] = useState(false);
@@ -167,6 +171,9 @@ export default function Home() {
       .finally(() => setLoading(false));
     fetchExpenses()
       .then(setExpenses)
+      .catch(() => {});
+    fetchSettings()
+      .then(setSettings)
       .catch(() => {});
   }, [user]);
 
@@ -335,6 +342,18 @@ export default function Home() {
     }
   };
 
+  const handleSaveSettings = async (
+    s: Omit<Settings, "created_at" | "updated_at">
+  ) => {
+    try {
+      const saved = await upsertSettings(s);
+      setSettings(saved);
+    } catch (e) {
+      console.error(e);
+      alert("設定の保存に失敗しました");
+    }
+  };
+
   const handleLogout = async () => {
     await supabase.auth.signOut();
     setUser(null);
@@ -345,7 +364,7 @@ export default function Home() {
   const visibleTabs = useMemo(
     () =>
       profile?.role === "member"
-        ? TABS.filter((t) => t.id !== "cashflow")
+        ? TABS.filter((t) => t.id !== "cashflow" && t.id !== "settings")
         : TABS,
     [profile]
   );
@@ -386,6 +405,10 @@ export default function Home() {
         onDeleteExpense={handleDeleteExpense}
       />
     );
+  } else if (tab === "settings") {
+    content = (
+      <SettingsPage settings={settings} onSave={handleSaveSettings} />
+    );
   } else if (tab === "companies") {
     content = (
       <CompaniesPage
@@ -401,6 +424,8 @@ export default function Home() {
       <ContractPage
         productType={tab}
         contracts={contractsFor(tab)}
+        companies={companies}
+        settings={settings}
         allMonths={allMonths}
         getCompanyName={getCompanyName}
         revenueFor={revenueFor}

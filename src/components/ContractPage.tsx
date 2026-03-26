@@ -1,8 +1,9 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import type { Contract, ProductType, ContractStatus } from "@/lib/database.types";
+import type { Contract, Company, ProductType, ContractStatus, Settings } from "@/lib/database.types";
 import { PRODUCTS } from "@/lib/constants";
+import { InvoiceSection } from "./InvoiceSection";
 import {
   makeBillingStart,
   calcEndDate,
@@ -20,6 +21,8 @@ import {
 interface ContractPageProps {
   productType: ProductType;
   contracts: Contract[];
+  companies: Company[];
+  settings: Settings | null;
   allMonths: string[];
   getCompanyName: (id: string) => string;
   revenueFor: (month: string, productFilter?: string) => number;
@@ -33,6 +36,8 @@ interface ContractPageProps {
 export function ContractPage({
   productType,
   contracts,
+  companies,
+  settings,
   allMonths,
   getCompanyName,
   revenueFor,
@@ -107,6 +112,12 @@ export function ContractPage({
             revenueFor={revenueFor}
             productType={productType}
             product={product}
+          />
+          <InvoiceSection
+            contracts={contracts}
+            companies={companies}
+            settings={settings}
+            allMonths={allMonths}
           />
         </div>
       )}
