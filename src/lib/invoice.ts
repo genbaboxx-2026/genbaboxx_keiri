@@ -26,6 +26,21 @@ async function loadJapaneseFont(
 
 const fmt = (n: number) => n.toLocaleString();
 
+async function loadImage(url: string): Promise<string | null> {
+  try {
+    const res = await fetch(url);
+    const blob = await res.blob();
+    return new Promise((resolve) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result as string);
+      reader.onerror = () => resolve(null);
+      reader.readAsDataURL(blob);
+    });
+  } catch {
+    return null;
+  }
+}
+
 export async function generateInvoicePDF(
   settings: Settings,
   invoices: CompanyInvoice[],
@@ -38,6 +53,10 @@ export async function generateInvoicePDF(
   const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
   await loadJapaneseFont(doc);
   doc.setFont("NotoSansJP", "normal");
+
+  // ロゴ・社印画像を事前ロード
+  const logoData = settings.logo_url ? await loadImage(settings.logo_url) : null;
+  const stampData = settings.stamp_url ? await loadImage(settings.stamp_url) : null;
 
   const today = new Date();
   const issueDate = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
@@ -80,22 +99,30 @@ export async function generateInvoicePDF(
       ry += 5;
     }
 
-    // ===== 右: 自社情報 =====
+    // ===== 右: ロゴ + 自社情報 =====
     ry += 3;
+    if (logoData) {
+      try { doc.addImage(logoData, "PNG", 140, ry - 5, 40, 12); } catch { /* ignore */ }
+      ry += 14;
+    }
     doc.setFontSize(11);
     doc.text(settings.company_name || "", pageW - marginR, ry, { align: "right" });
     ry += 6;
     doc.setFontSize(8);
+    const stampStartY = ry;
     if (settings.company_address) {
       const addrLines = settings.company_address.split("\n");
       for (const line of addrLines) {
-        doc.text(line, pageW - marginR, ry, { align: "right" });
+        doc.text(line, pageW - marginR - (stampData ? 20 : 0), ry, { align: "right" });
         ry += 4;
       }
     }
     if (settings.company_phone) {
-      doc.text(`TEL: ${settings.company_phone}`, pageW - marginR, ry, { align: "right" });
+      doc.text(`TEL: ${settings.company_phone}`, pageW - marginR - (stampData ? 20 : 0), ry, { align: "right" });
       ry += 4;
+    }
+    if (stampData) {
+      try { doc.addImage(stampData, "PNG", pageW - marginR - 18, stampStartY - 2, 18, 18); } catch { /* ignore */ }
     }
 
     // ===== 「下記の通り...」 =====

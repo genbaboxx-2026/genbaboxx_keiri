@@ -507,13 +507,25 @@ function InvoicePreview({
 
         {/* 自社情報 右寄せ */}
         <div className={`text-right ${baseText} mb-3`}>
+          {settings.logo_url && (
+            <div className="flex justify-end mb-1">
+              <img src={settings.logo_url} alt="ロゴ" className={large ? "h-10" : "h-6"} />
+            </div>
+          )}
           <div className={`font-bold ${companySize}`}>{settings.company_name}</div>
-          {settings.company_address && (
-            <div className="whitespace-pre-line text-slate-600">{settings.company_address}</div>
-          )}
-          {settings.company_phone && (
-            <div className="text-slate-600">TEL: {settings.company_phone}</div>
-          )}
+          <div className="flex justify-end items-start gap-1">
+            <div>
+              {settings.company_address && (
+                <div className="whitespace-pre-line text-slate-600">{settings.company_address}</div>
+              )}
+              {settings.company_phone && (
+                <div className="text-slate-600">TEL: {settings.company_phone}</div>
+              )}
+            </div>
+            {settings.stamp_url && (
+              <img src={settings.stamp_url} alt="社印" className={`${large ? "h-12 w-12" : "h-8 w-8"} object-contain`} />
+            )}
+          </div>
         </div>
 
         {/* 「下記の通り...」 */}

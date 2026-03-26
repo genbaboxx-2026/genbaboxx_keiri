@@ -51,6 +51,8 @@ export function SettingsPage({ settings, onSave }: SettingsPageProps) {
   const [companyPhone, setCompanyPhone] = useState(settings?.company_phone ?? "");
   const [bankInfo, setBankInfo] = useState(settings?.bank_info ?? "");
   const [invoiceNumber, setInvoiceNumber] = useState(settings?.invoice_number ?? "");
+  const [logoUrl, setLogoUrl] = useState(settings?.logo_url ?? "");
+  const [stampUrl, setStampUrl] = useState(settings?.stamp_url ?? "");
   const [saved, setSaved] = useState(false);
   const [initialized, setInitialized] = useState(!!settings);
 
@@ -61,6 +63,8 @@ export function SettingsPage({ settings, onSave }: SettingsPageProps) {
       setCompanyPhone(settings.company_phone);
       setBankInfo(settings.bank_info);
       setInvoiceNumber(settings.invoice_number);
+      setLogoUrl(settings.logo_url || "");
+      setStampUrl(settings.stamp_url || "");
       setInitialized(true);
     }
   }, [settings, initialized]);
@@ -73,6 +77,8 @@ export function SettingsPage({ settings, onSave }: SettingsPageProps) {
       company_phone: companyPhone,
       bank_info: bankInfo,
       invoice_number: invoiceNumber,
+      logo_url: logoUrl,
+      stamp_url: stampUrl,
     });
     setSaved(true);
     setTimeout(() => setSaved(false), 2000);
@@ -127,6 +133,38 @@ export function SettingsPage({ settings, onSave }: SettingsPageProps) {
             multiline
             placeholder={"〇〇銀行 △△支店\n普通 1234567\n口座名義 カ）〇〇"}
           />
+        </div>
+
+        <div className="bg-slate-50 rounded-xl p-5">
+          <div className="text-sm font-bold text-slate-700 mb-4">
+            ロゴ・社印
+          </div>
+          <div className="space-y-3">
+            <Field
+              label="ロゴ画像URL"
+              value={logoUrl}
+              onChange={setLogoUrl}
+              placeholder="https://example.com/logo.png"
+            />
+            {logoUrl && (
+              <div className="flex items-center gap-2">
+                <img src={logoUrl} alt="ロゴ" className="h-10 object-contain" />
+                <span className="text-xs text-slate-400">プレビュー</span>
+              </div>
+            )}
+            <Field
+              label="社印画像URL"
+              value={stampUrl}
+              onChange={setStampUrl}
+              placeholder="https://example.com/stamp.png"
+            />
+            {stampUrl && (
+              <div className="flex items-center gap-2">
+                <img src={stampUrl} alt="社印" className="h-12 object-contain" />
+                <span className="text-xs text-slate-400">プレビュー</span>
+              </div>
+            )}
+          </div>
         </div>
 
         <div className="flex items-center gap-3">

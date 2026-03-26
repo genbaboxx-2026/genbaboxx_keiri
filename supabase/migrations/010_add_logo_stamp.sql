@@ -1,0 +1,3 @@
+ALTER TABLE settings
+  ADD COLUMN IF NOT EXISTS logo_url text NOT NULL DEFAULT '',
+  ADD COLUMN IF NOT EXISTS stamp_url text NOT NULL DEFAULT '';

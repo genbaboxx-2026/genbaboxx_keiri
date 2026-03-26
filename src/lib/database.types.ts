@@ -67,6 +67,8 @@ export interface Settings {
   company_phone: string;
   bank_info: string;
   invoice_number: string;
+  logo_url: string;
+  stamp_url: string;
   created_at: string;
   updated_at: string;
 }
