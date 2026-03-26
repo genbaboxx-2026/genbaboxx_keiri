@@ -598,14 +598,8 @@ function PreviewGallery({
 
   return (
     <div>
-      {/* 上部: 企業名 + ページ */}
-      <div className="flex items-center justify-between mb-4">
-        <div className="text-sm font-bold text-slate-700">
-          {current.companyName}
-          <span className="ml-2 text-xs font-normal text-slate-400">
-            ¥{formatNumber(current.total)}（税込）
-          </span>
-        </div>
+      {/* 上部: ページ番号 */}
+      <div className="flex items-center justify-end mb-2">
         <div className="text-xs text-slate-500">
           {safeIndex + 1} / {invoices.length}
         </div>
@@ -629,18 +623,25 @@ function PreviewGallery({
         </button>
 
         {/* カードスタック */}
-        <div className="relative" style={{ height: "70vh", aspectRatio: "210/297" }}>
+        <div className="relative" style={{ height: "calc(70vh + 28px)", aspectRatio: "210/297" }}>
           {/* 左後ろのカード（前のページ） */}
           {prevInv && (
             <div
-              className="absolute inset-0 transition-all duration-300 ease-out cursor-pointer"
+              className="absolute transition-all duration-300 ease-out cursor-pointer"
               style={{
-                transform: "translateX(calc(-60% - 20px)) scale(0.88)",
+                top: 28,
+                left: 0,
+                right: 0,
+                bottom: 0,
+                transform: "translateX(calc(-60% - 20px)) scale(0.92)",
                 zIndex: 1,
               }}
               onClick={goPrev}
             >
-              <div className="h-full w-full rounded-lg shadow-md overflow-hidden opacity-50 hover:opacity-70 transition-opacity">
+              <div className="text-center mb-1.5">
+                <span className="text-xs font-semibold text-slate-400">{prevInv.companyName}</span>
+              </div>
+              <div className="h-[calc(100%-20px)] w-full rounded-lg shadow-lg overflow-hidden opacity-70 hover:opacity-90 transition-opacity border border-slate-200">
                 <InvoicePreview
                   inv={prevInv}
                   settings={settings}
@@ -656,14 +657,21 @@ function PreviewGallery({
           {/* 右後ろのカード（次のページ） */}
           {nextInv && (
             <div
-              className="absolute inset-0 transition-all duration-300 ease-out cursor-pointer"
+              className="absolute transition-all duration-300 ease-out cursor-pointer"
               style={{
-                transform: "translateX(calc(60% + 20px)) scale(0.88)",
+                top: 28,
+                left: 0,
+                right: 0,
+                bottom: 0,
+                transform: "translateX(calc(60% + 20px)) scale(0.92)",
                 zIndex: 1,
               }}
               onClick={goNext}
             >
-              <div className="h-full w-full rounded-lg shadow-md overflow-hidden opacity-50 hover:opacity-70 transition-opacity">
+              <div className="text-center mb-1.5">
+                <span className="text-xs font-semibold text-slate-400">{nextInv.companyName}</span>
+              </div>
+              <div className="h-[calc(100%-20px)] w-full rounded-lg shadow-lg overflow-hidden opacity-70 hover:opacity-90 transition-opacity border border-slate-200">
                 <InvoicePreview
                   inv={nextInv}
                   settings={settings}
@@ -679,10 +687,14 @@ function PreviewGallery({
           {/* メインカード（現在のページ） */}
           <div
             key={safeIndex}
-            className="absolute inset-0 transition-all duration-300 ease-out animate-card-appear"
-            style={{ zIndex: 10 }}
+            className="absolute transition-all duration-300 ease-out animate-card-appear"
+            style={{ top: 0, left: 0, right: 0, bottom: 0, zIndex: 10 }}
           >
-            <div className="h-full w-full rounded-lg shadow-xl overflow-hidden">
+            <div className="text-center mb-1.5">
+              <span className="text-sm font-bold text-slate-700">{current.companyName}</span>
+              <span className="ml-2 text-xs text-slate-400">¥{formatNumber(current.total)}</span>
+            </div>
+            <div className="h-[calc(100%-20px)] w-full rounded-lg shadow-2xl overflow-hidden border border-slate-300">
               <InvoicePreview
                 inv={current}
                 settings={settings}
