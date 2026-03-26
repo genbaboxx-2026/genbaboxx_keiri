@@ -26,26 +26,15 @@ async function loadJapaneseFont(
 
 const fmt = (n: number) => n.toLocaleString();
 
-// 罫線ヘルパー
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-function drawLine(doc: any, x1: number, y1: number, x2: number, y2: number, width = 0.3) {
-  doc.setLineWidth(width);
-  doc.setDrawColor(51, 51, 51);
-  doc.line(x1, y1, x2, y2);
-}
-
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-function drawRect(doc: any, x: number, y: number, w: number, h: number) {
-  doc.setLineWidth(0.18);
-  doc.setDrawColor(51, 51, 51);
-  doc.rect(x, y, w, h);
-}
-
 function generateInvoiceNumber(): string {
   const ts = Date.now().toString();
   const last10 = ts.slice(-10).padStart(10, "0");
   return `INV-${last10}`;
 }
+
+// 1px(700px canvas) = 0.3mm(A4 210mm)
+// padding: left/right 48px = 14.4mm, top 42px = 12.6mm, bottom 34px = 10.2mm
+// A4: 210 x 297 mm
 
 export async function generateInvoicePDF(
   settings: Settings,
@@ -55,154 +44,175 @@ export async function generateInvoicePDF(
   dueDate?: string
 ) {
   const { jsPDF } = await import("jspdf");
-
-  const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const doc: any = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
   await loadJapaneseFont(doc);
   doc.setFont("NotoSansJP", "normal");
 
   const today = new Date();
   const issueDate = `${today.getFullYear()}/${String(today.getMonth() + 1).padStart(2, "0")}/${String(today.getDate()).padStart(2, "0")}`;
+
+  const mL = 14.4;   // 48px
+  const mR = 14.4;   // 48px
+  const mT = 12.6;   // 42px
   const pageW = 210;
-  const mL = 18;
-  const mR = 18;
-  const contentW = pageW - mL - mR;
+  const contentW = pageW - mL - mR; // 181.2mm
+
+  // 罫線ヘルパー
+  const line = (x1: number, y1: number, x2: number, y2: number, w = 0.15) => {
+    doc.setLineWidth(w);
+    doc.setDrawColor(51, 51, 51);
+    doc.line(x1, y1, x2, y2);
+  };
+  const rect = (x: number, y: number, w: number, h: number) => {
+    doc.setLineWidth(0.15);
+    doc.setDrawColor(51, 51, 51);
+    doc.rect(x, y, w, h);
+  };
 
   for (let idx = 0; idx < invoices.length; idx++) {
     const inv = invoices[idx];
     if (idx > 0) doc.addPage();
 
     const invoiceNumber = generateInvoiceNumber();
+    let y = mT;
 
-    let y = 18;
-
-    // ===== タイトル =====
-    doc.setFontSize(22);
+    // ===== タイトル「請求書」 =====
+    // fontSize:24, letterSpacing:8px=2.4mm, marginBottom:28px=8.4mm
+    doc.setFontSize(24);
     doc.setTextColor(26, 26, 26);
-    doc.text("請 求 書", pageW / 2, y, { align: "center", charSpace: 2.5 });
-    y += 3.5;
-    drawLine(doc, pageW / 2 - 16, y, pageW / 2 + 16, y, 0.7);
-    y += 10;
+    doc.text("請 求 書", pageW / 2, y, { align: "center", charSpace: 2.4 });
+    y += 4; // underline position
+    line(pageW / 2 - 18, y, pageW / 2 + 18, y, 0.6);
+    y += 8.4; // marginBottom 28px
 
-    // ===== 左: 請求先 =====
-    const headerY = y;
-    doc.setFontSize(16);
+    // ===== ヘッダー: 左=請求先, 右=請求情報+自社 =====
+    const headerStartY = y;
+
+    // 左: 請求先 (fontSize:18, fontWeight:700, marginBottom:3px=0.9mm)
+    doc.setFontSize(18);
     doc.setTextColor(26, 26, 26);
-    const companyNameWidth = doc.getTextWidth(inv.companyName);
-    doc.text(inv.companyName, mL, y);
-    doc.setFontSize(16);
-    doc.text("御中", mL + companyNameWidth + 3, y);
-    y += 7;
+    doc.text(`${inv.companyName}　御中`, mL, y);
 
-    // ===== 右上: 請求情報テーブル =====
-    const rightTableX = 130;
-    const rightTableW = pageW - mR - rightTableX;
-    const rightLabelX = rightTableX;
-    const rightValueX = pageW - mR;
-    let ry = headerY - 5;
+    // 右: 請求情報テーブル (fontSize:12.5, marginBottom:14px=4.2mm)
+    const rightX = 130; // テーブル左端
+    const rightEnd = pageW - mR; // テーブル右端
+    let ry = headerStartY - 3;
 
-    doc.setFontSize(10);
+    doc.setFontSize(12.5);
     // 請求日
     doc.setTextColor(51, 51, 51);
-    doc.text("請求日", rightLabelX, ry);
-    doc.setTextColor(30, 30, 30);
-    doc.text(issueDate, rightValueX, ry, { align: "right" });
-    ry += 1;
-    drawLine(doc, rightTableX, ry, rightValueX, ry, 0.2);
+    doc.text("請求日", rightX + 1.8, ry);
+    doc.setTextColor(26, 26, 26);
+    doc.text(issueDate, rightEnd - 1.8, ry, { align: "right" });
+    ry += 1.5;
+    line(rightX, ry, rightEnd, ry, 0.15);
     ry += 5;
 
     // 請求書番号
     doc.setTextColor(51, 51, 51);
-    doc.text("請求書番号", rightLabelX, ry);
-    doc.setTextColor(30, 30, 30);
-    doc.text(invoiceNumber, rightValueX, ry, { align: "right" });
-    ry += 1;
-    drawLine(doc, rightTableX, ry, rightValueX, ry, 0.2);
+    doc.text("請求書番号", rightX + 1.8, ry);
+    doc.setTextColor(26, 26, 26);
+    doc.text(invoiceNumber, rightEnd - 1.8, ry, { align: "right" });
+    ry += 1.5;
+    line(rightX, ry, rightEnd, ry, 0.15);
     ry += 5;
 
     // 登録番号
     if (settings.invoice_number) {
       doc.setTextColor(51, 51, 51);
-      doc.text("登録番号", rightLabelX, ry);
-      doc.setTextColor(30, 30, 30);
-      doc.text(settings.invoice_number, rightValueX, ry, { align: "right" });
+      doc.text("登録番号", rightX + 1.8, ry);
+      doc.setTextColor(26, 26, 26);
+      doc.text(settings.invoice_number, rightEnd - 1.8, ry, { align: "right" });
       ry += 1.5;
-      drawLine(doc, rightTableX, ry, rightValueX, ry, 0.2);
-      ry += 5.5;
+      line(rightX, ry, rightEnd, ry, 0.15);
+      ry += 5;
     }
 
-    // 自社情報（右寄せ）
-    ry += 3;
-    doc.setFontSize(13);
+    // 自社情報 (marginTop:14px=4.2mm from table)
+    ry += 4.2;
+    // 会社名 fontSize:15, fontWeight:700, marginBottom:4px=1.2mm
+    doc.setFontSize(15);
     doc.setTextColor(26, 26, 26);
-    doc.text(settings.company_name || "", rightValueX, ry, { align: "right" });
-    ry += 5;
+    doc.text(settings.company_name || "", rightEnd, ry, { align: "right" });
+    ry += 5.5;
 
+    // （本店所在地） fontSize:11.5, color:#555
     if (settings.company_address) {
-      doc.setFontSize(9.5);
+      doc.setFontSize(11.5);
       doc.setTextColor(85, 85, 85);
-      doc.text("（本店所在地）", rightValueX, ry, { align: "right" });
-      ry += 4;
-      doc.setFontSize(10);
-      doc.setTextColor(51, 51, 51);
+      doc.text("（本店所在地）", rightEnd, ry, { align: "right" });
+      ry += 4.5;
+      // 住所 fontSize:12.5
+      doc.setFontSize(12.5);
+      doc.setTextColor(26, 26, 26);
       const addrLines = settings.company_address.split("\n");
-      for (const line of addrLines) {
-        doc.text(line, rightValueX, ry, { align: "right" });
-        ry += 4;
+      for (const addrLine of addrLines) {
+        doc.text(addrLine, rightEnd, ry, { align: "right" });
+        ry += 4.5;
       }
     }
 
     // ===== 「下記の通り...」 =====
-    y = Math.max(y + 6, ry + 3);
-    doc.setFontSize(10);
+    // marginTop:14px=4.2mm, marginBottom:16px=4.8mm, fontSize:13
+    y = Math.max(headerStartY + 8, ry + 2);
+    y += 4.2;
+    doc.setFontSize(13);
     doc.setTextColor(26, 26, 26);
     doc.text("下記の通りご請求申し上げます。", mL, y);
-    y += 8;
+    y += 4.8;
 
     // ===== 請求金額 =====
-    doc.setFontSize(11);
+    // marginBottom:18px=5.4mm
+    // 「請求金額」fontSize:13 fontWeight:700
+    // 金額 fontSize:24 fontWeight:700 letterSpacing:1
+    // 「円」fontSize:14
+    y += 2;
+    doc.setFontSize(13);
     doc.setTextColor(26, 26, 26);
-    const labelW = doc.getTextWidth("請求金額");
-    doc.text("請求金額", mL, y);
+    const lbl = "請求金額";
+    const lblW = doc.getTextWidth(lbl);
+    doc.text(lbl, mL, y);
 
-    doc.setFontSize(20);
-    const amountStr = fmt(inv.total);
-    const amountW = doc.getTextWidth(amountStr);
-    doc.text(amountStr, mL + labelW + 3, y);
+    doc.setFontSize(24);
+    const amtStr = fmt(inv.total);
+    const amtW = doc.getTextWidth(amtStr);
+    doc.text(amtStr, mL + lblW + 3.6, y); // gap:12px=3.6mm
 
-    doc.setFontSize(12);
-    doc.text("円", mL + labelW + 3 + amountW + 1, y);
+    doc.setFontSize(14);
+    doc.text("円", mL + lblW + 3.6 + amtW + 0.3, y);
 
-    y += 3;
-    drawLine(doc, mL, y, mL + contentW * 0.45, y, 0.9);
-    y += 6;
+    y += 2.5;
+    // 2.5px=0.75mm underline, width:45%
+    line(mL, y, mL + contentW * 0.45, y, 0.75);
+    y += 5.4;
 
     // ===== 明細テーブル =====
     const items = inv.items.filter((it) => it.amount > 0 || it.description);
     const maxRows = 8;
     const emptyRows = Math.max(0, maxRows - items.length);
 
-    const colWidths = [contentW * 0.50, contentW * 0.12, contentW * 0.18, contentW * 0.20];
-    const rowH = 6;
-    const headerH = 7;
+    // テーブル幅 = contentW, 列: 48% 10% 18% 18% (残り6%=rightに吸収→20%)
+    const cols = [contentW * 0.48, contentW * 0.10, contentW * 0.18, contentW * 0.24];
+    // padding:8px=2.4mm → rowH ≈ 7mm
+    const hdrH = 7;
+    const rowH = 7;
+    const cb = 0.15; // border width
 
     // ヘッダー
-    const tableStartY = y;
-    drawRect(doc, mL, y, contentW, headerH);
-    doc.setFontSize(10);
+    doc.setFontSize(13);
     doc.setTextColor(26, 26, 26);
-    const headers = ["摘要", "数量", "単価", "明細金額"];
+    const hdrs = ["摘要", "数量", "単価", "明細金額"];
     let cx = mL;
     for (let c = 0; c < 4; c++) {
-      doc.text(headers[c], cx + colWidths[c] / 2, y + headerH / 2 + 1.5, { align: "center" });
-      if (c < 3) {
-        drawLine(doc, cx + colWidths[c], y, cx + colWidths[c], y + headerH, 0.18);
-      }
-      cx += colWidths[c];
+      rect(cx, y, cols[c], hdrH);
+      doc.text(hdrs[c], cx + cols[c] / 2, y + hdrH / 2 + 1.8, { align: "center" });
+      cx += cols[c];
     }
-    y += headerH;
+    y += hdrH;
 
     // データ行
-    doc.setTextColor(30, 30, 30);
+    doc.setFontSize(13);
     const allRows = [
       ...items.map((item) => [
         item.description,
@@ -213,95 +223,106 @@ export async function generateInvoicePDF(
       ...Array(emptyRows).fill(["", "", "", ""]),
     ];
 
-    for (let r = 0; r < allRows.length; r++) {
-      const row = allRows[r];
-      const ry2 = y + r * rowH;
-      // Row borders (all cells)
-      drawRect(doc, mL, ry2, contentW, rowH);
+    for (const row of allRows) {
       cx = mL;
-      doc.setFontSize(10);
-      // 摘要（左寄せ）
-      doc.text(row[0], cx + 3, ry2 + rowH / 2 + 1.5);
-      cx += colWidths[0];
-      drawLine(doc, cx, ry2, cx, ry2 + rowH, 0.18);
-      // 数量（右寄せ）
-      doc.text(row[1], cx + colWidths[1] - 3, ry2 + rowH / 2 + 1.5, { align: "right" });
-      cx += colWidths[1];
-      drawLine(doc, cx, ry2, cx, ry2 + rowH, 0.18);
-      // 単価（右寄せ）
-      doc.text(row[2], cx + colWidths[2] - 3, ry2 + rowH / 2 + 1.5, { align: "right" });
-      cx += colWidths[2];
-      drawLine(doc, cx, ry2, cx, ry2 + rowH, 0.18);
-      // 金額（右寄せ）
-      doc.text(row[3], cx + colWidths[3] - 3, ry2 + rowH / 2 + 1.5, { align: "right" });
+      doc.setTextColor(26, 26, 26);
+      for (let c = 0; c < 4; c++) {
+        rect(cx, y, cols[c], rowH);
+        if (c === 0) {
+          // 摘要: 左寄せ
+          doc.text(row[c], cx + 2.4, y + rowH / 2 + 1.8);
+        } else {
+          // 数量・単価・金額: 右寄せ
+          doc.text(row[c], cx + cols[c] - 2.4, y + rowH / 2 + 1.8, { align: "right" });
+        }
+        cx += cols[c];
+      }
+      y += rowH;
     }
 
-    const tableBottom = y + allRows.length * rowH;
-    y = tableBottom + 5;
+    y += 3; // marginTop:10px=3mm
 
-    // ===== 左下: 入金期日 + 振込先 =====
+    // ===== 下部: 左=入金期日+振込先, 右=合計テーブル =====
     const bottomY = y;
-    doc.setFontSize(10);
-    doc.setTextColor(30, 30, 30);
 
-    let by = bottomY;
+    // 左: 入金期日 + 振込先 (fontSize:12.5, marginTop:18px=5.4mm)
+    let by = bottomY + 5.4;
+    doc.setFontSize(12.5);
+    doc.setTextColor(26, 26, 26);
+
     if (dueDate) {
       doc.text("入金期日", mL, by);
-      const labelEnd = mL + doc.getTextWidth("入金期日");
-      doc.setFontSize(12.5);
-      doc.text(`　${dueDate.replace(/-/g, "/")}`, labelEnd, by);
+      doc.text(dueDate.replace(/-/g, "/"), mL + doc.getTextWidth("入金期日") + 4.2, by);
       by += 5;
     }
 
-    doc.setFontSize(10);
     doc.text("振込先", mL, by);
-    by += 4;
-
     if (settings.bank_info) {
-      doc.setFontSize(10);
-      doc.setTextColor(30, 30, 30);
+      const bankText = settings.bank_info.replace(/\n/g, "　");
+      doc.text(bankText, mL + doc.getTextWidth("振込先") + 4.2, by);
+      by += 5;
+      // 改行がある場合は各行も表示
       const bankLines = settings.bank_info.split("\n");
-      for (const line of bankLines) {
-        doc.text(line, mL + 2, by);
-        by += 5;
+      if (bankLines.length > 1) {
+        // 1行にまとめたので追加行は不要
       }
     }
 
-    // ===== 右下: 合計テーブル (小計/消費税/合計のみ) =====
-    const sumW = 70;
+    // 右: 合計テーブル (fontSize:13, marginTop:6px=1.8mm)
+    // padding:6px 14px = 1.8mm 4.2mm (左) / 6px 18px = 1.8mm 5.4mm (右)
+    const sumW = 60;
     const sumX = pageW - mR - sumW;
-    const sumRowH = 6;
+    const sumRowH = 7;
+    const sumLabelW = sumW * 0.38;
+    let sy = bottomY + 1.8;
+
     const sumData: [string, string, boolean][] = [
       ["小計", `${fmt(inv.subtotal)}円`, false],
       ["消費税", `${fmt(inv.tax)}円`, false],
       ["合計", `${fmt(inv.total)}円`, true],
     ];
 
-    let sy = bottomY - 2;
+    doc.setTextColor(26, 26, 26);
     for (const [label, value, bold] of sumData) {
-      drawRect(doc, sumX, sy, sumW, sumRowH);
-      doc.setTextColor(30, 30, 30);
-      doc.setFontSize(bold ? 10 : 9.5);
-      const midColX = sumX + sumW * 0.4;
-      drawLine(doc, midColX, sy, midColX, sy + sumRowH, 0.18);
-      doc.text(label, sumX + 3, sy + sumRowH / 2 + 1.5);
-      doc.text(value, sumX + sumW - 3, sy + sumRowH / 2 + 1.5, { align: "right" });
+      doc.setFontSize(13);
+      // 左セル (label)
+      line(sumX, sy, sumX, sy + sumRowH, cb); // 左枠
+      line(sumX, sy + sumRowH, sumX + sumW, sy + sumRowH, cb); // 下枠
+      if (sy === bottomY + 1.8) line(sumX, sy, sumX + sumW, sy, cb); // 上枠（最初の行のみ）
+      line(sumX + sumLabelW, sy, sumX + sumLabelW, sy + sumRowH, cb); // 中間仕切り
+      line(sumX + sumW, sy, sumX + sumW, sy + sumRowH, cb); // 右枠
+
+      doc.text(label, sumX + 4.2, sy + sumRowH / 2 + 1.8);
+      if (bold) {
+        doc.text(value, sumX + sumW - 5.4, sy + sumRowH / 2 + 1.8, { align: "right" });
+      } else {
+        doc.text(value, sumX + sumW - 5.4, sy + sumRowH / 2 + 1.8, { align: "right" });
+      }
       sy += sumRowH;
     }
 
     // ===== 備考 =====
-    const notesY = Math.max(sy + 5, by + 3);
-    doc.setFontSize(9);
+    // marginTop:16px=4.8mm, border:0.5px solid #999, borderRadius:2, padding:10px 12px=3mm 3.6mm, minHeight:80px=24mm
+    const notesTop = Math.max(sy + 4.8, by + 3);
+    const notesH = 24;
+    doc.setDrawColor(153, 153, 153);
+    doc.setLineWidth(0.15);
+    doc.rect(mL, notesTop, contentW, notesH);
+
+    // 「備考」ラベル fontSize:11.5, fontWeight:700, color:#444
+    doc.setFontSize(11.5);
     doc.setTextColor(68, 68, 68);
-    drawRect(doc, mL, notesY - 3, contentW, 22);
-    doc.text("備考", mL + 3, notesY + 1);
-    doc.setTextColor(30, 30, 30);
+    doc.text("備考", mL + 3.6, notesTop + 4);
+
+    // 備考テキスト
     if (templateNotes) {
+      doc.setFontSize(12.5);
+      doc.setTextColor(30, 30, 30);
+      let ny = notesTop + 9;
       const noteLines = templateNotes.split("\n");
-      let ny = notesY + 7;
-      for (const line of noteLines) {
-        doc.text(line, mL + 3, ny);
-        ny += 5;
+      for (const noteLine of noteLines) {
+        doc.text(noteLine, mL + 3.6, ny);
+        ny += 4.5;
       }
     }
   }
