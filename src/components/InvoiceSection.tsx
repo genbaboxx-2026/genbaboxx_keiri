@@ -615,9 +615,6 @@ function PreviewGallery({
               onClick={() => onChangeIndex(i)}
             >
               <div className="truncate">{inv.companyName}</div>
-              <div className={`text-[10px] tabular-nums mt-0.5 ${i === safeIndex ? "text-slate-300" : "text-slate-400"}`}>
-                ¥{formatNumber(inv.total)}
-              </div>
             </button>
           ))}
         </div>
