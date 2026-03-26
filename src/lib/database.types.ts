@@ -71,6 +71,8 @@ export interface Settings {
   invoice_number: string;
   logo_url: string;
   stamp_url: string;
+  email_subject_template: string;
+  email_body_template: string;
   created_at: string;
   updated_at: string;
 }

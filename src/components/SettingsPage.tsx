@@ -53,6 +53,8 @@ export function SettingsPage({ settings, onSave }: SettingsPageProps) {
   const [invoiceNumber, setInvoiceNumber] = useState(settings?.invoice_number ?? "");
   const [logoUrl, setLogoUrl] = useState(settings?.logo_url ?? "");
   const [stampUrl, setStampUrl] = useState(settings?.stamp_url ?? "");
+  const [emailSubjectTemplate, setEmailSubjectTemplate] = useState(settings?.email_subject_template ?? "");
+  const [emailBodyTemplate, setEmailBodyTemplate] = useState(settings?.email_body_template ?? "");
   const [saved, setSaved] = useState(false);
   const [initialized, setInitialized] = useState(!!settings);
 
@@ -65,6 +67,8 @@ export function SettingsPage({ settings, onSave }: SettingsPageProps) {
       setInvoiceNumber(settings.invoice_number);
       setLogoUrl(settings.logo_url || "");
       setStampUrl(settings.stamp_url || "");
+      setEmailSubjectTemplate(settings.email_subject_template || "");
+      setEmailBodyTemplate(settings.email_body_template || "");
       setInitialized(true);
     }
   }, [settings, initialized]);
@@ -79,6 +83,8 @@ export function SettingsPage({ settings, onSave }: SettingsPageProps) {
       invoice_number: invoiceNumber,
       logo_url: logoUrl,
       stamp_url: stampUrl,
+      email_subject_template: emailSubjectTemplate,
+      email_body_template: emailBodyTemplate,
     });
     setSaved(true);
     setTimeout(() => setSaved(false), 2000);
@@ -170,6 +176,33 @@ export function SettingsPage({ settings, onSave }: SettingsPageProps) {
                 </div>
               )}
             </div>
+          </div>
+        </div>
+      </div>
+
+      <div className="bg-slate-50 rounded-xl p-5 mt-6">
+        <div className="text-sm font-bold text-slate-700 mb-4">
+          メール設定（請求書送付時のデフォルト）
+        </div>
+        <div className="space-y-3">
+          <Field
+            label="件名テンプレート"
+            value={emailSubjectTemplate}
+            onChange={setEmailSubjectTemplate}
+            placeholder="【会社名】○月分 請求書送付のご案内"
+          />
+          <div className="text-[10px] text-slate-400 -mt-1">
+            ※ 空欄の場合は自動生成されます
+          </div>
+          <Field
+            label="本文テンプレート"
+            value={emailBodyTemplate}
+            onChange={setEmailBodyTemplate}
+            multiline
+            placeholder={"いつもお世話になっております。\n○○です。\n\n○月分の請求書を添付にてお送りいたします。"}
+          />
+          <div className="text-[10px] text-slate-400 -mt-1">
+            ※ 空欄の場合は自動生成されます
           </div>
         </div>
       </div>

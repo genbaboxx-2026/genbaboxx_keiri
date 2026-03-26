@@ -213,8 +213,12 @@ export function InvoiceSection({
   }, [settings, monthLabel]);
 
   const handleOpenConfirm = () => {
-    setEmailSubject(`【${settings?.company_name || ""}】${monthLabel}分 請求書送付のご案内`);
-    setEmailBody(buildDefaultEmailBody());
+    setEmailSubject(
+      settings?.email_subject_template || `【${settings?.company_name || ""}】${monthLabel}分 請求書送付のご案内`
+    );
+    setEmailBody(
+      settings?.email_body_template || buildDefaultEmailBody()
+    );
     setSendChecked(new Set(selectedInvoices.map((i) => i.companyId)));
     setShowSendConfirm(true);
   };
