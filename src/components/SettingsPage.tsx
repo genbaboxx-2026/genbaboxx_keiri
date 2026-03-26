@@ -9,22 +9,24 @@ interface SettingsPageProps {
 }
 
 export function SettingsPage({ settings, onSave }: SettingsPageProps) {
-  const [companyName, setCompanyName] = useState("");
-  const [companyAddress, setCompanyAddress] = useState("");
-  const [companyPhone, setCompanyPhone] = useState("");
-  const [bankInfo, setBankInfo] = useState("");
-  const [invoiceNumber, setInvoiceNumber] = useState("");
+  const [companyName, setCompanyName] = useState(settings?.company_name ?? "");
+  const [companyAddress, setCompanyAddress] = useState(settings?.company_address ?? "");
+  const [companyPhone, setCompanyPhone] = useState(settings?.company_phone ?? "");
+  const [bankInfo, setBankInfo] = useState(settings?.bank_info ?? "");
+  const [invoiceNumber, setInvoiceNumber] = useState(settings?.invoice_number ?? "");
   const [saved, setSaved] = useState(false);
+  const [initialized, setInitialized] = useState(!!settings);
 
   useEffect(() => {
-    if (settings) {
+    if (settings && !initialized) {
       setCompanyName(settings.company_name);
       setCompanyAddress(settings.company_address);
       setCompanyPhone(settings.company_phone);
       setBankInfo(settings.bank_info);
       setInvoiceNumber(settings.invoice_number);
+      setInitialized(true);
     }
-  }, [settings]);
+  }, [settings, initialized]);
 
   const handleSave = () => {
     onSave({
