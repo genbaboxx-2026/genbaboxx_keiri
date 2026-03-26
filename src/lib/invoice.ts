@@ -1,21 +1,25 @@
 import type { Settings } from "./database.types";
 import type { CompanyInvoice } from "./invoiceCalc";
 
-let fontLoaded = false;
+let cachedFontBase64: string | null = null;
 
 async function loadJapaneseFont(
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   doc: any
 ) {
-  if (fontLoaded) return;
-  // NotoSansJP を fetch して Base64 に変換
-  const res = await fetch(
-    "https://cdn.jsdelivr.net/gh/nicholass003/noto-sans-jp-base64-jspdf@main/NotoSansJP-Regular.txt"
-  );
-  const base64 = await res.text();
-  doc.addFileToVFS("NotoSansJP-Regular.ttf", base64);
+  if (!cachedFontBase64) {
+    const res = await fetch("/fonts/NotoSansJP-Regular.ttf");
+    const buffer = await res.arrayBuffer();
+    const bytes = new Uint8Array(buffer);
+    let binary = "";
+    const chunkSize = 8192;
+    for (let i = 0; i < bytes.length; i += chunkSize) {
+      binary += String.fromCharCode(...bytes.slice(i, i + chunkSize));
+    }
+    cachedFontBase64 = btoa(binary);
+  }
+  doc.addFileToVFS("NotoSansJP-Regular.ttf", cachedFontBase64);
   doc.addFont("NotoSansJP-Regular.ttf", "NotoSansJP", "normal");
-  fontLoaded = true;
 }
 
 export async function generateInvoicePDF(
