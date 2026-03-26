@@ -137,7 +137,7 @@ export function ContractForm({
       billing_day: billingDay,
       duration_months: durationMonths,
       monthly_fee: monthlyFee,
-      fee_months: productType === "ninkuboxx" ? feeMonths : 1,
+      fee_months: billingType === "monthly" ? feeMonths : 1,
       monthly_close: monthlyClose,
       monthly_pay: monthlyPay,
       has_initial_fee: hasInitialFee,
@@ -375,7 +375,7 @@ export function ContractForm({
               onChange={setMonthlyFee}
               placeholder="30,000"
             />
-            {productType === "ninkuboxx" && billingType === "monthly" && (
+            {billingType === "monthly" && (
               <div className="flex items-center gap-1.5 mt-1.5">
                 <span className="text-[11px] text-slate-500">×</span>
                 <input
