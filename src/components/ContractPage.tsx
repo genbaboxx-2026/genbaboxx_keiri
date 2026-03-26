@@ -341,94 +341,83 @@ function ContractDetailView({
             );
           })()}
 
-          {/* ステータス別テーブル */}
-          {([
-            { key: "initial" as ContractStatus, label: "初回契約", headerBg: "bg-blue-50", headerBorder: "border-blue-200", headerText: "text-blue-700" },
-            { key: "renewed" as ContractStatus, label: "継続契約", headerBg: "bg-emerald-50", headerBorder: "border-emerald-200", headerText: "text-emerald-700" },
-            { key: "auto_renewing" as ContractStatus, label: "自動更新", headerBg: "bg-amber-50", headerBorder: "border-amber-200", headerText: "text-amber-700" },
-          ] as const).map((sg) => {
-            const items = contracts.filter((c) => (c.contract_status || "initial") === sg.key);
-            if (items.length === 0) return null;
-            const monthlyTotal = items.reduce((s, c) => s + c.monthly_fee, 0);
-            return (
-              <div key={sg.key} className="mb-5">
-                <div className={`flex items-center justify-between ${sg.headerBg} ${sg.headerBorder} border rounded-t-xl px-4 py-2`}>
-                  <span className={`text-sm font-bold ${sg.headerText}`}>
-                    {sg.label}
-                    <span className="ml-2 text-xs font-normal opacity-70">{items.length}社</span>
-                  </span>
-                  <span className={`text-sm font-extrabold ${sg.headerText}`}>
-                    月額合計 {formatYen(monthlyTotal)}
-                  </span>
-                </div>
-                <div className="overflow-x-auto rounded-b-xl border border-t-0 border-slate-200">
-                  <table className="w-full border-collapse text-[13px]">
-                    <thead>
-                      <tr className="bg-slate-50">
-                        {["企業名", "開始", "起算", "期間", "完了", "月額", "条件", "初期", "OP", ""].map((h, i) => (
-                          <th key={i} className="px-3 py-2 text-left font-bold text-slate-600 border-b-2 border-slate-200 whitespace-nowrap text-xs">
-                            {h}
-                          </th>
-                        ))}
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {items.map((c) => {
-                        const bs = makeBillingStart(c.billing_month, c.billing_day);
-                        const end = calcEndDate(bs, c.duration_months);
-                        const bm = c.billing_month ? parseInt(c.billing_month.split("-")[1]) : 0;
-                        return (
-                          <tr key={c.id} className="cursor-pointer hover:bg-slate-50 border-b border-slate-100" onClick={() => onEdit(c)}>
-                            <td className="px-3 py-2.5 font-semibold">{getCompanyName(c.company_id)}</td>
-                            <td className="px-3 py-2.5 text-xs">{formatDate(c.contract_start_date)}</td>
-                            <td className="px-3 py-2.5 text-xs">{formatDate(bs)}</td>
-                            <td className="px-3 py-2.5">{c.duration_months}ヶ月</td>
-                            <td className="px-3 py-2.5 text-xs font-semibold text-blue-800">{formatDate(end)}</td>
-                            <td className="px-3 py-2.5 font-semibold">
-                              {formatYen(c.monthly_fee)}
-                              {c.fee_months > 1 && (
-                                <span className="ml-1 text-[10px] text-slate-500">×{c.fee_months}ヶ月</span>
-                              )}
-                              {c.billing_type === "lump_sum" && (
-                                <span className="ml-1 text-[10px] font-bold text-amber-600 bg-amber-50 px-1.5 py-0.5 rounded">一括</span>
-                              )}
-                            </td>
-                            <td className="px-3 py-2.5 text-[10px] text-slate-500">{payDescription(c.monthly_close, c.monthly_pay, bm)}</td>
-                            <td className="px-3 py-2.5 text-xs">
-                              {c.has_initial_fee ? (
-                                <span>
-                                  {formatYen(c.initial_fee)}
-                                  <br />
-                                  <span className="text-[9px] text-slate-500">{payDescription(c.initial_close, c.initial_pay, bm)}</span>
-                                </span>
-                              ) : <span className="text-slate-300">—</span>}
-                            </td>
-                            <td className="px-3 py-2.5 text-xs">
-                              {c.has_option ? (
-                                <span>
-                                  {c.option_name} {formatYen(c.option_fee)}/月
-                                  <br />
-                                  <span className="text-[9px] text-slate-500">{payDescription(c.option_close, c.option_pay, bm)}</span>
-                                </span>
-                              ) : <span className="text-slate-300">—</span>}
-                            </td>
-                            <td className="px-3 py-2.5">
-                              <button
-                                className="px-4 py-2 bg-red-50 text-red-600 border border-red-200 rounded-lg text-[13px] font-medium cursor-pointer hover:bg-red-100"
-                                onClick={(e) => { e.stopPropagation(); onDelete(c.id); }}
-                              >
-                                削除
-                              </button>
-                            </td>
-                          </tr>
-                        );
-                      })}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-            );
-          })}
+          {/* 契約テーブル（全ステータス統合） */}
+          <div className="overflow-x-auto rounded-xl border border-slate-200">
+            <table className="w-full border-collapse text-[13px]">
+              <thead>
+                <tr className="bg-slate-50">
+                  {["企業名", "ステータス", "開始", "起算", "期間", "完了", "月額", "条件", "初期", "OP", ""].map((h, i) => (
+                    <th key={i} className="px-3 py-2 text-left font-bold text-slate-600 border-b-2 border-slate-200 whitespace-nowrap text-xs">
+                      {h}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {contracts.map((c) => {
+                  const bs = makeBillingStart(c.billing_month, c.billing_day);
+                  const end = calcEndDate(bs, c.duration_months);
+                  const bm = c.billing_month ? parseInt(c.billing_month.split("-")[1]) : 0;
+                  const status = c.contract_status || "initial";
+                  const statusConfig = {
+                    initial: { label: "初回", bg: "bg-blue-50", text: "text-blue-700", border: "border-blue-200" },
+                    renewed: { label: "継続", bg: "bg-emerald-50", text: "text-emerald-700", border: "border-emerald-200" },
+                    auto_renewing: { label: "自動更新", bg: "bg-amber-50", text: "text-amber-700", border: "border-amber-200" },
+                  }[status];
+                  return (
+                    <tr key={c.id} className="cursor-pointer hover:bg-slate-50 border-b border-slate-100" onClick={() => onEdit(c)}>
+                      <td className="px-3 py-2.5 font-semibold">{getCompanyName(c.company_id)}</td>
+                      <td className="px-3 py-2.5">
+                        <span className={`${statusConfig.bg} ${statusConfig.text} ${statusConfig.border} border text-[10px] font-bold px-2 py-0.5 rounded-full whitespace-nowrap`}>
+                          {statusConfig.label}
+                        </span>
+                      </td>
+                      <td className="px-3 py-2.5 text-xs">{formatDate(c.contract_start_date)}</td>
+                      <td className="px-3 py-2.5 text-xs">{formatDate(bs)}</td>
+                      <td className="px-3 py-2.5">{c.duration_months}ヶ月</td>
+                      <td className="px-3 py-2.5 text-xs font-semibold text-blue-800">{formatDate(end)}</td>
+                      <td className="px-3 py-2.5 font-semibold">
+                        {formatYen(c.monthly_fee)}
+                        {c.fee_months > 1 && (
+                          <span className="ml-1 text-[10px] text-slate-500">{c.fee_months}ヶ月</span>
+                        )}
+                        {c.billing_type === "lump_sum" && (
+                          <span className="ml-1 text-[10px] font-bold text-amber-600 bg-amber-50 px-1.5 py-0.5 rounded">一括</span>
+                        )}
+                      </td>
+                      <td className="px-3 py-2.5 text-[10px] text-slate-500">{payDescription(c.monthly_close, c.monthly_pay, bm)}</td>
+                      <td className="px-3 py-2.5 text-xs">
+                        {c.has_initial_fee ? (
+                          <span>
+                            {formatYen(c.initial_fee)}
+                            <br />
+                            <span className="text-[9px] text-slate-500">{payDescription(c.initial_close, c.initial_pay, bm)}</span>
+                          </span>
+                        ) : <span className="text-slate-300">—</span>}
+                      </td>
+                      <td className="px-3 py-2.5 text-xs">
+                        {c.has_option ? (
+                          <span>
+                            {c.option_name} {formatYen(c.option_fee)}/月
+                            <br />
+                            <span className="text-[9px] text-slate-500">{payDescription(c.option_close, c.option_pay, bm)}</span>
+                          </span>
+                        ) : <span className="text-slate-300">—</span>}
+                      </td>
+                      <td className="px-3 py-2.5">
+                        <button
+                          className="px-4 py-2 bg-red-50 text-red-600 border border-red-200 rounded-lg text-[13px] font-medium cursor-pointer hover:bg-red-100"
+                          onClick={(e) => { e.stopPropagation(); onDelete(c.id); }}
+                        >
+                          削除
+                        </button>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
         </>
       )}
     </div>

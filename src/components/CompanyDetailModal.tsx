@@ -41,6 +41,129 @@ function ContractStatusBadge({ status }: { status: ContractStatus }) {
   );
 }
 
+function ContractCard({
+  contract,
+  isCurrent,
+  onEdit,
+  onDelete,
+}: {
+  contract: Contract;
+  isCurrent: boolean;
+  onEdit: (contract: Contract) => void;
+  onDelete: (id: string) => void;
+}) {
+  const billingStart = makeBillingStart(contract.billing_month, contract.billing_day);
+  const endDate = calcEndDate(billingStart, contract.duration_months);
+  return (
+    <div
+      className={`rounded-lg px-4 py-3 cursor-pointer transition-colors ${
+        isCurrent
+          ? "bg-white border-2 border-blue-300 shadow-sm hover:border-blue-400"
+          : "bg-slate-50 border border-slate-200 opacity-60 hover:opacity-80"
+      }`}
+      onClick={() => onEdit(contract)}
+    >
+      <div className="flex justify-between items-start">
+        <div className="flex-1">
+          <div className="flex items-center gap-2 mb-1.5">
+            <ContractStatusBadge status={contract.contract_status} />
+            {isCurrent && (
+              <span className="text-[10px] font-bold text-green-700 bg-green-100 border border-green-200 px-1.5 py-0.5 rounded-full">
+                現在の契約
+              </span>
+            )}
+            {!isCurrent && (
+              <span className="text-[10px] text-slate-400">履歴</span>
+            )}
+          </div>
+          <div className="text-sm text-slate-700">
+            <span className="font-semibold">
+              ¥{formatNumber(contract.monthly_fee)}
+            </span>
+            <span className="text-slate-500">/月</span>
+            {contract.billing_type === "lump_sum" && (
+              <span className="ml-1.5 text-xs text-amber-600 font-medium">
+                (一括払い)
+              </span>
+            )}
+          </div>
+          <div className="text-xs text-slate-500 mt-1">
+            {contract.contract_start_date && (
+              <>
+                {contract.contract_start_date} 〜{" "}
+                {endDate ? formatDate(endDate) : "—"}
+                <span className="ml-1.5">
+                  ({contract.duration_months}ヶ月)
+                </span>
+              </>
+            )}
+          </div>
+          {(contract.has_initial_fee || contract.has_option) && (
+            <div className="flex gap-1.5 mt-1.5">
+              {contract.has_initial_fee && (
+                <span className="text-[10px] px-1.5 py-0.5 bg-slate-100 text-slate-600 rounded">
+                  初期費用: ¥{formatNumber(contract.initial_fee)}
+                </span>
+              )}
+              {contract.has_option && (
+                <span className="text-[10px] px-1.5 py-0.5 bg-slate-100 text-slate-600 rounded">
+                  {contract.option_name || "オプション"}: ¥{formatNumber(contract.option_fee)}/月
+                </span>
+              )}
+            </div>
+          )}
+        </div>
+        <button
+          type="button"
+          className="px-3 py-1.5 bg-red-50 text-red-600 border border-red-200 rounded text-[11px] font-medium cursor-pointer hover:bg-red-100"
+          onClick={(e) => {
+            e.stopPropagation();
+            onDelete(contract.id);
+          }}
+        >
+          削除
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function HistoryContracts({
+  contracts,
+  onEdit,
+  onDelete,
+}: {
+  contracts: Contract[];
+  onEdit: (contract: Contract) => void;
+  onDelete: (id: string) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  return (
+    <div className="mt-1.5">
+      <button
+        type="button"
+        className="text-[11px] text-slate-400 hover:text-slate-600 cursor-pointer bg-transparent border-none px-1"
+        onClick={() => setOpen(!open)}
+      >
+        {open ? "▼" : "▶"} 過去の契約（{contracts.length}件）
+      </button>
+      {open && (
+        <div className="flex flex-col gap-1.5 mt-1.5">
+          {contracts.map((c) => (
+            <ContractCard
+              key={c.id}
+              contract={c}
+              isCurrent={false}
+              onEdit={onEdit}
+              onDelete={onDelete}
+            />
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 export function CompanyDetailModal({
   company,
   contracts,
@@ -163,73 +286,45 @@ export function CompanyDetailModal({
             </div>
           </div>
         ) : (
-          <div className="flex flex-col gap-2">
-            {companyContracts.map((contract) => {
-              const billingStart = makeBillingStart(
-                contract.billing_month,
-                contract.billing_day
-              );
-              const endDate = calcEndDate(billingStart, contract.duration_months);
+          <div className="flex flex-col gap-4">
+            {/* プロダクトごとにグループ化 */}
+            {PRODUCTS.map((product) => {
+              const productContracts = companyContracts
+                .filter((c) => c.product_type === product.id)
+                .sort(
+                  (a, b) =>
+                    new Date(b.created_at).getTime() -
+                    new Date(a.created_at).getTime()
+                );
+              if (productContracts.length === 0) return null;
+
+              const [latest, ...history] = productContracts;
+
               return (
-                <div
-                  key={contract.id}
-                  className="bg-white border border-blue-100 rounded-lg px-4 py-3 cursor-pointer hover:border-blue-300 transition-colors"
-                  onClick={() => onEditContract(contract)}
-                >
-                  <div className="flex justify-between items-start">
-                    <div className="flex-1">
-                      <div className="flex items-center gap-2 mb-1.5">
-                        <Badge product={contract.product_type} />
-                        <ContractStatusBadge status={contract.contract_status} />
-                      </div>
-                      <div className="text-sm text-slate-700">
-                        <span className="font-semibold">
-                          ¥{formatNumber(contract.monthly_fee)}
-                        </span>
-                        <span className="text-slate-500">/月</span>
-                        {contract.billing_type === "lump_sum" && (
-                          <span className="ml-1.5 text-xs text-amber-600 font-medium">
-                            (一括払い)
-                          </span>
-                        )}
-                      </div>
-                      <div className="text-xs text-slate-500 mt-1">
-                        {contract.contract_start_date && (
-                          <>
-                            {contract.contract_start_date} 〜{" "}
-                            {endDate ? formatDate(endDate) : "—"}
-                            <span className="ml-1.5">
-                              ({contract.duration_months}ヶ月)
-                            </span>
-                          </>
-                        )}
-                      </div>
-                      {(contract.has_initial_fee || contract.has_option) && (
-                        <div className="flex gap-1.5 mt-1.5">
-                          {contract.has_initial_fee && (
-                            <span className="text-[10px] px-1.5 py-0.5 bg-slate-100 text-slate-600 rounded">
-                              初期費用: ¥{formatNumber(contract.initial_fee)}
-                            </span>
-                          )}
-                          {contract.has_option && (
-                            <span className="text-[10px] px-1.5 py-0.5 bg-slate-100 text-slate-600 rounded">
-                              {contract.option_name || "オプション"}
-                            </span>
-                          )}
-                        </div>
-                      )}
-                    </div>
-                    <button
-                      type="button"
-                      className="px-3 py-1.5 bg-red-50 text-red-600 border border-red-200 rounded text-[11px] font-medium cursor-pointer hover:bg-red-100"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        onDeleteContract(contract.id);
-                      }}
-                    >
-                      削除
-                    </button>
+                <div key={product.id}>
+                  <div className="flex items-center gap-2 mb-2">
+                    <Badge product={product.id} />
+                    <span className="text-xs text-slate-500">
+                      {productContracts.length}件
+                    </span>
                   </div>
+
+                  {/* 最新（現在の契約） */}
+                  <ContractCard
+                    contract={latest}
+                    isCurrent
+                    onEdit={onEditContract}
+                    onDelete={onDeleteContract}
+                  />
+
+                  {/* 過去の契約 */}
+                  {history.length > 0 && (
+                    <HistoryContracts
+                      contracts={history}
+                      onEdit={onEditContract}
+                      onDelete={onDeleteContract}
+                    />
+                  )}
                 </div>
               );
             })}
