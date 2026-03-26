@@ -150,7 +150,7 @@ export async function generateInvoicePDF(
     const bodyData = [
       ...items.map((item) => [
         item.description,
-        String(item.quantity),
+        `${item.quantity}${item.unit || ""}`,
         fmt(item.unitPrice),
         fmt(item.amount),
       ]),

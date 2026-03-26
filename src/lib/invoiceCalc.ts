@@ -10,7 +10,9 @@ import {
 export interface InvoiceLineItem {
   description: string;
   quantity: number;
+  unit: string;
   unitPrice: number;
+  taxRate: number;
   amount: number;
 }
 
@@ -61,7 +63,9 @@ export function getInvoicesForMonth(
         items.push({
           description: `${monthlyLabel}（${c.duration_months}ヶ月一括）`,
           quantity: c.duration_months,
+          unit: "ヶ月",
           unitPrice: c.monthly_fee,
+          taxRate: 10,
           amount: c.monthly_fee * c.duration_months,
         });
       }
@@ -73,7 +77,9 @@ export function getInvoicesForMonth(
         items.push({
           description: monthlyLabel,
           quantity: matchingMonths.length,
+          unit: "ヶ月",
           unitPrice: c.monthly_fee,
+          taxRate: 10,
           amount: c.monthly_fee * matchingMonths.length,
         });
       }
@@ -86,7 +92,9 @@ export function getInvoicesForMonth(
         items.push({
           description: initialLabel,
           quantity: 1,
+          unit: "式",
           unitPrice: c.initial_fee,
+          taxRate: 10,
           amount: c.initial_fee,
         });
       }
@@ -100,7 +108,9 @@ export function getInvoicesForMonth(
         items.push({
           description: c.option_name || optionLabel,
           quantity: optMonths.length,
+          unit: "ヶ月",
           unitPrice: c.option_fee,
+          taxRate: 10,
           amount: c.option_fee * optMonths.length,
         });
       }
@@ -129,13 +139,15 @@ export function getInvoicesForMonth(
         allItems.push({
           description: preset.description,
           quantity: preset.defaultQuantity || 1,
+          unit: "",
           unitPrice: preset.defaultUnitPrice || 0,
+          taxRate: 10,
           amount: (preset.defaultQuantity || 1) * (preset.defaultUnitPrice || 0),
         });
       }
     }
     const subtotal = allItems.reduce((s, i) => s + i.amount, 0);
-    const tax = Math.floor(subtotal * 0.1);
+    const tax = allItems.reduce((s, i) => s + Math.floor(i.amount * (i.taxRate / 100)), 0);
     invoices.push({
       companyId,
       companyName: companyMap.get(companyId) || "不明",

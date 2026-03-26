@@ -47,7 +47,7 @@ export function InvoiceSection({
         const extra = customItems[inv.companyId] || [];
         const allItems = [...inv.items, ...extra];
         const subtotal = allItems.reduce((s, i) => s + i.amount, 0);
-        const tax = Math.floor(subtotal * 0.1);
+        const tax = allItems.reduce((s, i) => s + Math.floor(i.amount * ((i.taxRate ?? 10) / 100)), 0);
         return { ...inv, items: allItems, subtotal, tax, total: subtotal + tax };
       }),
     [baseInvoices, customItems]
@@ -87,7 +87,7 @@ export function InvoiceSection({
       ...prev,
       [companyId]: [
         ...(prev[companyId] || []),
-        { description: "", quantity: 1, unitPrice: 0, amount: 0 },
+        { description: "", quantity: 1, unit: "", unitPrice: 0, taxRate: 10, amount: 0 },
       ],
     }));
   };
@@ -103,12 +103,16 @@ export function InvoiceSection({
       const item = { ...items[index] };
       if (field === "description") {
         item.description = value as string;
+      } else if (field === "unit") {
+        item.unit = value as string;
       } else if (field === "quantity") {
         item.quantity = Number(value) || 0;
         item.amount = item.quantity * item.unitPrice;
       } else if (field === "unitPrice") {
         item.unitPrice = Number(value) || 0;
         item.amount = item.quantity * item.unitPrice;
+      } else if (field === "taxRate") {
+        item.taxRate = Number(value);
       }
       items[index] = item;
       return { ...prev, [companyId]: items };
@@ -374,9 +378,11 @@ function CompanyRow({
                   <tr className="bg-slate-50 border-b border-slate-200">
                     <th className="w-8 px-2 py-2 text-center text-slate-400">#</th>
                     <th className="px-3 py-2 text-left font-semibold text-slate-500">摘要</th>
-                    <th className="px-3 py-2 text-right font-semibold text-slate-500 w-16">数量</th>
-                    <th className="px-3 py-2 text-right font-semibold text-slate-500 w-24">単価</th>
-                    <th className="px-3 py-2 text-right font-semibold text-slate-500 w-28">金額</th>
+                    <th className="px-3 py-2 text-right font-semibold text-slate-500 w-14">数量</th>
+                    <th className="px-3 py-2 text-center font-semibold text-slate-500 w-14">単位</th>
+                    <th className="px-3 py-2 text-right font-semibold text-slate-500 w-22">単価</th>
+                    <th className="px-3 py-2 text-center font-semibold text-slate-500 w-16">税率</th>
+                    <th className="px-3 py-2 text-right font-semibold text-slate-500 w-24">金額</th>
                     <th className="w-8" />
                   </tr>
                 </thead>
@@ -386,7 +392,9 @@ function CompanyRow({
                       <td className="px-2 py-2.5 text-center text-slate-300">{i + 1}</td>
                       <td className="px-3 py-2.5 text-slate-700">{item.description}</td>
                       <td className="px-3 py-2.5 text-right tabular-nums">{item.quantity}</td>
+                      <td className="px-3 py-2.5 text-center text-slate-500">{item.unit}</td>
                       <td className="px-3 py-2.5 text-right tabular-nums">¥{formatNumber(item.unitPrice)}</td>
+                      <td className="px-3 py-2.5 text-center text-slate-500">{item.taxRate}%</td>
                       <td className="px-3 py-2.5 text-right tabular-nums font-semibold">¥{formatNumber(item.amount)}</td>
                       <td />
                     </tr>
@@ -412,12 +420,31 @@ function CompanyRow({
                       </td>
                       <td className="px-2 py-1.5">
                         <input
+                          className="w-full px-1 py-1.5 border border-slate-200 rounded bg-white text-xs text-center outline-none focus:border-blue-400"
+                          placeholder="単位"
+                          value={item.unit || ""}
+                          onChange={(e) => onUpdateItem(i, "unit", e.target.value)}
+                        />
+                      </td>
+                      <td className="px-2 py-1.5">
+                        <input
                           className="w-full px-2 py-1.5 border border-slate-200 rounded bg-white text-xs text-right outline-none focus:border-blue-400"
                           type="number"
                           placeholder="単価"
                           value={item.unitPrice || ""}
                           onChange={(e) => onUpdateItem(i, "unitPrice", e.target.value)}
                         />
+                      </td>
+                      <td className="px-2 py-1.5">
+                        <select
+                          className="w-full px-1 py-1.5 border border-slate-200 rounded bg-white text-xs outline-none focus:border-blue-400"
+                          value={item.taxRate ?? 10}
+                          onChange={(e) => onUpdateItem(i, "taxRate", Number(e.target.value))}
+                        >
+                          <option value={10}>10%</option>
+                          <option value={8}>8%</option>
+                          <option value={0}>0%</option>
+                        </select>
                       </td>
                       <td className="px-3 py-1.5 text-right tabular-nums font-semibold">
                         ¥{formatNumber(item.amount)}
@@ -556,7 +583,7 @@ function InvoicePreview({
             {visibleItems.map((item, i) => (
               <tr key={i}>
                 <td className="border border-slate-400 px-1.5 py-1">{item.description}</td>
-                <td className="border border-slate-400 px-1.5 py-1 text-right">{item.quantity}</td>
+                <td className="border border-slate-400 px-1.5 py-1 text-right">{item.quantity}{item.unit}</td>
                 <td className="border border-slate-400 px-1.5 py-1 text-right">{formatNumber(item.unitPrice)}</td>
                 <td className="border border-slate-400 px-1.5 py-1 text-right">{formatNumber(item.amount)}</td>
               </tr>
