@@ -73,52 +73,51 @@ export async function generateInvoicePDF(
 
     const invoiceNumber = generateInvoiceNumber();
 
-    let y = 22;
+    let y = 18;
 
     // ===== タイトル =====
-    doc.setFontSize(24);
+    doc.setFontSize(22);
     doc.setTextColor(26, 26, 26);
-    doc.text("請 求 書", pageW / 2, y, { align: "center", charSpace: 2.8 });
-    y += 4;
-    // 2px underline (~0.7mm)
-    drawLine(doc, pageW / 2 - 17.5, y, pageW / 2 + 17.5, y, 0.7);
-    y += 12;
+    doc.text("請 求 書", pageW / 2, y, { align: "center", charSpace: 2.5 });
+    y += 3.5;
+    drawLine(doc, pageW / 2 - 16, y, pageW / 2 + 16, y, 0.7);
+    y += 10;
 
     // ===== 左: 請求先 =====
     const headerY = y;
-    doc.setFontSize(18);
+    doc.setFontSize(16);
     doc.setTextColor(26, 26, 26);
     const companyNameWidth = doc.getTextWidth(inv.companyName);
     doc.text(inv.companyName, mL, y);
-    doc.setFontSize(18);
-    doc.text("御中", mL + companyNameWidth + 4, y);
-    y += 8;
+    doc.setFontSize(16);
+    doc.text("御中", mL + companyNameWidth + 3, y);
+    y += 7;
 
     // ===== 右上: 請求情報テーブル =====
     const rightTableX = 130;
     const rightTableW = pageW - mR - rightTableX;
     const rightLabelX = rightTableX;
     const rightValueX = pageW - mR;
-    let ry = headerY - 6;
+    let ry = headerY - 5;
 
-    doc.setFontSize(12.5);
+    doc.setFontSize(10);
     // 請求日
     doc.setTextColor(51, 51, 51);
     doc.text("請求日", rightLabelX, ry);
     doc.setTextColor(30, 30, 30);
     doc.text(issueDate, rightValueX, ry, { align: "right" });
-    ry += 1.5;
+    ry += 1;
     drawLine(doc, rightTableX, ry, rightValueX, ry, 0.2);
-    ry += 5.5;
+    ry += 5;
 
     // 請求書番号
     doc.setTextColor(51, 51, 51);
     doc.text("請求書番号", rightLabelX, ry);
     doc.setTextColor(30, 30, 30);
     doc.text(invoiceNumber, rightValueX, ry, { align: "right" });
-    ry += 1.5;
+    ry += 1;
     drawLine(doc, rightTableX, ry, rightValueX, ry, 0.2);
-    ry += 5.5;
+    ry += 5;
 
     // 登録番号
     if (settings.invoice_number) {
@@ -132,50 +131,50 @@ export async function generateInvoicePDF(
     }
 
     // 自社情報（右寄せ）
-    ry += 4;
-    doc.setFontSize(15);
+    ry += 3;
+    doc.setFontSize(13);
     doc.setTextColor(26, 26, 26);
     doc.text(settings.company_name || "", rightValueX, ry, { align: "right" });
-    ry += 6;
+    ry += 5;
 
     if (settings.company_address) {
-      doc.setFontSize(11.5);
+      doc.setFontSize(9.5);
       doc.setTextColor(85, 85, 85);
       doc.text("（本店所在地）", rightValueX, ry, { align: "right" });
-      ry += 5;
-      doc.setFontSize(12.5);
+      ry += 4;
+      doc.setFontSize(10);
       doc.setTextColor(51, 51, 51);
       const addrLines = settings.company_address.split("\n");
       for (const line of addrLines) {
         doc.text(line, rightValueX, ry, { align: "right" });
-        ry += 5;
+        ry += 4;
       }
     }
 
     // ===== 「下記の通り...」 =====
-    y = Math.max(y + 8, ry + 4);
-    doc.setFontSize(13);
+    y = Math.max(y + 6, ry + 3);
+    doc.setFontSize(10);
     doc.setTextColor(26, 26, 26);
     doc.text("下記の通りご請求申し上げます。", mL, y);
-    y += 10;
+    y += 8;
 
     // ===== 請求金額 =====
-    doc.setFontSize(13);
+    doc.setFontSize(11);
     doc.setTextColor(26, 26, 26);
     const labelW = doc.getTextWidth("請求金額");
     doc.text("請求金額", mL, y);
 
-    doc.setFontSize(24);
+    doc.setFontSize(20);
     const amountStr = fmt(inv.total);
     const amountW = doc.getTextWidth(amountStr);
-    doc.text(amountStr, mL + labelW + 4, y);
+    doc.text(amountStr, mL + labelW + 3, y);
 
-    doc.setFontSize(14);
-    doc.text("円", mL + labelW + 4 + amountW + 1, y);
+    doc.setFontSize(12);
+    doc.text("円", mL + labelW + 3 + amountW + 1, y);
 
     y += 3;
     drawLine(doc, mL, y, mL + contentW * 0.45, y, 0.9);
-    y += 8;
+    y += 6;
 
     // ===== 明細テーブル =====
     const items = inv.items.filter((it) => it.amount > 0 || it.description);
@@ -183,13 +182,13 @@ export async function generateInvoicePDF(
     const emptyRows = Math.max(0, maxRows - items.length);
 
     const colWidths = [contentW * 0.50, contentW * 0.12, contentW * 0.18, contentW * 0.20];
-    const rowH = 7;
-    const headerH = 8;
+    const rowH = 6;
+    const headerH = 7;
 
     // ヘッダー
     const tableStartY = y;
     drawRect(doc, mL, y, contentW, headerH);
-    doc.setFontSize(13);
+    doc.setFontSize(10);
     doc.setTextColor(26, 26, 26);
     const headers = ["摘要", "数量", "単価", "明細金額"];
     let cx = mL;
@@ -220,7 +219,7 @@ export async function generateInvoicePDF(
       // Row borders (all cells)
       drawRect(doc, mL, ry2, contentW, rowH);
       cx = mL;
-      doc.setFontSize(13);
+      doc.setFontSize(10);
       // 摘要（左寄せ）
       doc.text(row[0], cx + 3, ry2 + rowH / 2 + 1.5);
       cx += colWidths[0];
@@ -238,11 +237,11 @@ export async function generateInvoicePDF(
     }
 
     const tableBottom = y + allRows.length * rowH;
-    y = tableBottom + 8;
+    y = tableBottom + 5;
 
     // ===== 左下: 入金期日 + 振込先 =====
     const bottomY = y;
-    doc.setFontSize(12.5);
+    doc.setFontSize(10);
     doc.setTextColor(30, 30, 30);
 
     let by = bottomY;
@@ -251,15 +250,15 @@ export async function generateInvoicePDF(
       const labelEnd = mL + doc.getTextWidth("入金期日");
       doc.setFontSize(12.5);
       doc.text(`　${dueDate.replace(/-/g, "/")}`, labelEnd, by);
-      by += 7;
+      by += 5;
     }
 
-    doc.setFontSize(12.5);
+    doc.setFontSize(10);
     doc.text("振込先", mL, by);
-    by += 5;
+    by += 4;
 
     if (settings.bank_info) {
-      doc.setFontSize(12.5);
+      doc.setFontSize(10);
       doc.setTextColor(30, 30, 30);
       const bankLines = settings.bank_info.split("\n");
       for (const line of bankLines) {
@@ -271,7 +270,7 @@ export async function generateInvoicePDF(
     // ===== 右下: 合計テーブル (小計/消費税/合計のみ) =====
     const sumW = 70;
     const sumX = pageW - mR - sumW;
-    const sumRowH = 7;
+    const sumRowH = 6;
     const sumData: [string, string, boolean][] = [
       ["小計", `${fmt(inv.subtotal)}円`, false],
       ["消費税", `${fmt(inv.tax)}円`, false],
@@ -282,7 +281,7 @@ export async function generateInvoicePDF(
     for (const [label, value, bold] of sumData) {
       drawRect(doc, sumX, sy, sumW, sumRowH);
       doc.setTextColor(30, 30, 30);
-      doc.setFontSize(bold ? 13 : 12.5);
+      doc.setFontSize(bold ? 10 : 9.5);
       const midColX = sumX + sumW * 0.4;
       drawLine(doc, midColX, sy, midColX, sy + sumRowH, 0.18);
       doc.text(label, sumX + 3, sy + sumRowH / 2 + 1.5);
@@ -291,10 +290,10 @@ export async function generateInvoicePDF(
     }
 
     // ===== 備考 =====
-    const notesY = Math.max(sy + 8, by + 4);
-    doc.setFontSize(11.5);
+    const notesY = Math.max(sy + 5, by + 3);
+    doc.setFontSize(9);
     doc.setTextColor(68, 68, 68);
-    drawRect(doc, mL, notesY - 3, contentW, 28);
+    drawRect(doc, mL, notesY - 3, contentW, 22);
     doc.text("備考", mL + 3, notesY + 1);
     doc.setTextColor(30, 30, 30);
     if (templateNotes) {
