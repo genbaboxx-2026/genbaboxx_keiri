@@ -35,6 +35,7 @@ export function InvoiceSection({
   const [baseOverrides, setBaseOverrides] = useState<
     Record<string, Record<number, Partial<InvoiceLineItem>>>
   >({});
+  const [deletedBaseItems, setDeletedBaseItems] = useState<Record<string, Set<number>>>({});
   const [generating, setGenerating] = useState(false);
   const [initialized, setInitialized] = useState(false);
   const getLastBusinessDay = (month: string) => {
@@ -64,22 +65,26 @@ export function InvoiceSection({
     () =>
       baseInvoices.map((inv) => {
         const overrides = baseOverrides[inv.companyId] || {};
-        const baseItems = inv.items.map((item, idx) => {
-          const ov = overrides[idx];
-          if (!ov) return item;
-          const merged = { ...item, ...ov };
-          if (ov.quantity !== undefined || ov.unitPrice !== undefined) {
-            merged.amount = (merged.quantity || 0) * (merged.unitPrice || 0);
-          }
-          return merged;
-        });
+        const deleted = deletedBaseItems[inv.companyId] || new Set<number>();
+        const baseItems = inv.items
+          .map((item, idx) => {
+            if (deleted.has(idx)) return null;
+            const ov = overrides[idx];
+            if (!ov) return item;
+            const merged = { ...item, ...ov };
+            if (ov.quantity !== undefined || ov.unitPrice !== undefined) {
+              merged.amount = (merged.quantity || 0) * (merged.unitPrice || 0);
+            }
+            return merged;
+          })
+          .filter((item): item is InvoiceLineItem => item !== null);
         const extra = customItems[inv.companyId] || [];
         const allItems = [...baseItems, ...extra];
         const subtotal = allItems.reduce((s, i) => s + i.amount, 0);
         const tax = allItems.reduce((s, i) => s + Math.floor(i.amount * ((i.taxRate ?? 10) / 100)), 0);
         return { ...inv, items: allItems, subtotal, tax, total: subtotal + tax };
       }),
-    [baseInvoices, customItems, baseOverrides]
+    [baseInvoices, customItems, baseOverrides, deletedBaseItems]
   );
 
   if (!initialized && invoices.length > 0) {
@@ -94,6 +99,7 @@ export function InvoiceSection({
     setExpandedId(null);
     setDueDate(getLastBusinessDay(m));
     setDueDates({});
+    setDeletedBaseItems({});
     setTimeout(() => {
       const inv = getInvoicesForMonth(m, contracts, companies, invoiceTemplate);
       setChecked(new Set(inv.map((i) => i.companyId)));
@@ -350,6 +356,13 @@ export function InvoiceSection({
                         }
                         onRemoveItem={(i) =>
                           removeCustomItem(inv.companyId, i)
+                        }
+                        onDeleteBaseItem={(i) =>
+                          setDeletedBaseItems((prev) => {
+                            const s = new Set(prev[inv.companyId] || []);
+                            s.add(i);
+                            return { ...prev, [inv.companyId]: s };
+                          })
                         }
                       />
                     );
@@ -891,6 +904,7 @@ function CompanyRow({
   onUpdateItem,
   onUpdateBaseItem,
   onRemoveItem,
+  onDeleteBaseItem,
 }: {
   inv: CompanyInvoice;
   isExpanded: boolean;
@@ -912,6 +926,7 @@ function CompanyRow({
     value: string | number
   ) => void;
   onRemoveItem: (index: number) => void;
+  onDeleteBaseItem: (index: number) => void;
 }) {
   const baseItemCount = inv.items.length - extras.length;
 
@@ -1037,14 +1052,12 @@ function CompanyRow({
                         ¥{formatNumber(item.amount)}
                       </td>
                       <td className="px-0.5 py-1">
-                        {!isBase && (
-                          <button
-                            className="text-red-400 hover:text-red-600 cursor-pointer bg-transparent border-none text-xs"
-                            onClick={() => onRemoveItem(i)}
-                          >
+                        <button
+                          className="text-red-400 hover:text-red-600 cursor-pointer bg-transparent border-none text-xs"
+                          onClick={() => isBase ? onDeleteBaseItem(i) : onRemoveItem(i)}
+                        >
                             ✕
-                          </button>
-                        )}
+                        </button>
                       </td>
                     </tr>
                   ))}
