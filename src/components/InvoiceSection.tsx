@@ -337,9 +337,9 @@ export function InvoiceSection({
                 </span>
                 （税込）
               </div>
-              <div className="flex flex-col items-end gap-2">
+              <div className="flex flex-col items-end gap-2 w-[300px]">
                 <button
-                  className="px-5 py-2 bg-white border border-slate-200 rounded-lg text-sm font-medium text-slate-700 cursor-pointer hover:bg-slate-50 disabled:opacity-40"
+                  className="w-full py-2.5 bg-white border border-slate-200 rounded-[10px] text-sm font-medium text-slate-700 cursor-pointer hover:bg-slate-50 disabled:opacity-40"
                   disabled={
                     generating ||
                     selectedInvoices.length === 0 ||
@@ -350,7 +350,7 @@ export function InvoiceSection({
                   {generating ? "生成中..." : `全${selectedInvoices.length}社を一括PDFダウンロード`}
                 </button>
                 <button
-                  className="px-6 py-2.5 bg-slate-800 text-white rounded-[10px] text-sm font-semibold cursor-pointer hover:bg-slate-700 disabled:opacity-40"
+                  className="w-full py-3 bg-slate-800 text-white rounded-[10px] text-sm font-bold cursor-pointer hover:bg-slate-700 disabled:opacity-40"
                   disabled={
                     selectedInvoices.length === 0 ||
                     !settings?.company_name
@@ -756,23 +756,23 @@ function PreviewGallery({
       </div>
 
       {/* ボタン */}
-      <div className="flex flex-col items-end gap-2 mt-5">
+      <div className="flex flex-col items-end gap-2 mt-5 w-[300px] ml-auto">
         <button
-          className="px-5 py-2 bg-white border border-slate-200 rounded-lg text-sm font-medium text-slate-700 cursor-pointer hover:bg-slate-50 disabled:opacity-40"
+          className="w-full py-2.5 bg-white border border-slate-200 rounded-[10px] text-sm font-medium text-slate-700 cursor-pointer hover:bg-slate-50 disabled:opacity-40"
           disabled={generating}
           onClick={() => onDownloadSingle(current)}
         >
           {generating ? "生成中..." : "この請求書をPDFダウンロード"}
         </button>
         <button
-          className="px-5 py-2 bg-white border border-slate-200 rounded-lg text-sm font-medium text-slate-700 cursor-pointer hover:bg-slate-50 disabled:opacity-40"
+          className="w-full py-2.5 bg-white border border-slate-200 rounded-[10px] text-sm font-medium text-slate-700 cursor-pointer hover:bg-slate-50 disabled:opacity-40"
           disabled={generating}
           onClick={onDownloadAll}
         >
           {generating ? "生成中..." : `全${invoices.length}社を一括PDFダウンロード`}
         </button>
         <button
-          className="px-6 py-2.5 bg-slate-800 text-white rounded-[10px] text-sm font-semibold cursor-pointer hover:bg-slate-700 disabled:opacity-40"
+          className="w-full py-3 bg-slate-800 text-white rounded-[10px] text-sm font-bold cursor-pointer hover:bg-slate-700 disabled:opacity-40"
           disabled={selectedCount === 0 || !settings?.company_name}
           onClick={onOpenConfirm}
         >
