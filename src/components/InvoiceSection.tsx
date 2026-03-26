@@ -38,6 +38,7 @@ export function InvoiceSection({
   const [generating, setGenerating] = useState(false);
   const [initialized, setInitialized] = useState(false);
   const [showSendConfirm, setShowSendConfirm] = useState(false);
+  const [emailSubject, setEmailSubject] = useState("");
   const [emailBody, setEmailBody] = useState("");
   const [sendChecked, setSendChecked] = useState<Set<string>>(new Set());
   const [viewMode, setViewMode] = useState<"list" | "preview">("list");
@@ -183,6 +184,7 @@ export function InvoiceSection({
   }, [settings, monthLabel]);
 
   const handleOpenConfirm = () => {
+    setEmailSubject(`【${settings?.company_name || ""}】${monthLabel}分 請求書送付のご案内`);
     setEmailBody(buildDefaultEmailBody());
     setSendChecked(new Set(selectedInvoices.map((i) => i.companyId)));
     setShowSendConfirm(true);
@@ -545,9 +547,19 @@ export function InvoiceSection({
                 )}
               </div>
 
-              {/* メール文面 */}
+              {/* メール件名 */}
               <div>
-                <div className="text-sm font-bold text-slate-700 mb-2">メール本文</div>
+                <div className="text-sm font-bold text-slate-700 mb-2">件名</div>
+                <input
+                  className="w-full px-4 py-2.5 border border-slate-200 rounded-xl text-sm outline-none focus:border-blue-400"
+                  value={emailSubject}
+                  onChange={(e) => setEmailSubject(e.target.value)}
+                />
+              </div>
+
+              {/* メール本文 */}
+              <div>
+                <div className="text-sm font-bold text-slate-700 mb-2">本文</div>
                 <textarea
                   className="w-full px-4 py-3 border border-slate-200 rounded-xl text-sm outline-none focus:border-blue-400 resize-y leading-relaxed"
                   rows={8}
