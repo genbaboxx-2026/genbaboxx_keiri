@@ -307,13 +307,18 @@ export default function Home() {
 
   const handleAddExpense = async (name: string, month: string, amount: number) => {
     try {
+      // 同じname+monthがあれば更新、なければ新規
+      const existing = expenses.find((e) => e.name === name && e.month === month);
       const saved = await upsertExpense({
-        id: crypto.randomUUID(),
+        id: existing?.id || crypto.randomUUID(),
         name,
         month,
         amount,
       });
-      setExpenses((prev) => [...prev, saved]);
+      setExpenses((prev) => {
+        const filtered = prev.filter((e) => e.id !== saved.id);
+        return [...filtered, saved];
+      });
     } catch (e) {
       console.error(e);
       alert("支出の追加に失敗しました");

@@ -6,7 +6,6 @@ import { PRODUCTS } from "@/lib/constants";
 import {
   formatNumber,
   getCurrentMonth,
-  getRevenue as getRevenueCalc,
   billingMonths,
   makeBillingStart,
   calcPayOffset,
@@ -27,7 +26,6 @@ interface CashflowPageProps {
   onDeleteExpense: (id: string) => void;
 }
 
-/** 企業単位の月別売上を計算 */
 function companyRevenueForMonth(
   contracts: Contract[],
   companyId: string,
@@ -43,20 +41,14 @@ function companyRevenueForMonth(
       const mo = calcPayOffset(c.monthly_close, c.monthly_pay);
       const isLump = c.billing_type === "lump_sum";
       const feeMs = c.fee_months && c.fee_months > 1 ? ms.slice(0, c.fee_months) : ms;
-
       if (isLump) {
-        if (ms.length > 0 && shiftMonth(ms[0], mo) === month)
-          amt += c.monthly_fee * c.duration_months;
+        if (ms.length > 0 && shiftMonth(ms[0], mo) === month) amt += c.monthly_fee * c.duration_months;
       } else {
-        feeMs.forEach((bm) => {
-          if (shiftMonth(bm, mo) === month) amt += c.monthly_fee;
-        });
+        feeMs.forEach((bm) => { if (shiftMonth(bm, mo) === month) amt += c.monthly_fee; });
       }
       if (c.has_option) {
         const oo = calcPayOffset(c.option_close, c.option_pay);
-        ms.forEach((bm) => {
-          if (shiftMonth(bm, oo) === month) amt += c.option_fee;
-        });
+        ms.forEach((bm) => { if (shiftMonth(bm, oo) === month) amt += c.option_fee; });
       }
       if (c.has_initial_fee && ms.length > 0) {
         const io = calcPayOffset(c.initial_close, c.initial_pay);
@@ -78,9 +70,10 @@ export function CashflowPage({
   onDeleteExpense,
 }: CashflowPageProps) {
   const [expandedProducts, setExpandedProducts] = useState<Set<string>>(new Set());
-  const [newExpenseName, setNewExpenseName] = useState("");
-  const [newExpenseMonth, setNewExpenseMonth] = useState("");
-  const [newExpenseAmount, setNewExpenseAmount] = useState("");
+  const [editingCell, setEditingCell] = useState<{ name: string; month: string } | null>(null);
+  const [editValue, setEditValue] = useState("");
+  const [newRowName, setNewRowName] = useState("");
+  const [showNewRow, setShowNewRow] = useState(false);
 
   const currentMonth = getCurrentMonth();
 
@@ -93,19 +86,42 @@ export function CashflowPage({
     });
   };
 
-  // 支出の月別集計
   const expenseForMonth = (month: string) =>
-    expenses
-      .filter((e) => e.month === month)
-      .reduce((s, e) => s + e.amount, 0);
+    expenses.filter((e) => e.month === month).reduce((s, e) => s + e.amount, 0);
 
-  // 支出項目名のユニークリスト
   const expenseNames = [...new Set(expenses.map((e) => e.name))];
 
-  const handleAddExpense = () => {
-    if (!newExpenseName || !newExpenseMonth || !newExpenseAmount) return;
-    onAddExpense(newExpenseName, newExpenseMonth, parseInt(newExpenseAmount.replace(/[^0-9]/g, "")) || 0);
-    setNewExpenseAmount("");
+  // セルクリックで編集開始
+  const startEdit = (name: string, month: string) => {
+    const existing = expenses.find((e) => e.name === name && e.month === month);
+    setEditingCell({ name, month });
+    setEditValue(existing ? String(existing.amount) : "");
+  };
+
+  // 編集確定
+  const commitEdit = () => {
+    if (!editingCell) return;
+    const amount = parseInt(editValue.replace(/[^0-9]/g, "")) || 0;
+    const existing = expenses.find(
+      (e) => e.name === editingCell.name && e.month === editingCell.month
+    );
+    if (amount === 0 && existing) {
+      onDeleteExpense(existing.id);
+    } else if (amount > 0) {
+      onAddExpense(editingCell.name, editingCell.month, amount);
+    }
+    setEditingCell(null);
+    setEditValue("");
+  };
+
+  // 新規行追加
+  const addNewRow = () => {
+    if (!newRowName.trim()) return;
+    // 空の行を追加（名前だけ登録、金額は各セルで入力）
+    // 最初のセルとして当月に0円で追加して行を作る
+    onAddExpense(newRowName.trim(), currentMonth, 0);
+    setNewRowName("");
+    setShowNewRow(false);
   };
 
   const summaryCards = [
@@ -143,21 +159,18 @@ export function CashflowPage({
                   key={m}
                   className={`px-2 py-2.5 text-right font-semibold text-slate-500 border-b-2 border-slate-200 whitespace-nowrap min-w-[90px] ${m === currentMonth ? "month-current" : ""}`}
                 >
-                  {parseInt(m.split("-")[1])}月
-                  <br />
+                  {parseInt(m.split("-")[1])}月<br />
                   <span className="text-[10px] text-slate-400">{m.split("-")[0]}</span>
                 </th>
               ))}
             </tr>
           </thead>
           <tbody>
-            {/* === 売上セクション === */}
+            {/* 売上 */}
             {PRODUCTS.map((pr) => {
               const isExpanded = expandedProducts.has(pr.id);
               const productContracts = contractsFor(pr.id);
-              // この商品に契約がある企業のリスト
               const companyIds = [...new Set(productContracts.map((c) => c.company_id))];
-
               return (
                 <ProductRows
                   key={pr.id}
@@ -182,57 +195,127 @@ export function CashflowPage({
               {allMonths.map((m) => {
                 const v = revenueFor(m);
                 return (
-                  <td
-                    key={m}
-                    className={`px-2 py-3 text-right font-extrabold text-[13px] text-emerald-600 tabular-nums ${m === currentMonth ? "!bg-amber-100" : ""}`}
-                  >
+                  <td key={m} className={`px-2 py-3 text-right font-extrabold text-[13px] text-emerald-600 tabular-nums ${m === currentMonth ? "!bg-amber-100" : ""}`}>
                     {v > 0 ? formatNumber(v) : "—"}
                   </td>
                 );
               })}
             </tr>
 
-            {/* === 支出セクション === */}
+            {/* 支出ヘッダー */}
             <tr>
-              <td
-                colSpan={allMonths.length + 1}
-                className="px-3.5 py-2 bg-slate-100 font-bold text-sm text-slate-600 sticky left-0"
-              >
-                支出
+              <td className="px-3.5 py-2 bg-slate-100 font-bold text-sm text-slate-600 sticky left-0 z-10">
+                <span className="flex items-center justify-between">
+                  支出
+                  <button
+                    className="text-[11px] font-semibold text-blue-600 hover:text-blue-800 cursor-pointer bg-transparent border-none"
+                    onClick={() => setShowNewRow(true)}
+                  >
+                    + 行を追加
+                  </button>
+                </span>
               </td>
+              {allMonths.map((m) => (
+                <td key={m} className="bg-slate-100" />
+              ))}
             </tr>
+
+            {/* 支出行 */}
             {expenseNames.map((name) => (
               <tr key={name} className="border-b border-slate-100">
-                <td className="px-3.5 py-2 sticky left-0 bg-white z-10 font-medium text-slate-700">
-                  {name}
+                <td className="px-3.5 py-2 sticky left-0 bg-white z-10 font-medium text-slate-700 flex items-center justify-between group">
+                  <span>{name}</span>
+                  <button
+                    className="text-red-400 hover:text-red-600 text-[10px] cursor-pointer bg-transparent border-none opacity-0 group-hover:opacity-100"
+                    onClick={() => {
+                      if (!confirm(`「${name}」の支出行を全て削除しますか？`)) return;
+                      expenses.filter((e) => e.name === name).forEach((e) => onDeleteExpense(e.id));
+                    }}
+                  >
+                    ✕
+                  </button>
                 </td>
                 {allMonths.map((m) => {
                   const items = expenses.filter((e) => e.name === name && e.month === m);
                   const total = items.reduce((s, e) => s + e.amount, 0);
+                  const isEditing = editingCell?.name === name && editingCell?.month === m;
                   return (
                     <td
                       key={m}
-                      className={`px-2 py-2 text-right tabular-nums ${total > 0 ? "text-red-600" : "text-slate-200"} ${m === currentMonth ? "month-current" : ""}`}
+                      className={`px-0 py-0 text-right tabular-nums border-b border-slate-100 ${m === currentMonth ? "month-current" : ""} ${!isEditing ? "cursor-pointer hover:bg-blue-50" : ""}`}
+                      onClick={() => !isEditing && startEdit(name, m)}
                     >
-                      {total > 0 ? formatNumber(total) : "—"}
+                      {isEditing ? (
+                        <input
+                          className="w-full px-2 py-2 text-right text-xs border-2 border-blue-400 outline-none bg-blue-50"
+                          autoFocus
+                          value={editValue}
+                          onChange={(e) => setEditValue(e.target.value.replace(/[^0-9]/g, ""))}
+                          onBlur={commitEdit}
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter") commitEdit();
+                            if (e.key === "Escape") { setEditingCell(null); setEditValue(""); }
+                          }}
+                        />
+                      ) : (
+                        <div className="px-2 py-2">
+                          {total > 0 ? (
+                            <span className="text-red-600">{formatNumber(total)}</span>
+                          ) : (
+                            <span className="text-slate-200">—</span>
+                          )}
+                        </div>
+                      )}
                     </td>
                   );
                 })}
               </tr>
             ))}
 
+            {/* 新規行入力 */}
+            {showNewRow && (
+              <tr className="border-b border-slate-100">
+                <td className="px-1 py-1 sticky left-0 bg-white z-10">
+                  <div className="flex gap-1">
+                    <input
+                      className="flex-1 px-2 py-1.5 border border-blue-300 rounded text-xs outline-none"
+                      autoFocus
+                      placeholder="項目名（家賃など）"
+                      value={newRowName}
+                      onChange={(e) => setNewRowName(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") addNewRow();
+                        if (e.key === "Escape") { setShowNewRow(false); setNewRowName(""); }
+                      }}
+                    />
+                    <button
+                      className="px-2 py-1 bg-blue-600 text-white rounded text-[10px] font-semibold cursor-pointer disabled:opacity-40"
+                      disabled={!newRowName.trim()}
+                      onClick={addNewRow}
+                    >
+                      追加
+                    </button>
+                    <button
+                      className="px-2 py-1 bg-slate-200 text-slate-600 rounded text-[10px] cursor-pointer"
+                      onClick={() => { setShowNewRow(false); setNewRowName(""); }}
+                    >
+                      ✕
+                    </button>
+                  </div>
+                </td>
+                {allMonths.map((m) => (
+                  <td key={m} className="border-b border-slate-100" />
+                ))}
+              </tr>
+            )}
+
             {/* 支出合計 */}
             <tr className="bg-red-50">
-              <td className="px-3.5 py-3 font-extrabold text-sm sticky left-0 bg-red-50 text-red-600 z-10">
-                支出合計
-              </td>
+              <td className="px-3.5 py-3 font-extrabold text-sm sticky left-0 bg-red-50 text-red-600 z-10">支出合計</td>
               {allMonths.map((m) => {
                 const v = expenseForMonth(m);
                 return (
-                  <td
-                    key={m}
-                    className={`px-2 py-3 text-right font-extrabold text-[13px] text-red-600 tabular-nums ${m === currentMonth ? "!bg-amber-100" : ""}`}
-                  >
+                  <td key={m} className={`px-2 py-3 text-right font-extrabold text-[13px] text-red-600 tabular-nums ${m === currentMonth ? "!bg-amber-100" : ""}`}>
                     {v > 0 ? formatNumber(v) : "—"}
                   </td>
                 );
@@ -241,18 +324,13 @@ export function CashflowPage({
 
             {/* 収支 */}
             <tr className="bg-blue-50">
-              <td className="px-3.5 py-3 font-extrabold text-sm sticky left-0 bg-blue-50 text-blue-700 z-10">
-                収支
-              </td>
+              <td className="px-3.5 py-3 font-extrabold text-sm sticky left-0 bg-blue-50 text-blue-700 z-10">収支</td>
               {allMonths.map((m) => {
                 const rev = revenueFor(m);
                 const exp = expenseForMonth(m);
                 const diff = rev - exp;
                 return (
-                  <td
-                    key={m}
-                    className={`px-2 py-3 text-right font-extrabold text-[13px] tabular-nums ${diff >= 0 ? "text-blue-700" : "text-red-600"} ${m === currentMonth ? "!bg-amber-100" : ""}`}
-                  >
+                  <td key={m} className={`px-2 py-3 text-right font-extrabold text-[13px] tabular-nums ${diff >= 0 ? "text-blue-700" : "text-red-600"} ${m === currentMonth ? "!bg-amber-100" : ""}`}>
                     {diff !== 0 ? formatNumber(diff) : "—"}
                   </td>
                 );
@@ -261,95 +339,12 @@ export function CashflowPage({
           </tbody>
         </table>
       </div>
-
-      {/* 支出追加フォーム */}
-      <div className="mt-6 bg-slate-50 rounded-xl p-4">
-        <div className="text-sm font-bold text-slate-700 mb-3">支出を追加</div>
-        <div className="flex gap-2 items-end flex-wrap">
-          <div>
-            <label className="block text-[11px] font-semibold text-slate-500 mb-1">項目名</label>
-            <input
-              className="px-3 py-2 border border-slate-200 rounded-lg text-sm w-[160px]"
-              value={newExpenseName}
-              onChange={(e) => setNewExpenseName(e.target.value)}
-              placeholder="家賃、人件費など"
-              list="expense-names"
-            />
-            <datalist id="expense-names">
-              {expenseNames.map((n) => (
-                <option key={n} value={n} />
-              ))}
-            </datalist>
-          </div>
-          <div>
-            <label className="block text-[11px] font-semibold text-slate-500 mb-1">月</label>
-            <input
-              type="month"
-              className="px-3 py-2 border border-slate-200 rounded-lg text-sm"
-              value={newExpenseMonth}
-              onChange={(e) => setNewExpenseMonth(e.target.value)}
-            />
-          </div>
-          <div>
-            <label className="block text-[11px] font-semibold text-slate-500 mb-1">金額</label>
-            <input
-              className="px-3 py-2 border border-slate-200 rounded-lg text-sm w-[120px]"
-              inputMode="numeric"
-              value={newExpenseAmount}
-              onChange={(e) => setNewExpenseAmount(e.target.value.replace(/[^0-9]/g, ""))}
-              placeholder="100000"
-            />
-          </div>
-          <button
-            className="px-5 py-2 bg-slate-800 text-white rounded-lg text-sm font-semibold cursor-pointer hover:bg-slate-700 disabled:opacity-40"
-            disabled={!newExpenseName || !newExpenseMonth || !newExpenseAmount}
-            onClick={handleAddExpense}
-          >
-            追加
-          </button>
-        </div>
-      </div>
-
-      {/* 支出一覧（削除用） */}
-      {expenses.length > 0 && (
-        <div className="mt-4 bg-white rounded-xl border border-slate-200 overflow-hidden">
-          <div className="px-4 py-2.5 bg-slate-50 text-xs font-bold text-slate-600">
-            登録済み支出
-          </div>
-          <div className="divide-y divide-slate-100">
-            {expenses.map((e) => (
-              <div key={e.id} className="flex items-center justify-between px-4 py-2 text-sm">
-                <div className="flex gap-4">
-                  <span className="font-medium">{e.name}</span>
-                  <span className="text-slate-500">{e.month}</span>
-                  <span className="font-semibold">¥{formatNumber(e.amount)}</span>
-                </div>
-                <button
-                  className="text-red-500 text-xs hover:text-red-700 cursor-pointer"
-                  onClick={() => onDeleteExpense(e.id)}
-                >
-                  削除
-                </button>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
     </div>
   );
 }
 
-/** プロダクト行 + 展開時の企業内訳 */
 function ProductRows({
-  product,
-  isExpanded,
-  onToggle,
-  companyIds,
-  companies,
-  contracts,
-  allMonths,
-  revenueFor,
-  currentMonth,
+  product, isExpanded, onToggle, companyIds, companies, contracts, allMonths, revenueFor, currentMonth,
 }: {
   product: (typeof PRODUCTS)[number];
   isExpanded: boolean;
@@ -363,7 +358,6 @@ function ProductRows({
 }) {
   return (
     <>
-      {/* プロダクト合計行 */}
       <tr className="cursor-pointer hover:bg-slate-50" onClick={onToggle}>
         <td className="px-3.5 py-2 border-b border-slate-100 sticky left-0 bg-white z-10">
           <span className="inline-flex items-center gap-1.5">
@@ -374,43 +368,30 @@ function ProductRows({
         {allMonths.map((m) => {
           const v = revenueFor(m, product.id);
           return (
-            <td
-              key={m}
-              className={`px-2 py-2 text-right border-b border-slate-100 tabular-nums font-semibold ${
-                v > 0 ? "text-slate-700" : "text-slate-200"
-              } ${m === currentMonth ? "month-current" : ""}`}
-            >
+            <td key={m} className={`px-2 py-2 text-right border-b border-slate-100 tabular-nums font-semibold ${v > 0 ? "text-slate-700" : "text-slate-200"} ${m === currentMonth ? "month-current" : ""}`}>
               {v > 0 ? formatNumber(v) : "—"}
             </td>
           );
         })}
       </tr>
-
-      {/* 展開時：企業別内訳 */}
-      {isExpanded &&
-        companyIds.map((cid) => {
-          const companyName = companies.find((c) => c.id === cid)?.name || "不明";
-          return (
-            <tr key={cid} className="bg-slate-50/50">
-              <td className="pl-10 pr-3.5 py-1.5 border-b border-slate-50 sticky left-0 bg-slate-50/50 z-10 text-[11px] text-slate-500">
-                {companyName}
-              </td>
-              {allMonths.map((m) => {
-                const v = companyRevenueForMonth(contracts, cid, m);
-                return (
-                  <td
-                    key={m}
-                    className={`px-2 py-1.5 text-right border-b border-slate-50 tabular-nums text-[11px] ${
-                      v > 0 ? "text-slate-500" : "text-slate-200"
-                    } ${m === currentMonth ? "month-current" : ""}`}
-                  >
-                    {v > 0 ? formatNumber(v) : "—"}
-                  </td>
-                );
-              })}
-            </tr>
-          );
-        })}
+      {isExpanded && companyIds.map((cid) => {
+        const companyName = companies.find((c) => c.id === cid)?.name || "不明";
+        return (
+          <tr key={cid} className="bg-slate-50/50">
+            <td className="pl-10 pr-3.5 py-1.5 border-b border-slate-50 sticky left-0 bg-slate-50/50 z-10 text-[11px] text-slate-500">
+              {companyName}
+            </td>
+            {allMonths.map((m) => {
+              const v = companyRevenueForMonth(contracts, cid, m);
+              return (
+                <td key={m} className={`px-2 py-1.5 text-right border-b border-slate-50 tabular-nums text-[11px] ${v > 0 ? "text-slate-500" : "text-slate-200"} ${m === currentMonth ? "month-current" : ""}`}>
+                  {v > 0 ? formatNumber(v) : "—"}
+                </td>
+              );
+            })}
+          </tr>
+        );
+      })}
     </>
   );
 }
