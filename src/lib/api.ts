@@ -1,5 +1,5 @@
 import { supabase } from "./supabase";
-import type { Company, Contract } from "./database.types";
+import type { Company, Contract, Expense } from "./database.types";
 
 // ========== Companies ==========
 
@@ -54,5 +54,33 @@ export async function upsertContract(
 
 export async function deleteContract(id: string): Promise<void> {
   const { error } = await supabase.from("contracts").delete().eq("id", id);
+  if (error) throw error;
+}
+
+// ========== Expenses ==========
+
+export async function fetchExpenses(): Promise<Expense[]> {
+  const { data, error } = await supabase
+    .from("expenses")
+    .select("*")
+    .order("name", { ascending: true });
+  if (error) throw error;
+  return data as Expense[];
+}
+
+export async function upsertExpense(
+  expense: Omit<Expense, "created_at" | "updated_at">
+): Promise<Expense> {
+  const { data, error } = await supabase
+    .from("expenses")
+    .upsert(expense as Record<string, unknown>)
+    .select()
+    .single();
+  if (error) throw error;
+  return data as Expense;
+}
+
+export async function deleteExpense(id: string): Promise<void> {
+  const { error } = await supabase.from("expenses").delete().eq("id", id);
   if (error) throw error;
 }

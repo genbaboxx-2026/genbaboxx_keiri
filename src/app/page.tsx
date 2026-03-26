@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback, useMemo, useRef } from "react";
-import type { Company, Contract, ProductType, Profile } from "@/lib/database.types";
+import type { Company, Contract, ProductType, Profile, Expense } from "@/lib/database.types";
 import {
   fetchCompanies,
   fetchContracts,
@@ -9,6 +9,9 @@ import {
   upsertContract,
   deleteCompany,
   deleteContract,
+  fetchExpenses,
+  upsertExpense,
+  deleteExpense,
 } from "@/lib/api";
 import { PRODUCTS, TABS, type TabId } from "@/lib/constants";
 import { getAllMonths, getRevenue } from "@/lib/calc";
@@ -35,6 +38,7 @@ export default function Home() {
   const [authLoading, setAuthLoading] = useState(true);
   const [companies, setCompanies] = useState<Company[]>([]);
   const [contracts, setContracts] = useState<Contract[]>([]);
+  const [expenses, setExpenses] = useState<Expense[]>([]);
   const [tab, setTabState] = useState<TabId>("bakusoq");
   const [modal, setModalState] = useState<ModalState>(null);
   const [viewList, setViewListState] = useState(false);
@@ -154,10 +158,11 @@ export default function Home() {
   // 初回データ取得
   useEffect(() => {
     if (!user) return;
-    Promise.all([fetchCompanies(), fetchContracts()])
-      .then(([cos, cons]) => {
+    Promise.all([fetchCompanies(), fetchContracts(), fetchExpenses()])
+      .then(([cos, cons, exps]) => {
         setCompanies(cos);
         setContracts(cons);
+        setExpenses(exps);
       })
       .catch(console.error)
       .finally(() => setLoading(false));
@@ -298,6 +303,31 @@ export default function Home() {
     }
   };
 
+  const handleAddExpense = async (name: string, month: string, amount: number) => {
+    try {
+      const saved = await upsertExpense({
+        id: crypto.randomUUID(),
+        name,
+        month,
+        amount,
+      });
+      setExpenses((prev) => [...prev, saved]);
+    } catch (e) {
+      console.error(e);
+      alert("支出の追加に失敗しました");
+    }
+  };
+
+  const handleDeleteExpense = async (id: string) => {
+    try {
+      await deleteExpense(id);
+      setExpenses((prev) => prev.filter((e) => e.id !== id));
+    } catch (e) {
+      console.error(e);
+      alert("削除に失敗しました");
+    }
+  };
+
   const handleLogout = async () => {
     await supabase.auth.signOut();
     setUser(null);
@@ -339,10 +369,14 @@ export default function Home() {
     content = (
       <CashflowPage
         contracts={contracts}
+        companies={companies}
         contractsFor={contractsFor}
         allMonths={allMonths}
         revenueFor={revenueFor}
         companiesCount={companies.length}
+        expenses={expenses}
+        onAddExpense={handleAddExpense}
+        onDeleteExpense={handleDeleteExpense}
       />
     );
   } else if (tab === "companies") {

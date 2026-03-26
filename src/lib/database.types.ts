@@ -42,6 +42,15 @@ export interface Contract {
   updated_at: string;
 }
 
+export interface Expense {
+  id: string;
+  name: string;
+  month: string;
+  amount: number;
+  created_at: string;
+  updated_at: string;
+}
+
 export type UserRole = "admin" | "member";
 
 export interface Profile {
