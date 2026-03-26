@@ -13,6 +13,8 @@ export function CompanyForm({ company, onSave, onClose }: CompanyFormProps) {
   const [name, setName] = useState(company?.name || "");
   const [contact, setContact] = useState(company?.contact || "");
   const [note, setNote] = useState(company?.note || "");
+  const [invoiceContactName, setInvoiceContactName] = useState(company?.invoice_contact_name || "");
+  const [invoiceEmail, setInvoiceEmail] = useState(company?.invoice_email || "");
 
   return (
     <div className="flex flex-col gap-4">
@@ -47,6 +49,34 @@ export function CompanyForm({ company, onSave, onClose }: CompanyFormProps) {
           onChange={(e) => setNote(e.target.value)}
         />
       </div>
+      <div className="border-t border-slate-200 pt-4 mt-1">
+        <div className="text-[13px] font-bold text-slate-600 mb-3">請求書送付先</div>
+        <div className="flex flex-col gap-3">
+          <div>
+            <label className="block text-[13px] font-semibold text-slate-600 mb-1.5">
+              担当者名
+            </label>
+            <input
+              className="w-full px-3.5 py-2.5 border-[1.5px] border-slate-200 rounded-[10px] text-sm outline-none focus:border-blue-400"
+              value={invoiceContactName}
+              onChange={(e) => setInvoiceContactName(e.target.value)}
+              placeholder="経理部 山田太郎"
+            />
+          </div>
+          <div>
+            <label className="block text-[13px] font-semibold text-slate-600 mb-1.5">
+              メールアドレス
+            </label>
+            <input
+              type="email"
+              className="w-full px-3.5 py-2.5 border-[1.5px] border-slate-200 rounded-[10px] text-sm outline-none focus:border-blue-400"
+              value={invoiceEmail}
+              onChange={(e) => setInvoiceEmail(e.target.value)}
+              placeholder="keiri@example.com"
+            />
+          </div>
+        </div>
+      </div>
       <div className="flex gap-2.5 justify-end mt-2">
         <button
           className="px-5 py-2.5 bg-slate-100 text-slate-700 rounded-[10px] text-sm font-medium cursor-pointer hover:bg-slate-200"
@@ -63,8 +93,8 @@ export function CompanyForm({ company, onSave, onClose }: CompanyFormProps) {
               name,
               contact,
               note,
-              invoice_contact_name: company?.invoice_contact_name || "",
-              invoice_email: company?.invoice_email || "",
+              invoice_contact_name: invoiceContactName,
+              invoice_email: invoiceEmail,
             })
           }
         >
