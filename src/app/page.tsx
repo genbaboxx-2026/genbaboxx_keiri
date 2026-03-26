@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback, useMemo } from "react";
+import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import type { Company, Contract, ProductType, Profile } from "@/lib/database.types";
 import {
   fetchCompanies,
@@ -35,10 +35,62 @@ export default function Home() {
   const [authLoading, setAuthLoading] = useState(true);
   const [companies, setCompanies] = useState<Company[]>([]);
   const [contracts, setContracts] = useState<Contract[]>([]);
-  const [tab, setTab] = useState<TabId>("bakusoq");
-  const [modal, setModal] = useState<ModalState>(null);
+  const [tab, setTabState] = useState<TabId>("bakusoq");
+  const [modal, setModalState] = useState<ModalState>(null);
   const [sideOpen, setSideOpen] = useState(true);
   const [loading, setLoading] = useState(true);
+  const skipUrlSync = useRef(false);
+
+  // URL → 状態の読み取り
+  const readUrl = useCallback(() => {
+    const params = new URLSearchParams(window.location.search);
+    const t = params.get("tab") as TabId | null;
+    const companyId = params.get("company");
+    const view = params.get("view");
+    return { tab: t, companyId, view };
+  }, []);
+
+  // 状態 → URLの更新
+  const updateUrl = useCallback(
+    (t: TabId, m: ModalState, replace = false) => {
+      const params = new URLSearchParams();
+      params.set("tab", t);
+      if (m?.type === "company-detail") {
+        params.set("company", m.company.id);
+        if (m.productFilter) params.set("product", m.productFilter);
+      }
+      const url = `?${params.toString()}`;
+      if (replace) {
+        window.history.replaceState(null, "", url);
+      } else {
+        window.history.pushState(null, "", url);
+      }
+    },
+    []
+  );
+
+  // タブ変更（URL同期）
+  const setTab = useCallback(
+    (t: TabId) => {
+      setTabState(t);
+      setModalState(null);
+      updateUrl(t, null);
+    },
+    [updateUrl]
+  );
+
+  // モーダル変更（URL同期）
+  const setModal = useCallback(
+    (m: ModalState) => {
+      setModalState(m);
+      if (m?.type === "company-detail") {
+        updateUrl(tab, m);
+      } else if (m === null) {
+        updateUrl(tab, null, true);
+      }
+    },
+    [tab, updateUrl]
+  );
 
   // 認証状態の監視
   useEffect(() => {
@@ -91,6 +143,61 @@ export default function Home() {
       .catch(console.error)
       .finally(() => setLoading(false));
   }, [user]);
+
+  // URLからの初期状態復元（データ読み込み後）
+  useEffect(() => {
+    if (loading || companies.length === 0) return;
+    const { tab: urlTab, companyId } = readUrl();
+    if (urlTab) {
+      const validTabs = TABS.map((t) => t.id) as string[];
+      if (validTabs.includes(urlTab)) {
+        setTabState(urlTab as TabId);
+      }
+    }
+    if (companyId) {
+      const company = companies.find((c) => c.id === companyId);
+      if (company) {
+        const params = new URLSearchParams(window.location.search);
+        const pf = params.get("product") as ProductType | null;
+        setModalState({
+          type: "company-detail",
+          company,
+          productFilter: pf || undefined,
+        });
+      }
+    }
+  }, [loading, companies, readUrl]);
+
+  // ブラウザの戻る/進む対応
+  useEffect(() => {
+    const handlePopState = () => {
+      const { tab: urlTab, companyId } = readUrl();
+      skipUrlSync.current = true;
+      if (urlTab) {
+        const validTabs = TABS.map((t) => t.id) as string[];
+        if (validTabs.includes(urlTab)) {
+          setTabState(urlTab as TabId);
+        }
+      }
+      if (companyId) {
+        const company = companies.find((c) => c.id === companyId);
+        if (company) {
+          const params = new URLSearchParams(window.location.search);
+          const pf = params.get("product") as ProductType | null;
+          setModalState({
+            type: "company-detail",
+            company,
+            productFilter: pf || undefined,
+          });
+        }
+      } else {
+        setModalState(null);
+      }
+      skipUrlSync.current = false;
+    };
+    window.addEventListener("popstate", handlePopState);
+    return () => window.removeEventListener("popstate", handlePopState);
+  }, [companies, readUrl]);
 
   const allMonths = useMemo(() => getAllMonths(contracts), [contracts]);
 
