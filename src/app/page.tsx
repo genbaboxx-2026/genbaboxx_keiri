@@ -352,7 +352,7 @@ export default function Home() {
 
   if (authLoading) {
     return (
-      <div className="flex items-center justify-center h-screen bg-slate-100">
+      <div className="flex items-center justify-center h-screen bg-white">
         <div className="text-slate-400">読み込み中...</div>
       </div>
     );
@@ -364,7 +364,7 @@ export default function Home() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-screen bg-slate-100">
+      <div className="flex items-center justify-center h-screen bg-white">
         <div className="text-slate-400">読み込み中...</div>
       </div>
     );
@@ -419,7 +419,7 @@ export default function Home() {
   }
 
   return (
-    <div className="flex min-h-screen bg-slate-100">
+    <div className="flex min-h-screen bg-white">
       {/* Sidebar */}
       <div
         className="flex flex-col flex-shrink-0 bg-slate-900 text-white transition-all duration-300 overflow-hidden"
