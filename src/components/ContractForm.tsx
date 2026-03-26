@@ -300,36 +300,40 @@ export function ContractForm({
             </select>
           </div>
         </div>
-        <div className="grid grid-cols-2 gap-3 mt-3">
-          <div>
-            <label className="block text-[13px] font-semibold text-slate-600 mb-1.5">
-              契約期間（ヶ月）*
-            </label>
-            <input
-              className="w-full px-3.5 py-2.5 border-[1.5px] border-slate-200 rounded-[10px] text-sm outline-none focus:border-blue-400"
-              inputMode="numeric"
-              value={durationMonths || ""}
-              onChange={(e) =>
-                setDurationMonths(
-                  parseInt(e.target.value.replace(/[^0-9]/g, "")) || 0
-                )
-              }
-            />
-          </div>
-          <div>
-            <label className="block text-[13px] font-semibold text-slate-600 mb-1.5">
-              契約完了日（自動計算）
-            </label>
-            <div className="w-full px-3.5 py-2.5 bg-indigo-100 text-blue-800 font-bold rounded-[10px] text-sm flex items-center">
-              {endDate ? formatDate(endDate) : "—"}
+        {contractStatus !== "auto_renewing" && (
+          <>
+            <div className="grid grid-cols-2 gap-3 mt-3">
+              <div>
+                <label className="block text-[13px] font-semibold text-slate-600 mb-1.5">
+                  契約期間（ヶ月）*
+                </label>
+                <input
+                  className="w-full px-3.5 py-2.5 border-[1.5px] border-slate-200 rounded-[10px] text-sm outline-none focus:border-blue-400"
+                  inputMode="numeric"
+                  value={durationMonths || ""}
+                  onChange={(e) =>
+                    setDurationMonths(
+                      parseInt(e.target.value.replace(/[^0-9]/g, "")) || 0
+                    )
+                  }
+                />
+              </div>
+              <div>
+                <label className="block text-[13px] font-semibold text-slate-600 mb-1.5">
+                  契約完了日（自動計算）
+                </label>
+                <div className="w-full px-3.5 py-2.5 bg-indigo-100 text-blue-800 font-bold rounded-[10px] text-sm flex items-center">
+                  {endDate ? formatDate(endDate) : "—"}
+                </div>
+              </div>
             </div>
-          </div>
-        </div>
-        {billingStart && (
-          <div className="mt-2.5 text-xs text-blue-500">
-            起算日: {formatDate(billingStart)} → 完了日:{" "}
-            {endDate ? formatDate(endDate) : "—"}
-          </div>
+            {billingStart && (
+              <div className="mt-2.5 text-xs text-blue-500">
+                起算日: {formatDate(billingStart)} → 完了日:{" "}
+                {endDate ? formatDate(endDate) : "—"}
+              </div>
+            )}
+          </>
         )}
       </div>
 
