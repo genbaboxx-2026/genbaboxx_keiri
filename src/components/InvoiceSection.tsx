@@ -943,7 +943,7 @@ function CompanyRow({
       {isExpanded && (
         <tr>
           <td colSpan={3} className="p-0">
-            <div className="border-t border-blue-200 bg-blue-50/40">
+            <div className="border-t border-blue-200 bg-blue-50/40 border-l-[3px] border-l-blue-400">
               <table className="w-full text-xs" style={{ tableLayout: "fixed" }}>
                 <colgroup>
                   <col style={{ width: "28px" }} />
@@ -1051,7 +1051,7 @@ function CompanyRow({
                   ))}
                 </tbody>
               </table>
-              <div className="flex items-center justify-between px-3 py-2 bg-blue-50/60 border-t border-blue-100">
+              <div className="flex items-center justify-between px-3 py-2 bg-blue-100/50 border-t border-blue-200 border-b-2 border-b-blue-300">
                 <div className="flex items-center gap-4">
                   <button
                     className="text-[11px] text-blue-600 hover:text-blue-800 cursor-pointer bg-transparent border-none font-semibold"
