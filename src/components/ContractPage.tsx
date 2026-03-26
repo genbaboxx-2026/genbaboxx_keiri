@@ -244,7 +244,7 @@ function MonthlyRevenueTable({
               return (
                 <td
                   key={m}
-                  className={`px-2 py-2.5 text-right font-extrabold tabular-nums ${m === currentMonth ? "!bg-amber-100" : ""}`}
+                  className={`px-2 py-2.5 text-right font-extrabold tabular-nums ${m === currentMonth ? "!bg-blue-100" : ""}`}
                   style={{ color: product.hex }}
                 >
                   {total > 0 ? formatNumber(total) : "—"}
