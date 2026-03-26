@@ -122,15 +122,15 @@ export function getInvoicesForMonth(
 
   const invoices: CompanyInvoice[] = [];
   for (const [companyId, items] of byCompany) {
-    // プリセット項目を追加（金額が設定されているもののみ）
+    // プリセット項目を追加
     const allItems = [...items];
     for (const preset of presets) {
-      if (preset.description && preset.defaultUnitPrice > 0) {
+      if (preset.description) {
         allItems.push({
           description: preset.description,
           quantity: preset.defaultQuantity || 1,
-          unitPrice: preset.defaultUnitPrice,
-          amount: (preset.defaultQuantity || 1) * preset.defaultUnitPrice,
+          unitPrice: preset.defaultUnitPrice || 0,
+          amount: (preset.defaultQuantity || 1) * (preset.defaultUnitPrice || 0),
         });
       }
     }
