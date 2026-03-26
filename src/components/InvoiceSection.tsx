@@ -38,6 +38,7 @@ export function InvoiceSection({
   const [generating, setGenerating] = useState(false);
   const [initialized, setInitialized] = useState(false);
   const [dueDate, setDueDate] = useState("");
+  const [dueDates, setDueDates] = useState<Record<string, string>>({});
   const [showSendConfirm, setShowSendConfirm] = useState(false);
   const [emailSubject, setEmailSubject] = useState("");
   const [emailBody, setEmailBody] = useState("");
@@ -324,6 +325,8 @@ export function InvoiceSection({
                         isExpanded={isExpanded}
                         isChecked={checked.has(inv.companyId)}
                         extras={extras}
+                        companyDueDate={dueDates[inv.companyId] || ""}
+                        onDueDateChange={(v) => setDueDates((prev) => ({ ...prev, [inv.companyId]: v }))}
                         onToggleCheck={() => toggleCheck(inv.companyId)}
                         onToggleExpand={() =>
                           setExpandedId(isExpanded ? null : inv.companyId)
@@ -866,6 +869,8 @@ function CompanyRow({
   isExpanded,
   isChecked,
   extras,
+  companyDueDate,
+  onDueDateChange,
   onToggleCheck,
   onToggleExpand,
   onAddItem,
@@ -877,6 +882,8 @@ function CompanyRow({
   isExpanded: boolean;
   isChecked: boolean;
   extras: InvoiceLineItem[];
+  companyDueDate: string;
+  onDueDateChange: (v: string) => void;
   onToggleCheck: () => void;
   onToggleExpand: () => void;
   onAddItem: () => void;
@@ -896,7 +903,7 @@ function CompanyRow({
 
   return (
     <>
-      <tr className="border-b border-slate-100 hover:bg-slate-50">
+      <tr className={`border-b border-slate-100 hover:bg-slate-50 ${isExpanded ? "bg-blue-50/60" : ""}`}>
         <td className="px-3 py-2.5">
           <input
             type="checkbox"
@@ -910,7 +917,7 @@ function CompanyRow({
           onClick={onToggleExpand}
         >
           <div className="flex items-center gap-2">
-            <span className="text-[10px] text-slate-400">
+            <span className={`text-[10px] ${isExpanded ? "text-blue-500" : "text-slate-400"}`}>
               {isExpanded ? "▼" : "▶"}
             </span>
             <div>
@@ -929,7 +936,7 @@ function CompanyRow({
       {isExpanded && (
         <tr>
           <td colSpan={3} className="p-0">
-            <div className="border-t border-slate-200">
+            <div className="border-t border-blue-200 bg-blue-50/40">
               <table className="w-full text-xs" style={{ tableLayout: "fixed" }}>
                 <colgroup>
                   <col style={{ width: "28px" }} />
@@ -1037,13 +1044,24 @@ function CompanyRow({
                   ))}
                 </tbody>
               </table>
-              <div className="flex items-center justify-between px-3 py-2 bg-slate-50/50 border-t border-slate-100">
-                <button
-                  className="text-[11px] text-blue-600 hover:text-blue-800 cursor-pointer bg-transparent border-none font-semibold"
-                  onClick={onAddItem}
-                >
-                  + 項目を追加
-                </button>
+              <div className="flex items-center justify-between px-3 py-2 bg-blue-50/60 border-t border-blue-100">
+                <div className="flex items-center gap-4">
+                  <button
+                    className="text-[11px] text-blue-600 hover:text-blue-800 cursor-pointer bg-transparent border-none font-semibold"
+                    onClick={onAddItem}
+                  >
+                    + 項目を追加
+                  </button>
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-[10px] text-slate-500">入金期日:</span>
+                    <input
+                      type="date"
+                      className="px-1.5 py-0.5 border border-slate-200 rounded text-[11px] outline-none focus:border-blue-400 bg-white"
+                      value={companyDueDate}
+                      onChange={(e) => onDueDateChange(e.target.value)}
+                    />
+                  </div>
+                </div>
                 <div className="flex gap-5 text-xs">
                   <span className="text-slate-500">小計 <span className="tabular-nums">¥{formatNumber(inv.subtotal)}</span></span>
                   <span className="text-slate-500">消費税 <span className="tabular-nums">¥{formatNumber(inv.tax)}</span></span>
