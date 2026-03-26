@@ -597,13 +597,34 @@ function PreviewGallery({
   const nextInv = hasNext ? invoices[safeIndex + 1] : null;
 
   return (
-    <div>
-      {/* 上部: ページ番号 */}
-      <div className="flex items-center justify-end mb-2">
-        <div className="text-xs text-slate-500">
-          {safeIndex + 1} / {invoices.length}
+    <div className="flex gap-5">
+      {/* 左: 企業リスト */}
+      <div className="w-[180px] flex-shrink-0 pt-1">
+        <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2 px-2">
+          {invoices.length}社
+        </div>
+        <div className="flex flex-col gap-0.5">
+          {invoices.map((inv, i) => (
+            <button
+              key={inv.companyId}
+              className={`w-full text-left px-3 py-2 rounded-lg text-xs cursor-pointer border-none transition-all ${
+                i === safeIndex
+                  ? "bg-slate-800 text-white font-bold shadow-sm"
+                  : "bg-transparent text-slate-600 hover:bg-slate-100 font-medium"
+              }`}
+              onClick={() => onChangeIndex(i)}
+            >
+              <div className="truncate">{inv.companyName}</div>
+              <div className={`text-[10px] tabular-nums mt-0.5 ${i === safeIndex ? "text-slate-300" : "text-slate-400"}`}>
+                ¥{formatNumber(inv.total)}
+              </div>
+            </button>
+          ))}
         </div>
       </div>
+
+      {/* 右: カードスタック */}
+      <div className="flex-1 min-w-0">
 
       {/* カードスタック領域 */}
       <div
@@ -718,21 +739,6 @@ function PreviewGallery({
         </button>
       </div>
 
-      {/* ドットインジケーター */}
-      {invoices.length > 1 && (
-        <div className="flex justify-center gap-1.5 mt-4">
-          {invoices.map((_, i) => (
-            <button
-              key={i}
-              className={`w-2 h-2 rounded-full cursor-pointer border-none transition-colors ${
-                i === safeIndex ? "bg-slate-700" : "bg-slate-300 hover:bg-slate-400"
-              }`}
-              onClick={() => onChangeIndex(i)}
-            />
-          ))}
-        </div>
-      )}
-
       {/* ボタン */}
       <div className="flex items-center justify-between mt-5">
         <button
@@ -758,6 +764,7 @@ function PreviewGallery({
         }
         .animate-card-appear { animation: cardAppear 0.3s ease-out; }
       `}</style>
+      </div>
     </div>
   );
 }
