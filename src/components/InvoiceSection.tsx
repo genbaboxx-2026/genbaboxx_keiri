@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo, useCallback } from "react";
+import { useState, useMemo, useCallback, useRef } from "react";
 import type { Contract, Company, Settings, InvoiceTemplate } from "@/lib/database.types";
 import {
   getInvoicesForMonth,
@@ -54,6 +54,17 @@ export function InvoiceSection({
   const [sendChecked, setSendChecked] = useState<Set<string>>(new Set());
   const [viewMode, setViewMode] = useState<"list" | "preview">("list");
   const [previewIndex, setPreviewIndex] = useState(0);
+
+  // Invoice number generation: INV-XXXXXXXXXX per company, stable during session
+  const invoiceNumberMap = useRef<Record<string, string>>({});
+  const getInvoiceNumber = useCallback((companyId: string) => {
+    if (!invoiceNumberMap.current[companyId]) {
+      const ts = Date.now().toString();
+      const last10 = ts.slice(-10).padStart(10, "0");
+      invoiceNumberMap.current[companyId] = `INV-${last10}`;
+    }
+    return invoiceNumberMap.current[companyId];
+  }, []);
 
   const baseInvoices = useMemo(
     () => getInvoicesForMonth(selectedMonth, contracts, companies, invoiceTemplate),
@@ -423,6 +434,7 @@ export function InvoiceSection({
                   month={selectedMonth}
                   notes={invoiceTemplate?.notes}
                   dueDate={dueDate}
+                  invoiceNumber={getInvoiceNumber(previewInvoice.companyId)}
                 />
               </div>
             ) : (
@@ -456,6 +468,7 @@ export function InvoiceSection({
                   notes={invoiceTemplate?.notes}
                   dueDate={dueDate}
                   large
+                  invoiceNumber={getInvoiceNumber(previewInvoice.companyId)}
                 />
               </div>
             </div>
@@ -477,6 +490,7 @@ export function InvoiceSection({
           onOpenConfirm={handleOpenConfirm}
           selectedCount={selectedInvoices.length}
           generating={generating}
+          getInvoiceNumber={getInvoiceNumber}
         />
       )}
 
@@ -652,6 +666,7 @@ function PreviewGallery({
   onOpenConfirm,
   selectedCount,
   generating,
+  getInvoiceNumber,
 }: {
   invoices: CompanyInvoice[];
   settings: Settings | null;
@@ -666,6 +681,7 @@ function PreviewGallery({
   onOpenConfirm: () => void;
   selectedCount: number;
   generating: boolean;
+  getInvoiceNumber: (companyId: string) => string;
 }) {
   const [touchStart, setTouchStart] = useState<number | null>(null);
   const [slideDir, setSlideDir] = useState<"left" | "right" | null>(null);
@@ -782,6 +798,7 @@ function PreviewGallery({
                   notes={notes}
                   dueDate={dueDate}
                   large
+                  invoiceNumber={getInvoiceNumber(prevInv.companyId)}
                 />
               </div>
             </div>
@@ -813,6 +830,7 @@ function PreviewGallery({
                   notes={notes}
                   dueDate={dueDate}
                   large
+                  invoiceNumber={getInvoiceNumber(nextInv.companyId)}
                 />
               </div>
             </div>
@@ -837,6 +855,7 @@ function PreviewGallery({
                 notes={notes}
                 dueDate={dueDate}
                 large
+                invoiceNumber={getInvoiceNumber(current.companyId)}
               />
             </div>
           </div>
@@ -1104,6 +1123,7 @@ function InvoicePreview({
   notes,
   dueDate,
   large,
+  invoiceNumber,
 }: {
   inv: CompanyInvoice;
   settings: Settings;
@@ -1112,152 +1132,140 @@ function InvoicePreview({
   notes?: string;
   dueDate?: string;
   large?: boolean;
+  invoiceNumber?: string;
 }) {
   const visibleItems = inv.items.filter((it) => it.amount > 0 || it.description);
   const emptyRows = Math.max(0, 8 - visibleItems.length);
-  const baseText = large ? "text-[11px]" : "text-[8px]";
-  const titleSize = large ? "text-xl" : "text-base";
-  const nameSize = large ? "text-sm" : "text-[10px]";
-  const amountSize = large ? "text-xl" : "text-[14px]";
-  const companySize = large ? "text-[13px]" : "text-[9px]";
-  const smallText = large ? "text-[10px]" : "text-[7px]";
-  const padding = large ? "p-8" : "p-4";
+
+  // Scale factor: large = 700x990 base, small = proportionally scaled
+  const scale = large ? 1 : 0.486; // ~340/700
+
+  const containerStyle: React.CSSProperties = large
+    ? { width: 700, height: 990 }
+    : { width: 700 * scale, height: 990 * scale };
 
   return (
-    <div className={`border border-slate-300 rounded bg-white shadow-sm ${large ? "" : "sticky top-4"} ${baseText} leading-relaxed`} style={large ? undefined : { aspectRatio: "210/297" }}>
-      <div className={`${padding} h-full flex flex-col overflow-hidden`}>
+    <div
+      className={`border border-slate-300 rounded bg-white shadow-sm ${large ? "" : "sticky top-4"}`}
+      style={containerStyle}
+    >
+      <div style={{ width: 700, height: 990, transform: `scale(${scale})`, transformOrigin: "top left", fontFamily: "'Noto Sans JP', sans-serif", padding: "42px 48px 34px", boxSizing: "border-box", fontSize: 13, color: "#1a1a1a", lineHeight: 1.65, overflow: "hidden", display: "flex", flexDirection: "column" }}>
         {/* タイトル */}
-        <div className="text-center mb-4">
-          <div className={`${titleSize} font-bold`}>請求書</div>
-          <div className="w-10 mx-auto border-b border-slate-800 mt-1" />
+        <div style={{ textAlign: "center", marginBottom: 28 }}>
+          <div style={{ fontSize: 24, fontWeight: 700, letterSpacing: 8, display: "inline-block" }}>
+            請求書
+            <div style={{ borderBottom: "2px solid #1a1a1a", marginTop: 4 }} />
+          </div>
         </div>
 
-        {/* 上部: 請求先 + 自社情報 */}
-        <div className="flex justify-between mb-4">
-          <div>
-            <div className={`${nameSize} font-bold`}>{inv.companyName} 御中</div>
-            <div className="border-b border-slate-800 mt-0.5 w-28" />
+        {/* ヘッダー */}
+        <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 10 }}>
+          <div style={{ maxWidth: 290 }}>
+            <div style={{ fontSize: 18, fontWeight: 700, marginBottom: 3 }}>{inv.companyName}　御中</div>
           </div>
-          <div className={`text-right ${baseText} text-slate-600`}>
-            <div>請求日　{issueDate}</div>
-            {dueDate && <div>入金期日　{dueDate.replace(/-/g, "/")}</div>}
-            {settings.invoice_number && (
-              <div>登録番号　{settings.invoice_number}</div>
+          <div style={{ textAlign: "right" }}>
+            <table style={{ marginLeft: "auto", borderCollapse: "collapse", fontSize: 12.5, marginBottom: 14 }}>
+              <tbody>
+                {([["請求日", issueDate], ["請求書番号", invoiceNumber || ""], ...(settings.invoice_number ? [["登録番号", settings.invoice_number]] : [])] as [string, string][]).map(([l, v]) => (
+                  <tr key={l} style={{ borderBottom: "0.5px solid #999" }}>
+                    <td style={{ padding: "3px 12px 3px 6px", textAlign: "left", color: "#333", fontWeight: 500 }}>{l}</td>
+                    <td style={{ padding: "3px 6px 3px 12px", textAlign: "right", fontWeight: 600 }}>{v}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+            <div style={{ fontSize: 15, fontWeight: 700, marginBottom: 4 }}>{settings.company_name}</div>
+            {settings.company_address && (
+              <>
+                <div style={{ fontSize: 11.5, color: "#555" }}>（本店所在地）</div>
+                <div style={{ fontSize: 12.5, whiteSpace: "pre-line" }}>{settings.company_address}</div>
+              </>
             )}
           </div>
         </div>
 
-        {/* 自社情報 右寄せ */}
-        <div className={`text-right ${baseText} mb-3`}>
-          {settings.logo_url && (
-            <div className="flex justify-end mb-1">
-              <img src={settings.logo_url} alt="ロゴ" className={large ? "h-10" : "h-6"} />
-            </div>
-          )}
-          <div className={`font-bold ${companySize}`}>{settings.company_name}</div>
-          <div className="flex justify-end items-start gap-1">
-            <div>
-              {settings.company_address && (
-                <div className="whitespace-pre-line text-slate-600">{settings.company_address}</div>
-              )}
-              {settings.company_phone && (
-                <div className="text-slate-600">TEL: {settings.company_phone}</div>
-              )}
-            </div>
-            {settings.stamp_url && (
-              <img src={settings.stamp_url} alt="社印" className={`${large ? "h-12 w-12" : "h-8 w-8"} object-contain`} />
-            )}
-          </div>
-        </div>
-
-        {/* 「下記の通り...」 */}
-        <div className={`${baseText} text-slate-600 mb-3`}>
-          下記の通りご請求申し上げます。
-        </div>
+        {/* 本文 */}
+        <div style={{ fontSize: 13, marginTop: 14, marginBottom: 16 }}>下記の通りご請求申し上げます。</div>
 
         {/* 請求金額 */}
-        <div className="mb-4">
-          <div className={`${baseText} text-slate-500 mb-1`}>請求金額</div>
-          <div className={`${amountSize} font-bold`}>
-            {formatNumber(inv.total)}円
+        <div style={{ marginBottom: 18 }}>
+          <div style={{ display: "flex", alignItems: "baseline", gap: 12 }}>
+            <span style={{ fontSize: 13, fontWeight: 700 }}>請求金額</span>
+            <span style={{ fontSize: 24, fontWeight: 700, letterSpacing: 1 }}>{formatNumber(inv.total)}<span style={{ fontSize: 14 }}>円</span></span>
           </div>
-          <div className="border-b-2 border-slate-800 w-24 mt-0.5" />
+          <div style={{ borderBottom: "2.5px solid #1a1a1a", marginTop: 4, width: "45%" }} />
         </div>
 
         {/* 明細テーブル */}
-        <table className="w-full border-collapse border border-slate-400 mb-3 text-[8px]">
+        {(() => { const cb = "0.5px solid #333"; return (
+        <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
           <thead>
             <tr>
-              {["摘要", "数量", "単価", "明細金額"].map((h) => (
-                <th key={h} className="border border-slate-400 px-1.5 py-1 font-normal bg-white text-center">
-                  {h}
-                </th>
-              ))}
+              <th style={{ padding: "8px 8px", textAlign: "center", fontWeight: 700, width: "48%", border: cb }}>摘要</th>
+              <th style={{ padding: "8px 8px", textAlign: "center", fontWeight: 700, width: "10%", borderTop: cb, borderBottom: cb, borderRight: cb }}>数量</th>
+              <th style={{ padding: "8px 8px", textAlign: "center", fontWeight: 700, width: "18%", borderTop: cb, borderBottom: cb, borderRight: cb }}>単価</th>
+              <th style={{ padding: "8px 8px", textAlign: "center", fontWeight: 700, width: "18%", borderTop: cb, borderBottom: cb, borderRight: cb }}>明細金額</th>
             </tr>
           </thead>
           <tbody>
             {visibleItems.map((item, i) => (
               <tr key={i}>
-                <td className="border border-slate-400 px-1.5 py-1">{item.description}</td>
-                <td className="border border-slate-400 px-1.5 py-1 text-right">{item.quantity}{item.unit}</td>
-                <td className="border border-slate-400 px-1.5 py-1 text-right">{formatNumber(item.unitPrice)}</td>
-                <td className="border border-slate-400 px-1.5 py-1 text-right">{formatNumber(item.amount)}</td>
+                <td style={{ padding: "8px 8px", borderBottom: cb, borderLeft: cb, borderRight: cb }}>{item.description}</td>
+                <td style={{ padding: "8px 8px", textAlign: "right", borderBottom: cb, borderRight: cb }}>{item.quantity}{item.unit}</td>
+                <td style={{ padding: "8px 8px", textAlign: "right", borderBottom: cb, borderRight: cb }}>{formatNumber(item.unitPrice)}</td>
+                <td style={{ padding: "8px 8px", textAlign: "right", borderBottom: cb, borderRight: cb }}>{formatNumber(item.amount)}</td>
               </tr>
             ))}
             {Array.from({ length: emptyRows }).map((_, i) => (
-              <tr key={`empty-${i}`}>
-                <td className="border border-slate-400 px-1.5 py-1">&nbsp;</td>
-                <td className="border border-slate-400 px-1.5 py-1">&nbsp;</td>
-                <td className="border border-slate-400 px-1.5 py-1">&nbsp;</td>
-                <td className="border border-slate-400 px-1.5 py-1">&nbsp;</td>
+              <tr key={`e${i}`}>
+                <td style={{ padding: "8px 8px", borderBottom: cb, borderLeft: cb, borderRight: cb }}>&nbsp;</td>
+                <td style={{ padding: "8px 8px", borderBottom: cb, borderRight: cb }} />
+                <td style={{ padding: "8px 8px", borderBottom: cb, borderRight: cb }} />
+                <td style={{ padding: "8px 8px", borderBottom: cb, borderRight: cb }} />
               </tr>
             ))}
           </tbody>
         </table>
+        ); })()}
 
-        {/* 下部: 振込先 + 合計 */}
-        <div className="flex justify-between mt-auto">
-          {/* 左: 振込先 */}
-          <div className={baseText}>
-            <div className="text-slate-500 mb-0.5">振込先</div>
-            <div className="whitespace-pre-line">
-              {settings.bank_info || "（設定ページで登録してください）"}
+        {/* 下部 */}
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginTop: 10 }}>
+          <div style={{ fontSize: 12.5, marginTop: 18 }}>
+            {dueDate && (
+              <div style={{ marginBottom: 5 }}>
+                <span style={{ fontWeight: 700 }}>入金期日</span>
+                <span style={{ marginLeft: 14 }}>{dueDate.replace(/-/g, "-")}</span>
+              </div>
+            )}
+            <div>
+              <span style={{ fontWeight: 700 }}>振込先</span>
+              <span style={{ marginLeft: 14, whiteSpace: "pre-line" }}>{settings.bank_info || "（設定ページで登録してください）"}</span>
             </div>
           </div>
-
-          {/* 右: 合計テーブル */}
-          <table className={`border-collapse border border-slate-400 ${baseText}`}>
+          {(() => { const cb = "0.5px solid #333"; return (
+          <table style={{ borderCollapse: "collapse", fontSize: 13, marginTop: 6 }}>
             <tbody>
               <tr>
-                <td className="border border-slate-400 px-2 py-0.5">小計</td>
-                <td className="border border-slate-400 px-2 py-0.5 text-right">{formatNumber(inv.subtotal)}円</td>
+                <td style={{ padding: "6px 14px", fontWeight: 600, borderTop: cb, borderBottom: cb, borderLeft: cb }}>小計</td>
+                <td style={{ padding: "6px 18px", textAlign: "right", borderTop: cb, borderBottom: cb, borderRight: cb }}>{formatNumber(inv.subtotal)}円</td>
               </tr>
               <tr>
-                <td className="border border-slate-400 px-2 py-0.5">消費税</td>
-                <td className="border border-slate-400 px-2 py-0.5 text-right">{formatNumber(inv.tax)}円</td>
-              </tr>
-              <tr className="font-bold">
-                <td className="border border-slate-400 px-2 py-0.5">合計</td>
-                <td className="border border-slate-400 px-2 py-0.5 text-right">{formatNumber(inv.total)}円</td>
+                <td style={{ padding: "6px 14px", fontWeight: 600, borderBottom: cb, borderLeft: cb }}>消費税</td>
+                <td style={{ padding: "6px 18px", textAlign: "right", borderBottom: cb, borderRight: cb }}>{formatNumber(inv.tax)}円</td>
               </tr>
               <tr>
-                <td className={`border border-slate-400 px-2 py-0.5 ${smallText}`}>内訳 10%対象(税抜)</td>
-                <td className={`border border-slate-400 px-2 py-0.5 text-right ${smallText}`}>{formatNumber(inv.subtotal)}円</td>
-              </tr>
-              <tr>
-                <td className={`border border-slate-400 px-2 py-0.5 ${smallText}`}>　　 10%消費税</td>
-                <td className={`border border-slate-400 px-2 py-0.5 text-right ${smallText}`}>{formatNumber(inv.tax)}円</td>
+                <td style={{ padding: "6px 14px", fontWeight: 700, borderBottom: cb, borderLeft: cb }}>合計</td>
+                <td style={{ padding: "6px 18px", textAlign: "right", fontWeight: 700, borderBottom: cb, borderRight: cb }}>{formatNumber(inv.total)}円</td>
               </tr>
             </tbody>
           </table>
+          ); })()}
         </div>
 
         {/* 備考 */}
-        <div className={`mt-2 border border-slate-400 px-2 py-1.5 ${baseText}`}>
-          <div className="text-slate-500 mb-0.5">備考</div>
-          <div className="whitespace-pre-line min-h-[1.5em]">
-            {notes || ""}
-          </div>
+        <div style={{ marginTop: 16, border: "0.5px solid #999", borderRadius: 2, padding: "10px 12px", minHeight: 80 }}>
+          <div style={{ fontSize: 11.5, fontWeight: 700, color: "#444", marginBottom: 2 }}>備考</div>
+          <div style={{ whiteSpace: "pre-line", fontSize: 12.5 }}>{notes || ""}</div>
         </div>
       </div>
     </div>
