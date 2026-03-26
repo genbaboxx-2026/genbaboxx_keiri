@@ -613,15 +613,15 @@ function PreviewGallery({
 
       {/* カードスタック領域 */}
       <div
-        className="relative flex items-center justify-center"
+        className="relative flex items-center justify-center overflow-hidden"
         style={{ minHeight: "calc(70vh + 48px)" }}
         onTouchStart={handleTouchStart}
         onTouchEnd={handleTouchEnd}
       >
         {/* 左ボタン */}
         <button
-          className="absolute left-2 z-20 w-10 h-10 flex items-center justify-center bg-white border border-slate-200 rounded-full shadow text-slate-500 hover:text-slate-800 cursor-pointer disabled:opacity-20 disabled:cursor-default"
-          style={{ top: "50%" , transform: "translateY(-50%)" }}
+          className="absolute z-20 w-10 h-10 flex items-center justify-center bg-white/90 border border-slate-200 rounded-full shadow text-slate-500 hover:text-slate-800 cursor-pointer disabled:opacity-20 disabled:cursor-default backdrop-blur-sm"
+          style={{ top: "50%", left: "calc(50% - 290px)", transform: "translateY(-50%)" }}
           disabled={!hasPrev}
           onClick={goPrev}
         >
@@ -635,13 +635,12 @@ function PreviewGallery({
             <div
               className="absolute inset-0 transition-all duration-300 ease-out cursor-pointer"
               style={{
-                transform: "translateX(-24px) scale(0.94)",
+                transform: "translateX(calc(-60% - 20px)) scale(0.88)",
                 zIndex: 1,
-                filter: "brightness(0.97)",
               }}
               onClick={goPrev}
             >
-              <div className="h-full w-full rounded-lg shadow-md overflow-hidden opacity-60 pointer-events-none">
+              <div className="h-full w-full rounded-lg shadow-md overflow-hidden opacity-50 hover:opacity-70 transition-opacity">
                 <InvoicePreview
                   inv={prevInv}
                   settings={settings}
@@ -659,13 +658,12 @@ function PreviewGallery({
             <div
               className="absolute inset-0 transition-all duration-300 ease-out cursor-pointer"
               style={{
-                transform: "translateX(24px) scale(0.94)",
+                transform: "translateX(calc(60% + 20px)) scale(0.88)",
                 zIndex: 1,
-                filter: "brightness(0.97)",
               }}
               onClick={goNext}
             >
-              <div className="h-full w-full rounded-lg shadow-md overflow-hidden opacity-60 pointer-events-none">
+              <div className="h-full w-full rounded-lg shadow-md overflow-hidden opacity-50 hover:opacity-70 transition-opacity">
                 <InvoicePreview
                   inv={nextInv}
                   settings={settings}
@@ -699,8 +697,8 @@ function PreviewGallery({
 
         {/* 右ボタン */}
         <button
-          className="absolute right-2 z-20 w-10 h-10 flex items-center justify-center bg-white border border-slate-200 rounded-full shadow text-slate-500 hover:text-slate-800 cursor-pointer disabled:opacity-20 disabled:cursor-default"
-          style={{ top: "50%", transform: "translateY(-50%)" }}
+          className="absolute z-20 w-10 h-10 flex items-center justify-center bg-white/90 border border-slate-200 rounded-full shadow text-slate-500 hover:text-slate-800 cursor-pointer disabled:opacity-20 disabled:cursor-default backdrop-blur-sm"
+          style={{ top: "50%", right: "calc(50% - 290px)", transform: "translateY(-50%)" }}
           disabled={!hasNext}
           onClick={goNext}
         >
