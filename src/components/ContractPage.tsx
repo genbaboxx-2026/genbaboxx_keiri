@@ -189,12 +189,12 @@ function MonthlyRevenueTable({
                 </td>
                 {allMonths.map((month) => {
                   let amt = 0;
-                  const unitFee = c.monthly_fee * (c.fee_months || 1);
+                  const feeMs = (c.fee_months && c.fee_months > 1) ? ms.slice(0, c.fee_months) : ms;
                   if (isLump) {
                     if (ms.length > 0 && shiftMonth(ms[0], mo) === month) amt += c.monthly_fee * c.duration_months;
                   } else {
-                    ms.forEach((bm) => {
-                      if (shiftMonth(bm, mo) === month) amt += unitFee;
+                    feeMs.forEach((bm) => {
+                      if (shiftMonth(bm, mo) === month) amt += c.monthly_fee;
                     });
                   }
                   if (c.has_option) {

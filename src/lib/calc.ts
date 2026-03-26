@@ -211,16 +211,16 @@ export function getRevenue(
       let amt = 0;
       const mo = calcPayOffset(c.monthly_close, c.monthly_pay);
       const isLump = c.billing_type === "lump_sum";
-      const unitFee = c.monthly_fee * (c.fee_months || 1);
+      const feeMs = (c.fee_months && c.fee_months > 1) ? ms.slice(0, c.fee_months) : ms;
       if (isLump) {
         // 一括: 支払い月に総額を計上
         if (ms.length > 0 && shiftMonth(ms[0], mo) === month) {
           amt += c.monthly_fee * c.duration_months;
         }
       } else {
-        // 月額: 毎月計上
-        ms.forEach((m) => {
-          if (shiftMonth(m, mo) === month) amt += unitFee;
+        // 月額: fee_monthsで請求月数を制限
+        feeMs.forEach((m) => {
+          if (shiftMonth(m, mo) === month) amt += c.monthly_fee;
         });
       }
       if (c.has_option) {

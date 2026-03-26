@@ -376,7 +376,7 @@ export function ContractForm({
                 <span className="text-[11px] text-slate-500">ヶ月分</span>
                 {feeMonths > 1 && (
                   <span className="text-[11px] text-blue-600 font-medium">
-                    = ¥{formatNumber(monthlyFee * feeMonths)}/月
+                    = ¥{formatNumber(monthlyFee)}/月 × {feeMonths}ヶ月
                   </span>
                 )}
               </div>
