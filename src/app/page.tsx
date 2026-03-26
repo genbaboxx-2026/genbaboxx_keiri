@@ -395,7 +395,7 @@ export default function Home() {
           </button>
           {sideOpen && (
             <span className="text-[15px] font-extrabold whitespace-nowrap">
-              財務管理
+              契約管理
             </span>
           )}
         </div>
