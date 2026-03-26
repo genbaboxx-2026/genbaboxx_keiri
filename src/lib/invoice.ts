@@ -103,7 +103,7 @@ export async function generateInvoicePDF(
 
     doc.setFontSize(12.5);
     // 請求日
-    doc.setTextColor(85, 85, 85);
+    doc.setTextColor(51, 51, 51);
     doc.text("請求日", rightLabelX, ry);
     doc.setTextColor(30, 30, 30);
     doc.text(issueDate, rightValueX, ry, { align: "right" });
@@ -112,7 +112,7 @@ export async function generateInvoicePDF(
     ry += 5.5;
 
     // 請求書番号
-    doc.setTextColor(85, 85, 85);
+    doc.setTextColor(51, 51, 51);
     doc.text("請求書番号", rightLabelX, ry);
     doc.setTextColor(30, 30, 30);
     doc.text(invoiceNumber, rightValueX, ry, { align: "right" });
@@ -122,7 +122,7 @@ export async function generateInvoicePDF(
 
     // 登録番号
     if (settings.invoice_number) {
-      doc.setTextColor(85, 85, 85);
+      doc.setTextColor(51, 51, 51);
       doc.text("登録番号", rightLabelX, ry);
       doc.setTextColor(30, 30, 30);
       doc.text(settings.invoice_number, rightValueX, ry, { align: "right" });
@@ -154,8 +154,8 @@ export async function generateInvoicePDF(
 
     // ===== 「下記の通り...」 =====
     y = Math.max(y + 8, ry + 4);
-    doc.setFontSize(12.5);
-    doc.setTextColor(85, 85, 85);
+    doc.setFontSize(13);
+    doc.setTextColor(26, 26, 26);
     doc.text("下記の通りご請求申し上げます。", mL, y);
     y += 10;
 
@@ -292,8 +292,8 @@ export async function generateInvoicePDF(
 
     // ===== 備考 =====
     const notesY = Math.max(sy + 8, by + 4);
-    doc.setFontSize(12.5);
-    doc.setTextColor(85, 85, 85);
+    doc.setFontSize(11.5);
+    doc.setTextColor(68, 68, 68);
     drawRect(doc, mL, notesY - 3, contentW, 28);
     doc.text("備考", mL + 3, notesY + 1);
     doc.setTextColor(30, 30, 30);
