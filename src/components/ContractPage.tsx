@@ -12,7 +12,7 @@ import {
   formatNumber,
   formatDate,
   formatYen,
-  payDescription,
+  payDescriptionGeneric,
   getCurrentMonth,
   effectiveDuration,
 } from "@/lib/calc";
@@ -360,7 +360,6 @@ function ContractDetailView({
                 {contracts.map((c) => {
                   const bs = makeBillingStart(c.billing_month, c.billing_day);
                   const end = calcEndDate(bs, c.duration_months);
-                  const bm = c.billing_month ? parseInt(c.billing_month.split("-")[1]) : 0;
                   const status = c.contract_status || "initial";
                   const statusConfig = {
                     initial: { label: "初回", bg: "bg-blue-50", text: "text-blue-700", border: "border-blue-200" },
@@ -388,13 +387,13 @@ function ContractDetailView({
                           <span className="ml-1 text-[10px] font-bold text-amber-600 bg-amber-50 px-1.5 py-0.5 rounded">一括</span>
                         )}
                       </td>
-                      <td className="px-3 py-2.5 text-[10px] text-slate-500">{payDescription(c.monthly_close, c.monthly_pay, bm)}</td>
+                      <td className="px-3 py-2.5 text-[10px] text-slate-500">{payDescriptionGeneric(c.monthly_close, c.monthly_pay)}</td>
                       <td className="px-3 py-2.5 text-xs">
                         {c.has_initial_fee ? (
                           <span>
                             {formatYen(c.initial_fee)}
                             <br />
-                            <span className="text-[9px] text-slate-500">{payDescription(c.initial_close, c.initial_pay, bm)}</span>
+                            <span className="text-[9px] text-slate-500">{payDescriptionGeneric(c.initial_close, c.initial_pay)}</span>
                           </span>
                         ) : <span className="text-slate-300">—</span>}
                       </td>
@@ -403,7 +402,7 @@ function ContractDetailView({
                           <span>
                             {c.option_name} {formatYen(c.option_fee)}/月
                             <br />
-                            <span className="text-[9px] text-slate-500">{payDescription(c.option_close, c.option_pay, bm)}</span>
+                            <span className="text-[9px] text-slate-500">{payDescriptionGeneric(c.option_close, c.option_pay)}</span>
                           </span>
                         ) : <span className="text-slate-300">—</span>}
                       </td>
