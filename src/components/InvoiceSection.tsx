@@ -37,6 +37,8 @@ export function InvoiceSection({
   >({});
   const [generating, setGenerating] = useState(false);
   const [initialized, setInitialized] = useState(false);
+  const [showSendConfirm, setShowSendConfirm] = useState(false);
+  const [emailBody, setEmailBody] = useState("");
 
   const baseInvoices = useMemo(
     () => getInvoicesForMonth(selectedMonth, contracts, companies, invoiceTemplate),
@@ -164,12 +166,31 @@ export function InvoiceSection({
   const selectedTotal = selectedInvoices.reduce((s, i) => s + i.total, 0);
   const previewInvoice = invoices.find((i) => i.companyId === expandedId);
 
+  // 企業IDから企業情報を取得
+  const getCompany = useCallback(
+    (companyId: string) => companies.find((c) => c.id === companyId),
+    [companies]
+  );
+
+  const monthLabel = `${selectedMonth.split("-")[0]}年${parseInt(selectedMonth.split("-")[1])}月`;
+
+  const buildDefaultEmailBody = useCallback(() => {
+    const companyName = settings?.company_name || "";
+    return `いつもお世話になっております。\n${companyName}です。\n\n${monthLabel}分の請求書を添付にてお送りいたします。\nご確認のほど、よろしくお願いいたします。\n\n何かご不明な点がございましたら、お気軽にお問い合わせください。\n\n${companyName}`;
+  }, [settings, monthLabel]);
+
+  const handleOpenConfirm = () => {
+    setEmailBody(buildDefaultEmailBody());
+    setShowSendConfirm(true);
+  };
+
   const handleGenerate = async () => {
     if (!settings || selectedInvoices.length === 0) return;
     setGenerating(true);
     try {
       const { generateInvoicePDF } = await import("@/lib/invoice");
       await generateInvoicePDF(settings, selectedInvoices, selectedMonth, invoiceTemplate?.notes);
+      setShowSendConfirm(false);
     } catch (e) {
       console.error(e);
       alert("PDF生成に失敗しました");
@@ -277,15 +298,12 @@ export function InvoiceSection({
               <button
                 className="px-6 py-2.5 bg-slate-800 text-white rounded-[10px] text-sm font-semibold cursor-pointer hover:bg-slate-700 disabled:opacity-40"
                 disabled={
-                  generating ||
                   selectedInvoices.length === 0 ||
                   !settings?.company_name
                 }
-                onClick={handleGenerate}
+                onClick={handleOpenConfirm}
               >
-                {generating
-                  ? "生成中..."
-                  : `選択した${selectedInvoices.length}社の請求書を作成`}
+                {`選択した${selectedInvoices.length}社の請求書送付を確認`}
               </button>
             </div>
           </div>
@@ -339,6 +357,116 @@ export function InvoiceSection({
               </div>
             </div>
           )}
+        </div>
+      )}
+
+      {/* 送付確認モーダル */}
+      {showSendConfirm && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm"
+          onClick={() => setShowSendConfirm(false)}
+        >
+          <div
+            className="bg-white rounded-2xl shadow-xl w-[680px] max-h-[85vh] overflow-y-auto"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between px-6 py-4 border-b border-slate-200">
+              <h3 className="text-lg font-bold">請求書送付確認</h3>
+              <button
+                className="w-8 h-8 flex items-center justify-center text-slate-400 hover:text-slate-700 cursor-pointer text-lg"
+                onClick={() => setShowSendConfirm(false)}
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="px-6 py-5 flex flex-col gap-5">
+              {/* 送付先一覧 */}
+              <div>
+                <div className="text-sm font-bold text-slate-700 mb-3">
+                  送付先一覧（{selectedInvoices.length}社）
+                </div>
+                <div className="border border-slate-200 rounded-xl overflow-hidden">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="bg-slate-50 border-b border-slate-200">
+                        <th className="px-4 py-2.5 text-left font-semibold text-xs text-slate-500">企業名</th>
+                        <th className="px-4 py-2.5 text-left font-semibold text-xs text-slate-500">担当者</th>
+                        <th className="px-4 py-2.5 text-left font-semibold text-xs text-slate-500">メールアドレス</th>
+                        <th className="px-4 py-2.5 text-right font-semibold text-xs text-slate-500">金額（税込）</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {selectedInvoices.map((inv) => {
+                        const co = getCompany(inv.companyId);
+                        const contactName = co?.invoice_contact_name || "";
+                        const email = co?.invoice_email || "";
+                        return (
+                          <tr key={inv.companyId} className="border-b border-slate-100">
+                            <td className="px-4 py-2.5 font-medium">{inv.companyName}</td>
+                            <td className="px-4 py-2.5 text-slate-600">
+                              {contactName || <span className="text-slate-300">未設定</span>}
+                            </td>
+                            <td className="px-4 py-2.5">
+                              {email ? (
+                                <span className="text-blue-600">{email}</span>
+                              ) : (
+                                <span className="text-red-400 text-xs font-medium">未設定</span>
+                              )}
+                            </td>
+                            <td className="px-4 py-2.5 text-right tabular-nums font-semibold">
+                              ¥{formatNumber(inv.total)}
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                    <tfoot>
+                      <tr className="bg-slate-50 border-t border-slate-200">
+                        <td colSpan={3} className="px-4 py-2.5 font-bold text-sm">合計</td>
+                        <td className="px-4 py-2.5 text-right tabular-nums font-bold text-sm">
+                          ¥{formatNumber(selectedTotal)}
+                        </td>
+                      </tr>
+                    </tfoot>
+                  </table>
+                </div>
+                {selectedInvoices.some((inv) => !getCompany(inv.companyId)?.invoice_email) && (
+                  <div className="mt-2 text-xs text-amber-600 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
+                    メールアドレスが未設定の企業があります。企業マスタから設定してください。
+                  </div>
+                )}
+              </div>
+
+              {/* メール文面 */}
+              <div>
+                <div className="text-sm font-bold text-slate-700 mb-2">メール本文</div>
+                <textarea
+                  className="w-full px-4 py-3 border border-slate-200 rounded-xl text-sm outline-none focus:border-blue-400 resize-y leading-relaxed"
+                  rows={8}
+                  value={emailBody}
+                  onChange={(e) => setEmailBody(e.target.value)}
+                />
+              </div>
+            </div>
+
+            {/* ボタン */}
+            <div className="flex gap-3 justify-end px-6 py-4 border-t border-slate-200">
+              <button
+                className="px-5 py-2.5 bg-slate-100 text-slate-700 rounded-[10px] text-sm font-medium cursor-pointer hover:bg-slate-200"
+                onClick={() => setShowSendConfirm(false)}
+              >
+                戻る
+              </button>
+              <button
+                className="px-7 py-2.5 bg-slate-800 text-white rounded-[10px] text-sm font-semibold cursor-pointer hover:bg-slate-700 disabled:opacity-40"
+                disabled={generating || !settings?.company_name}
+                onClick={handleGenerate}
+              >
+                {generating ? "生成中..." : `${selectedInvoices.length}社の請求書を作成`}
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>
