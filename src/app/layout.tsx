@@ -9,7 +9,7 @@ const notoSansJP = Noto_Sans_JP({
 });
 
 export const metadata: Metadata = {
-  title: "財務管理 - genbaboxx keiri",
+  title: "GB契約管理",
   description: "契約管理・資金繰りシステム",
 };
 
