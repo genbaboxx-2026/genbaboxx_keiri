@@ -3,6 +3,43 @@
 import { useState, useEffect } from "react";
 import type { Settings } from "@/lib/database.types";
 
+function Field({
+  label,
+  value,
+  onChange,
+  multiline,
+  placeholder,
+}: {
+  label: string;
+  value: string;
+  onChange: (v: string) => void;
+  multiline?: boolean;
+  placeholder?: string;
+}) {
+  return (
+    <div>
+      <label className="block text-[13px] font-semibold text-slate-600 mb-1.5">
+        {label}
+      </label>
+      {multiline ? (
+        <textarea
+          className="w-full px-3.5 py-2.5 border-[1.5px] border-slate-200 rounded-[10px] text-sm outline-none focus:border-blue-400 min-h-[80px] resize-y"
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          placeholder={placeholder}
+        />
+      ) : (
+        <input
+          className="w-full px-3.5 py-2.5 border-[1.5px] border-slate-200 rounded-[10px] text-sm outline-none focus:border-blue-400"
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          placeholder={placeholder}
+        />
+      )}
+    </div>
+  );
+}
+
 interface SettingsPageProps {
   settings: Settings | null;
   onSave: (settings: Omit<Settings, "created_at" | "updated_at">) => void;
@@ -40,41 +77,6 @@ export function SettingsPage({ settings, onSave }: SettingsPageProps) {
     setSaved(true);
     setTimeout(() => setSaved(false), 2000);
   };
-
-  const Field = ({
-    label,
-    value,
-    onChange,
-    multiline,
-    placeholder,
-  }: {
-    label: string;
-    value: string;
-    onChange: (v: string) => void;
-    multiline?: boolean;
-    placeholder?: string;
-  }) => (
-    <div>
-      <label className="block text-[13px] font-semibold text-slate-600 mb-1.5">
-        {label}
-      </label>
-      {multiline ? (
-        <textarea
-          className="w-full px-3.5 py-2.5 border-[1.5px] border-slate-200 rounded-[10px] text-sm outline-none focus:border-blue-400 min-h-[80px] resize-y"
-          value={value}
-          onChange={(e) => onChange(e.target.value)}
-          placeholder={placeholder}
-        />
-      ) : (
-        <input
-          className="w-full px-3.5 py-2.5 border-[1.5px] border-slate-200 rounded-[10px] text-sm outline-none focus:border-blue-400"
-          value={value}
-          onChange={(e) => onChange(e.target.value)}
-          placeholder={placeholder}
-        />
-      )}
-    </div>
-  );
 
   return (
     <div>
