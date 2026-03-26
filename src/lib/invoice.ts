@@ -8,7 +8,6 @@ async function loadJapaneseFont(
   doc: any
 ) {
   if (!cachedFontBase64) {
-    // Google Fonts の静的ホスティングからTTFを取得
     const res = await fetch(
       "https://raw.githubusercontent.com/google/fonts/main/ofl/notosansjp/NotoSansJP%5Bwght%5D.ttf"
     );
@@ -25,148 +24,213 @@ async function loadJapaneseFont(
   doc.addFont("NotoSansJP-Regular.ttf", "NotoSansJP", "normal");
 }
 
+const fmt = (n: number) => n.toLocaleString();
+
 export async function generateInvoicePDF(
   settings: Settings,
   invoices: CompanyInvoice[],
-  invoiceMonth: string
+  invoiceMonth: string,
+  templateNotes?: string
 ) {
   const { jsPDF } = await import("jspdf");
   const { default: autoTable } = await import("jspdf-autotable");
 
   const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
-
-  // 日本語フォントロード
   await loadJapaneseFont(doc);
   doc.setFont("NotoSansJP", "normal");
 
-  const [yearStr, monthStr] = invoiceMonth.split("-");
   const today = new Date();
-  const issueDate = `${today.getFullYear()}/${String(today.getMonth() + 1).padStart(2, "0")}/${String(today.getDate()).padStart(2, "0")}`;
+  const issueDate = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
+  const pageW = 210;
+  const marginL = 20;
+  const marginR = 20;
+  const contentW = pageW - marginL - marginR;
 
-  for (let i = 0; i < invoices.length; i++) {
-    const inv = invoices[i];
-    if (i > 0) doc.addPage();
+  for (let idx = 0; idx < invoices.length; idx++) {
+    const inv = invoices[idx];
+    if (idx > 0) doc.addPage();
 
     let y = 20;
 
-    // タイトル
-    doc.setFontSize(22);
-    doc.text("請求書", 105, y, { align: "center" });
-    y += 12;
-
-    // 発行日
-    doc.setFontSize(10);
-    doc.text(`発行日: ${issueDate}`, 190, y, { align: "right" });
-    y += 8;
-
-    // 請求先
-    doc.setFontSize(14);
-    doc.text(`${inv.companyName} 御中`, 20, y);
-    y += 2;
-    doc.setLineWidth(0.5);
-    doc.line(20, y, 120, y);
-    y += 10;
-
-    // 請求金額
-    doc.setFontSize(11);
-    doc.text("ご請求金額（税込）", 20, y);
-    y += 7;
+    // ===== タイトル =====
     doc.setFontSize(18);
-    doc.text(`¥${inv.total.toLocaleString()}`, 20, y);
+    doc.text("請求書", pageW / 2, y, { align: "center" });
+    y += 3;
+    doc.setLineWidth(0.5);
+    doc.line(pageW / 2 - 20, y, pageW / 2 + 20, y);
     y += 12;
 
-    // 請求元情報
-    const infoX = 120;
-    let infoY = 50;
-    doc.setFontSize(10);
-    if (settings.company_name) {
-      doc.setFontSize(12);
-      doc.text(settings.company_name, infoX, infoY);
-      infoY += 6;
-      doc.setFontSize(9);
+    // ===== 左: 請求先 =====
+    doc.setFontSize(14);
+    doc.text(`${inv.companyName} 御中`, marginL, y);
+    y += 2;
+    doc.setLineWidth(0.3);
+    doc.line(marginL, y, marginL + 90, y);
+
+    // ===== 右上: 請求日・番号 =====
+    const rightX = 130;
+    let ry = 32;
+    doc.setFontSize(8);
+    doc.text("請求日", rightX, ry);
+    doc.text(issueDate, pageW - marginR, ry, { align: "right" });
+    ry += 5;
+    if (settings.invoice_number) {
+      doc.text("登録番号", rightX, ry);
+      doc.text(settings.invoice_number, pageW - marginR, ry, { align: "right" });
+      ry += 5;
     }
+
+    // ===== 右: 自社情報 =====
+    ry += 3;
+    doc.setFontSize(11);
+    doc.text(settings.company_name || "", pageW - marginR, ry, { align: "right" });
+    ry += 6;
+    doc.setFontSize(8);
     if (settings.company_address) {
       const addrLines = settings.company_address.split("\n");
       for (const line of addrLines) {
-        doc.text(line, infoX, infoY);
-        infoY += 5;
+        doc.text(line, pageW - marginR, ry, { align: "right" });
+        ry += 4;
       }
     }
     if (settings.company_phone) {
-      doc.text(`TEL: ${settings.company_phone}`, infoX, infoY);
-      infoY += 5;
-    }
-    if (settings.invoice_number) {
-      doc.text(`登録番号: ${settings.invoice_number}`, infoX, infoY);
-      infoY += 5;
+      doc.text(`TEL: ${settings.company_phone}`, pageW - marginR, ry, { align: "right" });
+      ry += 4;
     }
 
-    // 対象期間
-    doc.setFontSize(10);
-    y = Math.max(y, infoY + 5);
-    doc.text(`対象期間: ${yearStr}年${parseInt(monthStr)}月分`, 20, y);
+    // ===== 「下記の通り...」 =====
+    y = Math.max(y + 12, ry + 5);
+    doc.setFontSize(9);
+    doc.text("下記の通りご請求申し上げます。", marginL, y);
+    y += 10;
+
+    // ===== 請求金額 =====
+    doc.setFontSize(9);
+    doc.text("請求金額", marginL, y);
     y += 8;
+    doc.setFontSize(20);
+    doc.text(`${fmt(inv.total)}円`, marginL + 5, y);
+    y += 3;
+    doc.setLineWidth(0.5);
+    doc.line(marginL, y, marginL + 80, y);
+    y += 10;
 
-    // 明細テーブル
-    autoTable(doc, {
-      startY: y,
-      head: [["品目", "数量", "単価", "金額"]],
-      body: inv.items.map((item) => [
+    // ===== 明細テーブル =====
+    const tableStartY = y;
+    const maxRows = 10;
+    const items = inv.items.filter((it) => it.amount > 0 || it.description);
+    const emptyRows = Math.max(0, maxRows - items.length);
+    const bodyData = [
+      ...items.map((item) => [
         item.description,
         String(item.quantity),
-        `¥${item.unitPrice.toLocaleString()}`,
-        `¥${item.amount.toLocaleString()}`,
+        fmt(item.unitPrice),
+        fmt(item.amount),
       ]),
+      ...Array(emptyRows).fill(["", "", "", ""]),
+    ];
+
+    autoTable(doc, {
+      startY: tableStartY,
+      head: [["摘要", "数量", "単価", "明細金額"]],
+      body: bodyData,
       styles: {
         font: "NotoSansJP",
-        fontSize: 10,
-        cellPadding: 4,
+        fontSize: 9,
+        cellPadding: 3,
+        lineColor: [0, 0, 0],
+        lineWidth: 0.2,
+        textColor: [0, 0, 0],
       },
       headStyles: {
-        fillColor: [51, 65, 85],
-        textColor: [255, 255, 255],
+        fillColor: [255, 255, 255],
+        textColor: [0, 0, 0],
         fontStyle: "normal",
+        halign: "center",
       },
       columnStyles: {
-        0: { cellWidth: 80 },
-        1: { halign: "right", cellWidth: 25 },
-        2: { halign: "right", cellWidth: 35 },
-        3: { halign: "right", cellWidth: 35 },
+        0: { cellWidth: 85 },
+        1: { cellWidth: 20, halign: "right" },
+        2: { cellWidth: 30, halign: "right" },
+        3: { cellWidth: 35, halign: "right" },
       },
-      margin: { left: 20, right: 20 },
+      margin: { left: marginL, right: marginR },
+      theme: "grid",
     });
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    y = (doc as any).lastAutoTable.finalY + 8;
+    y = (doc as any).lastAutoTable.finalY + 5;
 
-    // 合計セクション
-    const sumX = 140;
-    doc.setFontSize(10);
-    doc.text("小計（税別）", sumX, y);
-    doc.text(`¥${inv.subtotal.toLocaleString()}`, 190, y, { align: "right" });
-    y += 6;
-    doc.text("消費税（10%）", sumX, y);
-    doc.text(`¥${inv.tax.toLocaleString()}`, 190, y, { align: "right" });
-    y += 2;
-    doc.line(sumX, y, 190, y);
-    y += 6;
-    doc.setFontSize(12);
-    doc.text("合計（税込）", sumX, y);
-    doc.text(`¥${inv.total.toLocaleString()}`, 190, y, { align: "right" });
-    y += 14;
-
-    // 振込先
+    // ===== 左下: 入金期日・振込先 =====
+    const bottomY = y;
+    doc.setFontSize(9);
     if (settings.bank_info) {
-      doc.setFontSize(10);
-      doc.text("お振込先", 20, y);
-      y += 6;
-      doc.setFontSize(9);
+      let by = bottomY;
+      doc.text("振込先", marginL, by);
+      by += 5;
+      doc.setFontSize(8);
       const bankLines = settings.bank_info.split("\n");
       for (const line of bankLines) {
-        doc.text(line, 20, y);
-        y += 5;
+        doc.text(line, marginL + 15, by);
+        by += 4;
       }
     }
+
+    // ===== 右下: 小計/消費税/合計/内訳 =====
+    const sumTableX = 120;
+    const sumTableW = pageW - marginR - sumTableX;
+
+    autoTable(doc, {
+      startY: bottomY - 2,
+      body: [
+        ["小計", `${fmt(inv.subtotal)}円`],
+        ["消費税", `${fmt(inv.tax)}円`],
+        ["合計", `${fmt(inv.total)}円`],
+        ["内訳  10%対象(税抜)", `${fmt(inv.subtotal)}円`],
+        ["        10%消費税", `${fmt(inv.tax)}円`],
+      ],
+      styles: {
+        font: "NotoSansJP",
+        fontSize: 8,
+        cellPadding: 2,
+        lineColor: [0, 0, 0],
+        lineWidth: 0.2,
+        textColor: [0, 0, 0],
+      },
+      columnStyles: {
+        0: { cellWidth: sumTableW * 0.55 },
+        1: { cellWidth: sumTableW * 0.45, halign: "right" },
+      },
+      margin: { left: sumTableX, right: marginR },
+      theme: "grid",
+    });
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    y = (doc as any).lastAutoTable.finalY + 5;
+
+    // ===== 備考 =====
+    if (templateNotes) {
+      doc.setFontSize(8);
+      doc.setDrawColor(0);
+      doc.rect(marginL, y, contentW, 20);
+      doc.text("備考", marginL + 3, y + 5);
+      const noteLines = templateNotes.split("\n");
+      let ny = y + 10;
+      for (const line of noteLines) {
+        doc.text(line, marginL + 3, ny);
+        ny += 4;
+      }
+      y += 25;
+    }
+
+    // ===== ページ番号 =====
+    doc.setFontSize(8);
+    doc.text(
+      `${idx + 1} / ${invoices.length}`,
+      pageW / 2,
+      287,
+      { align: "center" }
+    );
   }
 
   doc.save(`請求書_${invoiceMonth}.pdf`);

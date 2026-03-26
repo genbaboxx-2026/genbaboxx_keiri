@@ -131,7 +131,7 @@ export function InvoiceSection({
     setGenerating(true);
     try {
       const { generateInvoicePDF } = await import("@/lib/invoice");
-      await generateInvoicePDF(settings, selectedInvoices, selectedMonth);
+      await generateInvoicePDF(settings, selectedInvoices, selectedMonth, invoiceTemplate?.notes);
     } catch (e) {
       console.error(e);
       alert("PDF生成に失敗しました");
@@ -257,6 +257,7 @@ export function InvoiceSection({
                 settings={settings}
                 issueDate={issueDate}
                 month={selectedMonth}
+                notes={invoiceTemplate?.notes}
               />
             </div>
           )}
@@ -417,110 +418,149 @@ function CompanyRow({
   );
 }
 
-/** 請求書プレビュー */
+/** 請求書プレビュー（実際のPDFレイアウトに近い表示） */
 function InvoicePreview({
   inv,
   settings,
   issueDate,
   month,
+  notes,
 }: {
   inv: CompanyInvoice;
   settings: Settings;
   issueDate: string;
   month: string;
+  notes?: string;
 }) {
-  const [y, m] = month.split("-");
-  return (
-    <div className="border border-slate-300 rounded-lg bg-white shadow-sm p-5 text-[10px] leading-relaxed sticky top-4">
-      <div className="text-center text-base font-bold border-b border-slate-800 pb-2 mb-3">
-        請求書
-      </div>
+  const visibleItems = inv.items.filter((it) => it.amount > 0 || it.description);
+  const emptyRows = Math.max(0, 8 - visibleItems.length);
 
-      <div className="flex justify-between mb-4">
-        <div>
-          <div className="text-sm font-bold">{inv.companyName} 御中</div>
+  return (
+    <div className="border border-slate-300 rounded bg-white shadow-sm sticky top-4 text-[9px] leading-relaxed" style={{ aspectRatio: "210/297" }}>
+      <div className="p-5 h-full flex flex-col">
+        {/* タイトル */}
+        <div className="text-center mb-4">
+          <div className="text-base font-bold">請求書</div>
+          <div className="w-10 mx-auto border-b border-slate-800 mt-1" />
         </div>
-        <div className="text-right text-[9px] text-slate-500">
-          <div>発行日: {issueDate}</div>
-          {settings.invoice_number && (
-            <div>登録番号: {settings.invoice_number}</div>
+
+        {/* 上部: 請求先 + 自社情報 */}
+        <div className="flex justify-between mb-4">
+          <div>
+            <div className="text-[11px] font-bold">{inv.companyName} 御中</div>
+            <div className="border-b border-slate-800 mt-0.5 w-28" />
+          </div>
+          <div className="text-right text-[8px] text-slate-600">
+            <div>請求日　{issueDate}</div>
+            {settings.invoice_number && (
+              <div>登録番号　{settings.invoice_number}</div>
+            )}
+          </div>
+        </div>
+
+        {/* 自社情報 右寄せ */}
+        <div className="text-right text-[8px] mb-3">
+          <div className="font-bold text-[10px]">{settings.company_name}</div>
+          {settings.company_address && (
+            <div className="whitespace-pre-line text-slate-600">{settings.company_address}</div>
+          )}
+          {settings.company_phone && (
+            <div className="text-slate-600">TEL: {settings.company_phone}</div>
           )}
         </div>
-      </div>
 
-      <div className="text-right mb-4 text-[9px]">
-        <div className="font-bold">{settings.company_name}</div>
-        {settings.company_address && (
-          <div className="whitespace-pre-line">{settings.company_address}</div>
-        )}
-        {settings.company_phone && <div>TEL: {settings.company_phone}</div>}
-      </div>
-
-      <div className="mb-3">
-        <span className="text-[9px] text-slate-500">
-          対象: {y}年{parseInt(m)}月分
-        </span>
-      </div>
-
-      <div className="bg-slate-50 rounded px-2 py-1.5 mb-3 text-center">
-        <span className="text-[9px] text-slate-500">ご請求金額（税込）</span>
-        <div className="text-sm font-bold">
-          ¥{formatNumber(inv.total)}
+        {/* 「下記の通り...」 */}
+        <div className="text-[8px] text-slate-600 mb-3">
+          下記の通りご請求申し上げます。
         </div>
-      </div>
 
-      {/* 明細 */}
-      <table className="w-full border-collapse mb-3">
-        <thead>
-          <tr className="bg-slate-700 text-white">
-            {["品目", "数量", "単価", "金額"].map((h) => (
-              <th key={h} className="px-1.5 py-1 text-[8px] font-medium">
-                {h}
-              </th>
-            ))}
-          </tr>
-        </thead>
-        <tbody>
-          {inv.items
-            .filter((it) => it.amount > 0 || it.description)
-            .map((item, i) => (
-              <tr key={i} className="border-b border-slate-200">
-                <td className="px-1.5 py-1">{item.description}</td>
-                <td className="px-1.5 py-1 text-right">{item.quantity}</td>
-                <td className="px-1.5 py-1 text-right">
-                  ¥{formatNumber(item.unitPrice)}
-                </td>
-                <td className="px-1.5 py-1 text-right font-medium">
-                  ¥{formatNumber(item.amount)}
-                </td>
+        {/* 請求金額 */}
+        <div className="mb-4">
+          <div className="text-[8px] text-slate-500 mb-1">請求金額</div>
+          <div className="text-[16px] font-bold">
+            {formatNumber(inv.total)}円
+          </div>
+          <div className="border-b-2 border-slate-800 w-24 mt-0.5" />
+        </div>
+
+        {/* 明細テーブル */}
+        <table className="w-full border-collapse border border-slate-400 mb-3 text-[8px]">
+          <thead>
+            <tr>
+              {["摘要", "数量", "単価", "明細金額"].map((h) => (
+                <th key={h} className="border border-slate-400 px-1.5 py-1 font-normal bg-white text-center">
+                  {h}
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {visibleItems.map((item, i) => (
+              <tr key={i}>
+                <td className="border border-slate-400 px-1.5 py-1">{item.description}</td>
+                <td className="border border-slate-400 px-1.5 py-1 text-right">{item.quantity}</td>
+                <td className="border border-slate-400 px-1.5 py-1 text-right">{formatNumber(item.unitPrice)}</td>
+                <td className="border border-slate-400 px-1.5 py-1 text-right">{formatNumber(item.amount)}</td>
               </tr>
             ))}
-        </tbody>
-      </table>
+            {Array.from({ length: emptyRows }).map((_, i) => (
+              <tr key={`empty-${i}`}>
+                <td className="border border-slate-400 px-1.5 py-1">&nbsp;</td>
+                <td className="border border-slate-400 px-1.5 py-1">&nbsp;</td>
+                <td className="border border-slate-400 px-1.5 py-1">&nbsp;</td>
+                <td className="border border-slate-400 px-1.5 py-1">&nbsp;</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
 
-      {/* 合計 */}
-      <div className="flex flex-col items-end gap-0.5 mb-3 text-[9px]">
-        <div className="flex gap-4">
-          <span className="text-slate-500">小計</span>
-          <span>¥{formatNumber(inv.subtotal)}</span>
+        {/* 下部: 振込先 + 合計 */}
+        <div className="flex justify-between mt-auto">
+          {/* 左: 振込先 */}
+          <div className="text-[8px]">
+            {settings.bank_info && (
+              <div>
+                <div className="text-slate-500 mb-0.5">振込先</div>
+                <div className="whitespace-pre-line">{settings.bank_info}</div>
+              </div>
+            )}
+          </div>
+
+          {/* 右: 合計テーブル */}
+          <table className="border-collapse border border-slate-400 text-[8px]">
+            <tbody>
+              <tr>
+                <td className="border border-slate-400 px-2 py-0.5">小計</td>
+                <td className="border border-slate-400 px-2 py-0.5 text-right">{formatNumber(inv.subtotal)}円</td>
+              </tr>
+              <tr>
+                <td className="border border-slate-400 px-2 py-0.5">消費税</td>
+                <td className="border border-slate-400 px-2 py-0.5 text-right">{formatNumber(inv.tax)}円</td>
+              </tr>
+              <tr className="font-bold">
+                <td className="border border-slate-400 px-2 py-0.5">合計</td>
+                <td className="border border-slate-400 px-2 py-0.5 text-right">{formatNumber(inv.total)}円</td>
+              </tr>
+              <tr>
+                <td className="border border-slate-400 px-2 py-0.5 text-[7px]">内訳 10%対象(税抜)</td>
+                <td className="border border-slate-400 px-2 py-0.5 text-right text-[7px]">{formatNumber(inv.subtotal)}円</td>
+              </tr>
+              <tr>
+                <td className="border border-slate-400 px-2 py-0.5 text-[7px]">　　 10%消費税</td>
+                <td className="border border-slate-400 px-2 py-0.5 text-right text-[7px]">{formatNumber(inv.tax)}円</td>
+              </tr>
+            </tbody>
+          </table>
         </div>
-        <div className="flex gap-4">
-          <span className="text-slate-500">消費税(10%)</span>
-          <span>¥{formatNumber(inv.tax)}</span>
-        </div>
-        <div className="flex gap-4 font-bold border-t border-slate-300 pt-0.5">
-          <span>合計</span>
-          <span>¥{formatNumber(inv.total)}</span>
-        </div>
+
+        {/* 備考 */}
+        {notes && (
+          <div className="mt-2 border border-slate-400 px-2 py-1.5 text-[8px]">
+            <div className="text-slate-500 mb-0.5">備考</div>
+            <div className="whitespace-pre-line">{notes}</div>
+          </div>
+        )}
       </div>
-
-      {/* 振込先 */}
-      {settings.bank_info && (
-        <div className="border-t border-slate-200 pt-2 text-[8px] text-slate-600">
-          <div className="font-bold mb-0.5">お振込先</div>
-          <div className="whitespace-pre-line">{settings.bank_info}</div>
-        </div>
-      )}
     </div>
   );
 }
