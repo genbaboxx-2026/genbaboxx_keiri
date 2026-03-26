@@ -39,6 +39,8 @@ export function InvoiceSection({
   const [initialized, setInitialized] = useState(false);
   const [showSendConfirm, setShowSendConfirm] = useState(false);
   const [emailBody, setEmailBody] = useState("");
+  const [viewMode, setViewMode] = useState<"list" | "preview">("list");
+  const [previewIndex, setPreviewIndex] = useState(0);
 
   const baseInvoices = useMemo(
     () => getInvoicesForMonth(selectedMonth, contracts, companies, invoiceTemplate),
@@ -199,12 +201,52 @@ export function InvoiceSection({
     }
   };
 
+  const handleGenerateSingle = async (inv: CompanyInvoice) => {
+    if (!settings) return;
+    setGenerating(true);
+    try {
+      const { generateInvoicePDF } = await import("@/lib/invoice");
+      await generateInvoicePDF(settings, [inv], selectedMonth, invoiceTemplate?.notes);
+    } catch (e) {
+      console.error(e);
+      alert("PDF生成に失敗しました");
+    } finally {
+      setGenerating(false);
+    }
+  };
+
   const today = new Date();
   const issueDate = `${today.getFullYear()}/${String(today.getMonth() + 1).padStart(2, "0")}/${String(today.getDate()).padStart(2, "0")}`;
 
   return (
     <div className="mt-8">
-      <h3 className="text-lg font-bold mb-4">請求書作成</h3>
+      <div className="flex items-center justify-between mb-4">
+        <h3 className="text-lg font-bold">請求書作成</h3>
+        {invoices.length > 0 && (
+          <div className="flex bg-slate-100 rounded-lg p-0.5">
+            <button
+              className={`px-3.5 py-1.5 rounded-md text-xs font-semibold cursor-pointer transition-colors ${
+                viewMode === "list"
+                  ? "bg-white text-slate-800 shadow-sm"
+                  : "bg-transparent text-slate-500 hover:text-slate-700"
+              }`}
+              onClick={() => setViewMode("list")}
+            >
+              一覧表示
+            </button>
+            <button
+              className={`px-3.5 py-1.5 rounded-md text-xs font-semibold cursor-pointer transition-colors ${
+                viewMode === "preview"
+                  ? "bg-white text-slate-800 shadow-sm"
+                  : "bg-transparent text-slate-500 hover:text-slate-700"
+              }`}
+              onClick={() => { setViewMode("preview"); setPreviewIndex(0); }}
+            >
+              プレビュー
+            </button>
+          </div>
+        )}
+      </div>
 
       <div className="mb-4 flex items-center gap-3">
         <label className="text-sm font-semibold text-slate-600">対象月:</label>
@@ -231,7 +273,7 @@ export function InvoiceSection({
         <div className="text-center py-8 text-slate-400 bg-slate-50 rounded-xl">
           この月に請求対象の企業はありません
         </div>
-      ) : (
+      ) : viewMode === "list" ? (
         <div className="flex gap-6">
           {/* 左: 企業一覧 */}
           <div className="flex-1 min-w-0">
@@ -358,6 +400,20 @@ export function InvoiceSection({
             </div>
           )}
         </div>
+      ) : (
+        /* プレビューモード */
+        <PreviewGallery
+          invoices={selectedInvoices.length > 0 ? selectedInvoices : invoices}
+          settings={settings}
+          issueDate={issueDate}
+          month={selectedMonth}
+          notes={invoiceTemplate?.notes}
+          currentIndex={previewIndex}
+          onChangeIndex={setPreviewIndex}
+          onDownloadSingle={handleGenerateSingle}
+          onDownloadAll={() => handleGenerate()}
+          generating={generating}
+        />
       )}
 
       {/* 送付確認モーダル */}
@@ -469,6 +525,184 @@ export function InvoiceSection({
           </div>
         </div>
       )}
+    </div>
+  );
+}
+
+/** プレビューギャラリー（スライド形式） */
+function PreviewGallery({
+  invoices,
+  settings,
+  issueDate,
+  month,
+  notes,
+  currentIndex,
+  onChangeIndex,
+  onDownloadSingle,
+  onDownloadAll,
+  generating,
+}: {
+  invoices: CompanyInvoice[];
+  settings: Settings | null;
+  issueDate: string;
+  month: string;
+  notes?: string;
+  currentIndex: number;
+  onChangeIndex: (i: number) => void;
+  onDownloadSingle: (inv: CompanyInvoice) => void;
+  onDownloadAll: () => void;
+  generating: boolean;
+}) {
+  const [touchStart, setTouchStart] = useState<number | null>(null);
+  const [slideDir, setSlideDir] = useState<"left" | "right" | null>(null);
+
+  if (invoices.length === 0 || !settings) {
+    return (
+      <div className="text-center py-12 text-slate-400 bg-slate-50 rounded-xl">
+        選択された請求書がありません
+      </div>
+    );
+  }
+
+  const safeIndex = Math.min(currentIndex, invoices.length - 1);
+  const current = invoices[safeIndex];
+
+  const goTo = (next: number, dir: "left" | "right") => {
+    setSlideDir(dir);
+    onChangeIndex(next);
+    setTimeout(() => setSlideDir(null), 300);
+  };
+
+  const goPrev = () => {
+    if (safeIndex > 0) goTo(safeIndex - 1, "right");
+  };
+  const goNext = () => {
+    if (safeIndex < invoices.length - 1) goTo(safeIndex + 1, "left");
+  };
+
+  const handleTouchStart = (e: React.TouchEvent) => {
+    setTouchStart(e.touches[0].clientX);
+  };
+  const handleTouchEnd = (e: React.TouchEvent) => {
+    if (touchStart === null) return;
+    const diff = e.changedTouches[0].clientX - touchStart;
+    if (diff > 60) goPrev();
+    else if (diff < -60) goNext();
+    setTouchStart(null);
+  };
+
+  return (
+    <div>
+      {/* 上部: 企業名 + ページ */}
+      <div className="flex items-center justify-between mb-4">
+        <div className="text-sm font-bold text-slate-700">
+          {current.companyName}
+          <span className="ml-2 text-xs font-normal text-slate-400">
+            ¥{formatNumber(current.total)}（税込）
+          </span>
+        </div>
+        <div className="text-xs text-slate-500">
+          {safeIndex + 1} / {invoices.length}
+        </div>
+      </div>
+
+      {/* スライド領域 */}
+      <div
+        className="relative flex items-center justify-center"
+        onTouchStart={handleTouchStart}
+        onTouchEnd={handleTouchEnd}
+      >
+        {/* 左ボタン */}
+        <button
+          className="absolute left-0 z-10 w-10 h-10 flex items-center justify-center bg-white border border-slate-200 rounded-full shadow-sm text-slate-500 hover:text-slate-800 cursor-pointer disabled:opacity-20 disabled:cursor-default"
+          disabled={safeIndex === 0}
+          onClick={goPrev}
+        >
+          ←
+        </button>
+
+        {/* カード */}
+        <div className="flex justify-center w-full px-14">
+          <div
+            className={`transition-all duration-300 ease-out ${
+              slideDir === "left"
+                ? "animate-slide-left"
+                : slideDir === "right"
+                ? "animate-slide-right"
+                : ""
+            }`}
+            style={{ maxHeight: "70vh", width: "auto" }}
+          >
+            <div className="bg-slate-100 rounded-2xl p-6 shadow-inner">
+              <div style={{ height: "70vh", aspectRatio: "210/297" }}>
+                <InvoicePreview
+                  inv={current}
+                  settings={settings}
+                  issueDate={issueDate}
+                  month={month}
+                  notes={notes}
+                  large
+                />
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* 右ボタン */}
+        <button
+          className="absolute right-0 z-10 w-10 h-10 flex items-center justify-center bg-white border border-slate-200 rounded-full shadow-sm text-slate-500 hover:text-slate-800 cursor-pointer disabled:opacity-20 disabled:cursor-default"
+          disabled={safeIndex === invoices.length - 1}
+          onClick={goNext}
+        >
+          →
+        </button>
+      </div>
+
+      {/* ドットインジケーター */}
+      {invoices.length > 1 && (
+        <div className="flex justify-center gap-1.5 mt-4">
+          {invoices.map((_, i) => (
+            <button
+              key={i}
+              className={`w-2 h-2 rounded-full cursor-pointer border-none transition-colors ${
+                i === safeIndex ? "bg-slate-700" : "bg-slate-300 hover:bg-slate-400"
+              }`}
+              onClick={() => onChangeIndex(i)}
+            />
+          ))}
+        </div>
+      )}
+
+      {/* ボタン */}
+      <div className="flex items-center justify-between mt-5">
+        <button
+          className="px-4 py-2 bg-white border border-slate-200 rounded-lg text-sm font-medium text-slate-700 cursor-pointer hover:bg-slate-50 disabled:opacity-40"
+          disabled={generating}
+          onClick={() => onDownloadSingle(current)}
+        >
+          {generating ? "生成中..." : "この請求書をPDFダウンロード"}
+        </button>
+        <button
+          className="px-6 py-2.5 bg-slate-800 text-white rounded-[10px] text-sm font-semibold cursor-pointer hover:bg-slate-700 disabled:opacity-40"
+          disabled={generating}
+          onClick={onDownloadAll}
+        >
+          {generating ? "生成中..." : `全${invoices.length}社を一括PDFダウンロード`}
+        </button>
+      </div>
+
+      <style>{`
+        @keyframes slideLeft {
+          from { opacity: 0; transform: translateX(40px); }
+          to { opacity: 1; transform: translateX(0); }
+        }
+        @keyframes slideRight {
+          from { opacity: 0; transform: translateX(-40px); }
+          to { opacity: 1; transform: translateX(0); }
+        }
+        .animate-slide-left { animation: slideLeft 0.3s ease-out; }
+        .animate-slide-right { animation: slideRight 0.3s ease-out; }
+      `}</style>
     </div>
   );
 }
