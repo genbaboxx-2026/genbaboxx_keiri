@@ -1176,7 +1176,7 @@ function CompanyRow({
                   ))}
                 </tbody>
               </table>
-              <div className="flex items-center justify-between pl-7 pr-3 py-2 bg-blue-100/50 border-t border-blue-200 border-b-2 border-b-blue-300">
+              <div className="flex items-center justify-between pl-7 pr-3 py-2 bg-blue-100/50 border-t border-blue-200">
                 <div className="flex items-center gap-4">
                   <button
                     className="text-[11px] text-blue-600 hover:text-blue-800 cursor-pointer bg-transparent border-none font-semibold"
@@ -1200,7 +1200,7 @@ function CompanyRow({
                   <span className="font-bold">合計 <span className="tabular-nums">¥{formatNumber(inv.total)}</span></span>
                 </div>
               </div>
-              <div className="px-4 py-2 border-t border-blue-100">
+              <div className="px-4 py-2 border-t border-blue-100 border-b-2 border-b-blue-300">
                 <div className="flex items-start gap-2">
                   <span className="text-[10px] text-slate-500 pt-1.5 flex-shrink-0">備考:</span>
                   <textarea
