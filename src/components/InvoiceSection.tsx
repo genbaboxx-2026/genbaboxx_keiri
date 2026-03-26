@@ -339,7 +339,7 @@ export function InvoiceSection({
               </div>
               <div className="flex flex-col items-end gap-2 w-[300px]">
                 <button
-                  className="w-full py-2.5 bg-white border border-slate-200 rounded-[10px] text-sm font-medium text-slate-700 cursor-pointer hover:bg-slate-50 disabled:opacity-40"
+                  className="w-full py-2.5 bg-slate-100 border border-slate-300 rounded-[10px] text-sm font-semibold text-slate-700 cursor-pointer hover:bg-slate-200 disabled:opacity-40"
                   disabled={
                     generating ||
                     selectedInvoices.length === 0 ||
@@ -758,14 +758,14 @@ function PreviewGallery({
       {/* ボタン */}
       <div className="flex flex-col items-end gap-2 mt-5 w-[300px] ml-auto">
         <button
-          className="w-full py-2.5 bg-white border border-slate-200 rounded-[10px] text-sm font-medium text-slate-700 cursor-pointer hover:bg-slate-50 disabled:opacity-40"
+          className="w-full py-2.5 bg-slate-100 border border-slate-300 rounded-[10px] text-sm font-semibold text-slate-700 cursor-pointer hover:bg-slate-200 disabled:opacity-40"
           disabled={generating}
           onClick={() => onDownloadSingle(current)}
         >
           {generating ? "生成中..." : "この請求書をPDFダウンロード"}
         </button>
         <button
-          className="w-full py-2.5 bg-white border border-slate-200 rounded-[10px] text-sm font-medium text-slate-700 cursor-pointer hover:bg-slate-50 disabled:opacity-40"
+          className="w-full py-2.5 bg-slate-100 border border-slate-300 rounded-[10px] text-sm font-semibold text-slate-700 cursor-pointer hover:bg-slate-200 disabled:opacity-40"
           disabled={generating}
           onClick={onDownloadAll}
         >
