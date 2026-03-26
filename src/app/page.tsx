@@ -248,9 +248,12 @@ export default function Home() {
         getCompanyName={getCompanyName}
         revenueFor={revenueFor}
         onAdd={() => setModal({ type: "contract", productType: tab })}
-        onEdit={(cn) =>
-          setModal({ type: "contract", productType: tab, item: cn })
-        }
+        onEdit={(cn) => {
+          const company = companies.find((c) => c.id === cn.company_id);
+          if (company) {
+            setModal({ type: "company-detail", company });
+          }
+        }}
         onDelete={handleDeleteContract}
       />
     );
