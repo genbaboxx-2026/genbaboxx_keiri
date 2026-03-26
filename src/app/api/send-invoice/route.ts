@@ -37,9 +37,7 @@ export async function POST(req: NextRequest) {
       error?: string;
     }[] = [];
 
-    // ドメイン認証前は onboarding@resend.dev を使用
-    const fromAddress = process.env.RESEND_FROM_EMAIL || "onboarding@resend.dev";
-    const fromLabel = senderName || "請求書送付";
+    const from = process.env.EMAIL_FROM || `${senderName || "請求書送付"} <onboarding@resend.dev>`;
 
     for (const recipient of recipients) {
       if (!recipient.email) {
@@ -61,7 +59,7 @@ export async function POST(req: NextRequest) {
           : `${recipient.companyName} 御中\n\n${body}`;
 
         await resend.emails.send({
-          from: `${fromLabel} <${fromAddress}>`,
+          from,
           to: [recipient.email],
           subject: personalizedSubject,
           text: personalizedBody,
