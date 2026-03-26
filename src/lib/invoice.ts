@@ -162,7 +162,9 @@ export async function generateInvoicePDF(
   invoices: CompanyInvoice[],
   invoiceMonth: string,
   templateNotes?: string,
-  dueDate?: string
+  dueDate?: string,
+  notesMap?: Record<string, string>,
+  dueDatesMap?: Record<string, string>
 ) {
   const [{ jsPDF }, { default: html2canvas }] = await Promise.all([
     import("jspdf"),
@@ -195,7 +197,9 @@ export async function generateInvoicePDF(
       if (idx > 0) doc.addPage();
 
       const invoiceNumber = generateInvoiceNumber();
-      const html = buildInvoiceHTML(inv, settings, issueDate, invoiceNumber, dueDate, templateNotes);
+      const companyNotes = notesMap?.[inv.companyId] ?? templateNotes;
+      const companyDueDate = dueDatesMap?.[inv.companyId] ?? dueDate;
+      const html = buildInvoiceHTML(inv, settings, issueDate, invoiceNumber, companyDueDate, companyNotes);
 
       container.innerHTML = html;
 

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo, useCallback, useRef } from "react";
+import { useState, useMemo, useCallback, useRef, useEffect } from "react";
 import type { Contract, Company, Settings, InvoiceTemplate } from "@/lib/database.types";
 import {
   getInvoicesForMonth,
@@ -49,6 +49,25 @@ export function InvoiceSection({
   const [dueDate, setDueDate] = useState(() => getLastBusinessDay(currentMonth));
   const [dueDates, setDueDates] = useState<Record<string, string>>({});
   const [companyNotes, setCompanyNotes] = useState<Record<string, string>>({});
+  const noteTimers = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
+
+  // 月変更時にDBから備考を読み込む
+  useEffect(() => {
+    import("@/lib/api").then(({ fetchInvoiceNotes }) => {
+      fetchInvoiceNotes(selectedMonth).then(setCompanyNotes);
+    });
+  }, [selectedMonth]);
+
+  // 備考変更時にDBに自動保存（debounce 1秒）
+  const handleNoteChange = useCallback((companyId: string, note: string) => {
+    setCompanyNotes((prev) => ({ ...prev, [companyId]: note }));
+    if (noteTimers.current[companyId]) clearTimeout(noteTimers.current[companyId]);
+    noteTimers.current[companyId] = setTimeout(() => {
+      import("@/lib/api").then(({ upsertInvoiceNote }) => {
+        upsertInvoiceNote(companyId, selectedMonth, note).catch(console.error);
+      });
+    }, 1000);
+  }, [selectedMonth]);
   const [showSendConfirm, setShowSendConfirm] = useState(false);
   const [emailSubject, setEmailSubject] = useState("");
   const [emailBody, setEmailBody] = useState("");
@@ -242,7 +261,7 @@ export function InvoiceSection({
     setGenerating(true);
     try {
       const { generateInvoicePDF } = await import("@/lib/invoice");
-      await generateInvoicePDF(settings, selectedInvoices, selectedMonth, invoiceTemplate?.notes, dueDate);
+      await generateInvoicePDF(settings, selectedInvoices, selectedMonth, invoiceTemplate?.notes, dueDate, companyNotes, dueDates);
       setShowSendConfirm(false);
     } catch (e) {
       console.error(e);
@@ -257,7 +276,7 @@ export function InvoiceSection({
     setGenerating(true);
     try {
       const { generateInvoicePDF } = await import("@/lib/invoice");
-      await generateInvoicePDF(settings, [inv], selectedMonth, invoiceTemplate?.notes, dueDate);
+      await generateInvoicePDF(settings, [inv], selectedMonth, invoiceTemplate?.notes, dueDate, companyNotes, dueDates);
     } catch (e) {
       console.error(e);
       alert("PDF生成に失敗しました");
@@ -282,7 +301,9 @@ export function InvoiceSection({
           recipients.push({ companyName: inv.companyName, email: "", contactName: "", pdfBase64: "" });
           continue;
         }
-        const pdfBase64 = await generateInvoicePDFBase64(settings, inv, selectedMonth, invoiceTemplate?.notes, dueDate);
+        const companyNote = companyNotes[inv.companyId] ?? invoiceTemplate?.notes;
+        const companyDue = dueDates[inv.companyId] ?? dueDate;
+        const pdfBase64 = await generateInvoicePDFBase64(settings, inv, selectedMonth, companyNote, companyDue);
         recipients.push({
           companyName: inv.companyName,
           email,
@@ -424,7 +445,7 @@ export function InvoiceSection({
                         companyDueDate={dueDates[inv.companyId] ?? dueDate}
                         onDueDateChange={(v) => setDueDates((prev) => ({ ...prev, [inv.companyId]: v }))}
                         companyNote={companyNotes[inv.companyId] ?? invoiceTemplate?.notes ?? ""}
-                        onNoteChange={(v) => setCompanyNotes((prev) => ({ ...prev, [inv.companyId]: v }))}
+                        onNoteChange={(v) => handleNoteChange(inv.companyId, v)}
                         onToggleCheck={() => toggleCheck(inv.companyId)}
                         onToggleExpand={() =>
                           setExpandedId(isExpanded ? null : inv.companyId)

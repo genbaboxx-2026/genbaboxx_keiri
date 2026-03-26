@@ -131,3 +131,28 @@ export async function upsertSettings(
   if (error) throw error;
   return data as Settings;
 }
+
+// ========== Invoice Notes ==========
+
+export async function fetchInvoiceNotes(month: string): Promise<Record<string, string>> {
+  const { data, error } = await supabase
+    .from("invoice_notes")
+    .select("company_id, note")
+    .eq("month", month);
+  if (error) return {};
+  const map: Record<string, string> = {};
+  for (const row of data || []) {
+    map[row.company_id] = row.note;
+  }
+  return map;
+}
+
+export async function upsertInvoiceNote(companyId: string, month: string, note: string): Promise<void> {
+  const { error } = await supabase
+    .from("invoice_notes")
+    .upsert(
+      { company_id: companyId, month, note } as Record<string, unknown>,
+      { onConflict: "company_id,month" }
+    );
+  if (error) throw error;
+}
