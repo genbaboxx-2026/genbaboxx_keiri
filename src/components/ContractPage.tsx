@@ -185,6 +185,8 @@ function MonthlyRevenueTable({
               ? calcPayOffset(c.initial_close, c.initial_pay)
               : 0;
             const isLump = c.billing_type === "lump_sum";
+            // 役務提供期間の月セット
+            const serviceMonths = new Set(ms);
             return (
               <tr key={c.id}>
                 <td className="px-3 py-2.5 font-semibold border-b border-slate-100 sticky left-0 bg-white whitespace-nowrap z-10">
@@ -212,14 +214,15 @@ function MonthlyRevenueTable({
                   ) {
                     amt += c.initial_fee;
                   }
+                  const inService = serviceMonths.has(month);
                   return (
                     <td
                       key={month}
                       className={`px-2 py-2.5 text-right border-b border-slate-100 tabular-nums ${
-                        amt > 0 ? "text-slate-700" : "text-slate-200"
-                      } ${month === currentMonth ? "month-current" : ""}`}
+                        amt > 0 ? "text-slate-700" : inService ? "text-slate-300" : "text-slate-200"
+                      } ${month === currentMonth ? "month-current" : ""} ${inService ? "bg-blue-50/60" : ""}`}
                     >
-                      {amt > 0 ? formatNumber(amt) : "—"}
+                      {amt > 0 ? formatNumber(amt) : inService ? "·" : "—"}
                     </td>
                   );
                 })}
