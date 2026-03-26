@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback, useMemo } from "react";
-import type { Company, Contract, ProductType } from "@/lib/database.types";
+import type { Company, Contract, ProductType, Profile } from "@/lib/database.types";
 import {
   fetchCompanies,
   fetchContracts,
@@ -15,16 +15,24 @@ import { getAllMonths, getRevenue } from "@/lib/calc";
 import { Modal } from "@/components/Modal";
 import { CompanyForm } from "@/components/CompanyForm";
 import { ContractForm } from "@/components/ContractForm";
+import { CompanyDetailModal } from "@/components/CompanyDetailModal";
 import { CompaniesPage } from "@/components/CompaniesPage";
 import { ContractPage } from "@/components/ContractPage";
 import { CashflowPage } from "@/components/CashflowPage";
+import { LoginPage } from "@/components/LoginPage";
+import { supabase } from "@/lib/supabase";
+import type { User } from "@supabase/supabase-js";
 
 type ModalState =
   | null
   | { type: "company"; item?: Company }
-  | { type: "contract"; productType: ProductType; item?: Contract };
+  | { type: "company-detail"; company: Company }
+  | { type: "contract"; productType: ProductType; item?: Contract; companyId?: string };
 
 export default function Home() {
+  const [user, setUser] = useState<User | null>(null);
+  const [profile, setProfile] = useState<Profile | null>(null);
+  const [authLoading, setAuthLoading] = useState(true);
   const [companies, setCompanies] = useState<Company[]>([]);
   const [contracts, setContracts] = useState<Contract[]>([]);
   const [tab, setTab] = useState<TabId>("bakusoq");
@@ -32,8 +40,49 @@ export default function Home() {
   const [sideOpen, setSideOpen] = useState(true);
   const [loading, setLoading] = useState(true);
 
+  // 認証状態の監視
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setUser(session?.user ?? null);
+      if (!session?.user) setAuthLoading(false);
+    });
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      (_event, session) => {
+        setUser(session?.user ?? null);
+        if (!session?.user) {
+          setProfile(null);
+          setAuthLoading(false);
+        }
+      }
+    );
+    return () => subscription.unsubscribe();
+  }, []);
+
+  // プロフィール取得
+  useEffect(() => {
+    if (!user) return;
+    supabase
+      .from("profiles")
+      .select("*")
+      .eq("user_id", user.id)
+      .single()
+      .then(({ data }) => {
+        setProfile(data as Profile | null);
+        setAuthLoading(false);
+      });
+  }, [user]);
+
+  // memberがcashflowタブにいる場合はリダイレクト
+  useEffect(() => {
+    if (profile?.role === "member" && tab === "cashflow") {
+      setTab("bakusoq");
+    }
+  }, [profile, tab]);
+
   // 初回データ取得
   useEffect(() => {
+    if (!user) return;
     Promise.all([fetchCompanies(), fetchContracts()])
       .then(([cos, cons]) => {
         setCompanies(cos);
@@ -41,7 +90,7 @@ export default function Home() {
       })
       .catch(console.error)
       .finally(() => setLoading(false));
-  }, []);
+  }, [user]);
 
   const allMonths = useMemo(() => getAllMonths(contracts), [contracts]);
 
@@ -88,6 +137,7 @@ export default function Home() {
       setCompanies((prev) => [...prev, saved]);
     } catch (e) {
       console.error(e);
+      alert("企業の登録に失敗しました");
     }
   };
 
@@ -132,6 +182,33 @@ export default function Home() {
     }
   };
 
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
+    setUser(null);
+    setProfile(null);
+  };
+
+  // ロールに基づいてタブをフィルタリング
+  const visibleTabs = useMemo(
+    () =>
+      profile?.role === "member"
+        ? TABS.filter((t) => t.id !== "cashflow")
+        : TABS,
+    [profile]
+  );
+
+  if (authLoading) {
+    return (
+      <div className="flex items-center justify-center h-screen bg-slate-100">
+        <div className="text-slate-400">読み込み中...</div>
+      </div>
+    );
+  }
+
+  if (!user) {
+    return <LoginPage />;
+  }
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-screen bg-slate-100">
@@ -158,7 +235,7 @@ export default function Home() {
         companies={companies}
         contracts={contracts}
         onAdd={() => setModal({ type: "company" })}
-        onEdit={(co) => setModal({ type: "company", item: co })}
+        onEdit={(co) => setModal({ type: "company-detail", company: co })}
         onDelete={handleDeleteCompany}
       />
     );
@@ -202,32 +279,55 @@ export default function Home() {
           )}
         </div>
         <div className="p-2 flex-1">
-          {TABS.map((t, i) => (
-            <div key={t.id}>
-              {i === 3 && (
-                <div
-                  className={`border-t border-slate-700 ${sideOpen ? "mx-2.5 my-2.5" : "mx-1 my-2.5"}`}
-                />
-              )}
-              <button
-                onClick={() => setTab(t.id)}
-                className={`w-full flex items-center gap-2.5 rounded-[10px] text-[13px] mb-0.5 cursor-pointer border-none ${
-                  tab === t.id
-                    ? "bg-blue-800 text-white font-bold"
-                    : "bg-transparent text-slate-400 font-medium hover:text-slate-200"
-                } ${sideOpen ? "px-3.5 py-2.5 justify-start" : "px-0 py-2.5 justify-center"}`}
-              >
-                <span className="text-base">{t.icon}</span>
-                {sideOpen && <span className="whitespace-nowrap">{t.label}</span>}
-              </button>
-            </div>
-          ))}
+          {visibleTabs.map((t, i) => {
+            const showSeparator =
+              i > 0 &&
+              visibleTabs[i - 1]?.id !== "cashflow" &&
+              visibleTabs[i - 1]?.id !== "companies" &&
+              (t.id === "cashflow" || t.id === "companies");
+            return (
+              <div key={t.id}>
+                {showSeparator && (
+                  <div
+                    className={`border-t border-slate-700 ${sideOpen ? "mx-2.5 my-2.5" : "mx-1 my-2.5"}`}
+                  />
+                )}
+                <button
+                  onClick={() => setTab(t.id)}
+                  className={`w-full flex items-center gap-2.5 rounded-[10px] text-[13px] mb-0.5 cursor-pointer border-none ${
+                    tab === t.id
+                      ? "bg-blue-800 text-white font-bold"
+                      : "bg-transparent text-slate-400 font-medium hover:text-slate-200"
+                  } ${sideOpen ? "px-3.5 py-2.5 justify-start" : "px-0 py-2.5 justify-center"}`}
+                >
+                  <span className="text-base">{t.icon}</span>
+                  {sideOpen && <span className="whitespace-nowrap">{t.label}</span>}
+                </button>
+              </div>
+            );
+          })}
         </div>
-        {sideOpen && (
-          <div className="px-[18px] py-3 border-t border-slate-800 text-[11px] text-slate-500">
-            自動保存
-          </div>
-        )}
+        <div className="border-t border-slate-800 p-2">
+          {sideOpen && profile && (
+            <div className="px-2.5 py-2 mb-1">
+              <div className="text-[11px] text-slate-400 truncate">
+                {profile.name || profile.email}
+              </div>
+              <div className="text-[10px] text-slate-600">
+                {profile.role === "admin" ? "管理者" : "メンバー"}
+              </div>
+            </div>
+          )}
+          <button
+            onClick={handleLogout}
+            className={`w-full flex items-center gap-2.5 rounded-[10px] text-[13px] cursor-pointer border-none bg-transparent text-slate-400 font-medium hover:text-red-400 ${
+              sideOpen ? "px-3.5 py-2.5 justify-start" : "px-0 py-2.5 justify-center"
+            }`}
+          >
+            <span className="text-base">🚪</span>
+            {sideOpen && <span className="whitespace-nowrap">ログアウト</span>}
+          </button>
+        </div>
       </div>
 
       {/* Main content */}
@@ -254,6 +354,36 @@ export default function Home() {
         )}
       </Modal>
       <Modal
+        open={modal?.type === "company-detail"}
+        onClose={() => setModal(null)}
+        title="企業詳細"
+      >
+        {modal?.type === "company-detail" && (
+          <CompanyDetailModal
+            company={modal.company}
+            contracts={contracts}
+            onSave={handleSaveCompany}
+            onAddContract={(productType) =>
+              setModal({
+                type: "contract",
+                productType,
+                companyId: modal.company.id,
+              })
+            }
+            onEditContract={(cn) =>
+              setModal({
+                type: "contract",
+                productType: cn.product_type,
+                item: cn,
+                companyId: modal.company.id,
+              })
+            }
+            onDeleteContract={handleDeleteContract}
+            onClose={() => setModal(null)}
+          />
+        )}
+      </Modal>
+      <Modal
         open={modal?.type === "contract"}
         onClose={() => setModal(null)}
         title={
@@ -267,6 +397,7 @@ export default function Home() {
             contract={modal.item}
             productType={modal.productType}
             companies={companies}
+            fixedCompanyId={modal.companyId}
             onSave={handleSaveContract}
             onAddCompany={handleAddCompanyInline}
             onClose={() => setModal(null)}

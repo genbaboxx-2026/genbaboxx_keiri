@@ -25,6 +25,7 @@ interface ContractFormProps {
   contract?: Contract;
   productType: ProductType;
   companies: Company[];
+  fixedCompanyId?: string;
   onSave: (contract: Omit<Contract, "created_at" | "updated_at">) => void;
   onAddCompany: (
     company: Omit<Company, "created_at" | "updated_at">
@@ -36,11 +37,12 @@ export function ContractForm({
   contract,
   productType,
   companies,
+  fixedCompanyId,
   onSave,
   onAddCompany,
   onClose,
 }: ContractFormProps) {
-  const [companyId, setCompanyId] = useState(contract?.company_id || "");
+  const [companyId, setCompanyId] = useState(contract?.company_id || fixedCompanyId || "");
   const [billingType, setBillingType] = useState<BillingType>(
     contract?.billing_type || "monthly"
   );
@@ -156,7 +158,11 @@ export function ContractForm({
         <label className="block text-[13px] font-semibold text-slate-600 mb-1.5">
           契約企業 *
         </label>
-        {!showNewCompany ? (
+        {fixedCompanyId ? (
+          <div className="px-3.5 py-2.5 bg-slate-100 border-[1.5px] border-slate-200 rounded-[10px] text-sm text-slate-700 font-medium">
+            {companies.find((c) => c.id === fixedCompanyId)?.name || "企業名"}
+          </div>
+        ) : !showNewCompany ? (
           <div className="flex gap-2">
             <select
               className="flex-1 px-3.5 py-2.5 border-[1.5px] border-slate-200 rounded-[10px] text-sm outline-none focus:border-blue-400"
@@ -196,6 +202,7 @@ export function ContractForm({
             />
             <div className="flex gap-2 justify-end">
               <button
+                type="button"
                 className="px-4 py-2 bg-slate-100 text-slate-700 rounded-[10px] text-[13px] font-medium cursor-pointer"
                 onClick={() => {
                   setShowNewCompany(false);
@@ -206,6 +213,7 @@ export function ContractForm({
                 キャンセル
               </button>
               <button
+                type="button"
                 className="px-4 py-2 bg-emerald-600 text-white rounded-[10px] text-[13px] font-semibold cursor-pointer disabled:opacity-40"
                 disabled={!newCompanyName.trim()}
                 onClick={handleAddCompany}

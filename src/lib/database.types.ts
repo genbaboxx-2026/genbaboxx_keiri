@@ -42,6 +42,18 @@ export interface Contract {
   updated_at: string;
 }
 
+export type UserRole = "admin" | "member";
+
+export interface Profile {
+  id: string;
+  user_id: string;
+  email: string;
+  name: string;
+  role: UserRole;
+  created_at: string;
+  updated_at: string;
+}
+
 export interface Database {
   public: {
     Tables: {
@@ -54,6 +66,11 @@ export interface Database {
         Row: Contract;
         Insert: Omit<Contract, "created_at" | "updated_at">;
         Update: Partial<Omit<Contract, "id" | "created_at" | "updated_at">>;
+      };
+      profiles: {
+        Row: Profile;
+        Insert: Omit<Profile, "id" | "created_at" | "updated_at">;
+        Update: Partial<Omit<Profile, "id" | "user_id" | "created_at" | "updated_at">>;
       };
     };
     Views: Record<string, never>;

@@ -54,9 +54,60 @@ create trigger contracts_updated_at
   before update on contracts
   for each row execute function update_updated_at();
 
--- RLS（Row Level Security）- 認証なしで全操作許可（初期開発用）
+-- プロフィール（ユーザー権限管理）
+create table if not exists profiles (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null unique references auth.users(id) on delete cascade,
+  email text not null,
+  name text not null default '',
+  role text not null default 'member' check (role in ('admin', 'member')),
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+create trigger profiles_updated_at
+  before update on profiles
+  for each row execute function update_updated_at();
+
+-- 新規ユーザー登録時に自動でprofileを作成するトリガー
+create or replace function handle_new_user()
+returns trigger as $$
+begin
+  insert into profiles (user_id, email, name)
+  values (new.id, new.email, coalesce(new.raw_user_meta_data->>'name', ''));
+  return new;
+end;
+$$ language plpgsql security definer;
+
+create trigger on_auth_user_created
+  after insert on auth.users
+  for each row execute function handle_new_user();
+
+-- RLS（Row Level Security）
 alter table companies enable row level security;
 alter table contracts enable row level security;
+alter table profiles enable row level security;
 
-create policy "Allow all on companies" on companies for all using (true) with check (true);
-create policy "Allow all on contracts" on contracts for all using (true) with check (true);
+-- 認証済みユーザーはデータの読み書き可能
+create policy "Authenticated users can manage companies"
+  on companies for all
+  using (auth.role() = 'authenticated')
+  with check (auth.role() = 'authenticated');
+
+create policy "Authenticated users can manage contracts"
+  on contracts for all
+  using (auth.role() = 'authenticated')
+  with check (auth.role() = 'authenticated');
+
+create policy "Authenticated users can read profiles"
+  on profiles for select
+  using (auth.role() = 'authenticated');
+
+create policy "Admins can update profiles"
+  on profiles for update
+  using (
+    exists (
+      select 1 from profiles p
+      where p.user_id = auth.uid() and p.role = 'admin'
+    )
+  );
