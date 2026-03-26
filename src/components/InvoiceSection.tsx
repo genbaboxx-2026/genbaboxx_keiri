@@ -944,9 +944,8 @@ function CompanyRow({
         <tr>
           <td colSpan={3} className="p-0">
             <div className="border-t border-blue-200 bg-blue-50/40 border-l-[3px] border-l-blue-400">
-              <table className="w-full text-xs" style={{ tableLayout: "fixed" }}>
+              <table className="w-full text-xs ml-4" style={{ tableLayout: "fixed", width: "calc(100% - 16px)" }}>
                 <colgroup>
-                  <col style={{ width: "28px" }} />
                   <col />
                   <col style={{ width: "60px" }} />
                   <col style={{ width: "52px" }} />
@@ -957,7 +956,6 @@ function CompanyRow({
                 </colgroup>
                 <thead>
                   <tr className="bg-slate-50 border-b border-slate-200">
-                    <th className="px-1 py-2 text-center text-slate-400">#</th>
                     <th className="px-2 py-2 text-left font-semibold text-slate-500">摘要</th>
                     <th className="px-1 py-2 text-center font-semibold text-slate-500">数量</th>
                     <th className="px-1 py-2 text-center font-semibold text-slate-500">単位</th>
@@ -971,9 +969,6 @@ function CompanyRow({
                   {[...inv.items.slice(0, baseItemCount).map((item, i) => ({ item, i, isBase: true })),
                     ...extras.map((item, i) => ({ item, i, isBase: false }))].map(({ item, i, isBase }) => (
                     <tr key={isBase ? i : `c-${i}`} className={`border-b border-slate-100 ${!isBase ? "bg-blue-50/30" : ""}`}>
-                      <td className={`px-1 py-1 text-center ${isBase ? "text-slate-300" : "text-blue-400"}`}>
-                        {isBase ? i + 1 : baseItemCount + i + 1}
-                      </td>
                       <td className="px-1 py-1 overflow-hidden">
                         <input
                           className="w-full px-1.5 py-1 border border-slate-200 rounded bg-white text-xs outline-none focus:border-blue-400 min-w-0"
@@ -1051,7 +1046,7 @@ function CompanyRow({
                   ))}
                 </tbody>
               </table>
-              <div className="flex items-center justify-between px-3 py-2 bg-blue-100/50 border-t border-blue-200 border-b-2 border-b-blue-300">
+              <div className="flex items-center justify-between pl-7 pr-3 py-2 bg-blue-100/50 border-t border-blue-200 border-b-2 border-b-blue-300">
                 <div className="flex items-center gap-4">
                   <button
                     className="text-[11px] text-blue-600 hover:text-blue-800 cursor-pointer bg-transparent border-none font-semibold"
