@@ -125,10 +125,10 @@ export function CashflowPage({
   };
 
   const summaryCards = [
-    { label: "企業数", value: companiesCount, unit: "社", color: "text-slate-800", bg: "bg-slate-100" },
-    { label: "BAKUSOQ", value: contractsFor("bakusoq").length, unit: "件", color: "text-blue-600", bg: "bg-blue-100" },
-    { label: "NiNKUBOXX", value: contractsFor("ninkuboxx").length, unit: "件", color: "text-violet-600", bg: "bg-violet-100" },
-    { label: "その他", value: contractsFor("other").length, unit: "件", color: "text-emerald-600", bg: "bg-emerald-100" },
+    { label: "企業数", value: companiesCount, unit: "社" },
+    { label: "BAKUSOQ", value: contractsFor("bakusoq").length, unit: "件" },
+    { label: "NiNKUBOXX", value: contractsFor("ninkuboxx").length, unit: "件" },
+    { label: "その他", value: contractsFor("other").length, unit: "件" },
   ];
 
   return (
@@ -137,11 +137,11 @@ export function CashflowPage({
 
       <div className="grid grid-cols-[repeat(auto-fit,minmax(160px,1fr))] gap-3.5 mb-7">
         {summaryCards.map((card) => (
-          <div key={card.label} className={`${card.bg} rounded-[14px] px-5 py-[18px]`}>
-            <div className="text-xs text-slate-500 font-semibold">{card.label}</div>
-            <div className={`text-[28px] font-extrabold mt-1 ${card.color}`}>
+          <div key={card.label} className="bg-white border border-slate-200 rounded-xl px-5 py-[18px]">
+            <div className="text-xs text-slate-400 font-semibold">{card.label}</div>
+            <div className="text-[28px] font-extrabold mt-1 text-slate-800">
               {card.value}
-              <span className="text-sm font-medium ml-1">{card.unit}</span>
+              <span className="text-sm font-medium ml-1 text-slate-400">{card.unit}</span>
             </div>
           </div>
         ))}
@@ -188,14 +188,14 @@ export function CashflowPage({
             })}
 
             {/* 売上合計 */}
-            <tr className="bg-green-50">
-              <td className="px-3.5 py-3 font-extrabold text-sm sticky left-0 bg-green-50 text-emerald-600 z-10">
+            <tr className="bg-slate-50 border-t-2 border-slate-300">
+              <td className="px-3.5 py-3 font-extrabold text-sm sticky left-0 bg-slate-50 text-slate-800 z-10">
                 売上合計
               </td>
               {allMonths.map((m) => {
                 const v = revenueFor(m);
                 return (
-                  <td key={m} className={`px-2 py-3 text-right font-extrabold text-[13px] text-emerald-600 tabular-nums ${m === currentMonth ? "!bg-amber-100" : ""}`}>
+                  <td key={m} className={`px-2 py-3 text-right font-extrabold text-[13px] text-slate-800 tabular-nums ${m === currentMonth ? "!bg-amber-50" : ""}`}>
                     {v > 0 ? formatNumber(v) : "—"}
                   </td>
                 );
@@ -265,7 +265,7 @@ export function CashflowPage({
                       ) : (
                         <div className="px-2 py-2">
                           {total > 0 ? (
-                            <span className="text-red-600">{formatNumber(total)}</span>
+                            <span className="text-slate-700">{formatNumber(total)}</span>
                           ) : (
                             <span className="text-slate-200">—</span>
                           )}
@@ -315,12 +315,12 @@ export function CashflowPage({
             )}
 
             {/* 支出合計 */}
-            <tr className="bg-red-50">
-              <td className="px-3.5 py-3 font-extrabold text-sm sticky left-0 bg-red-50 text-red-600 z-10">支出合計</td>
+            <tr className="bg-slate-50 border-t-2 border-slate-300">
+              <td className="px-3.5 py-3 font-extrabold text-sm sticky left-0 bg-slate-50 text-slate-800 z-10">支出合計</td>
               {allMonths.map((m) => {
                 const v = expenseForMonth(m);
                 return (
-                  <td key={m} className={`px-2 py-3 text-right font-extrabold text-[13px] text-red-600 tabular-nums ${m === currentMonth ? "!bg-amber-100" : ""}`}>
+                  <td key={m} className={`px-2 py-3 text-right font-extrabold text-[13px] text-slate-800 tabular-nums ${m === currentMonth ? "!bg-amber-50" : ""}`}>
                     {v > 0 ? formatNumber(v) : "—"}
                   </td>
                 );
@@ -328,14 +328,14 @@ export function CashflowPage({
             </tr>
 
             {/* 収支 */}
-            <tr className="bg-blue-50">
-              <td className="px-3.5 py-3 font-extrabold text-sm sticky left-0 bg-blue-50 text-blue-700 z-10">収支</td>
+            <tr className="bg-slate-100 border-t-2 border-slate-400">
+              <td className="px-3.5 py-3 font-extrabold text-sm sticky left-0 bg-slate-100 text-slate-900 z-10">収支</td>
               {allMonths.map((m) => {
                 const rev = revenueFor(m);
                 const exp = expenseForMonth(m);
                 const diff = rev - exp;
                 return (
-                  <td key={m} className={`px-2 py-3 text-right font-extrabold text-[13px] tabular-nums ${diff >= 0 ? "text-blue-700" : "text-red-600"} ${m === currentMonth ? "!bg-amber-100" : ""}`}>
+                  <td key={m} className={`px-2 py-3 text-right font-extrabold text-[13px] tabular-nums ${diff < 0 ? "text-red-600" : "text-slate-900"} ${m === currentMonth ? "!bg-amber-50" : ""}`}>
                     {diff !== 0 ? formatNumber(diff) : "—"}
                   </td>
                 );
