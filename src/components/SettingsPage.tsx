@@ -88,98 +88,104 @@ export function SettingsPage({ settings, onSave }: SettingsPageProps) {
     <div>
       <h2 className="text-[22px] font-extrabold mb-6">設定</h2>
 
-      <div className="max-w-[600px] space-y-6">
-        <div className="bg-slate-50 rounded-xl p-5">
-          <div className="text-sm font-bold text-slate-700 mb-4">
-            自社情報（請求書に表示）
+      <div className="flex gap-8">
+        {/* 左カラム: 自社情報 */}
+        <div className="flex-1 space-y-6">
+          <div className="bg-slate-50 rounded-xl p-5">
+            <div className="text-sm font-bold text-slate-700 mb-4">
+              自社情報（請求書に表示）
+            </div>
+            <div className="space-y-3">
+              <Field
+                label="会社名"
+                value={companyName}
+                onChange={setCompanyName}
+                placeholder="株式会社〇〇"
+              />
+              <Field
+                label="住所"
+                value={companyAddress}
+                onChange={setCompanyAddress}
+                multiline
+                placeholder="東京都渋谷区..."
+              />
+              <Field
+                label="電話番号"
+                value={companyPhone}
+                onChange={setCompanyPhone}
+                placeholder="03-1234-5678"
+              />
+              <Field
+                label="登録番号（インボイス）"
+                value={invoiceNumber}
+                onChange={setInvoiceNumber}
+                placeholder="T1234567890123"
+              />
+            </div>
           </div>
-          <div className="space-y-3">
+        </div>
+
+        {/* 右カラム: 振込先 + ロゴ・社印 */}
+        <div className="flex-1 space-y-6">
+          <div className="bg-slate-50 rounded-xl p-5">
+            <div className="text-sm font-bold text-slate-700 mb-4">
+              振込先情報
+            </div>
             <Field
-              label="会社名"
-              value={companyName}
-              onChange={setCompanyName}
-              placeholder="株式会社〇〇"
-            />
-            <Field
-              label="住所"
-              value={companyAddress}
-              onChange={setCompanyAddress}
+              label="振込先"
+              value={bankInfo}
+              onChange={setBankInfo}
               multiline
-              placeholder="東京都渋谷区..."
-            />
-            <Field
-              label="電話番号"
-              value={companyPhone}
-              onChange={setCompanyPhone}
-              placeholder="03-1234-5678"
-            />
-            <Field
-              label="登録番号（インボイス）"
-              value={invoiceNumber}
-              onChange={setInvoiceNumber}
-              placeholder="T1234567890123"
+              placeholder={"〇〇銀行 △△支店\n普通 1234567\n口座名義 カ）〇〇"}
             />
           </div>
-        </div>
 
-        <div className="bg-slate-50 rounded-xl p-5">
-          <div className="text-sm font-bold text-slate-700 mb-4">
-            振込先情報
+          <div className="bg-slate-50 rounded-xl p-5">
+            <div className="text-sm font-bold text-slate-700 mb-4">
+              ロゴ・社印
+            </div>
+            <div className="space-y-3">
+              <Field
+                label="ロゴ画像URL"
+                value={logoUrl}
+                onChange={setLogoUrl}
+                placeholder="https://example.com/logo.png"
+              />
+              {logoUrl && (
+                <div className="flex items-center gap-2">
+                  <img src={logoUrl} alt="ロゴ" className="h-10 object-contain" />
+                  <span className="text-xs text-slate-400">プレビュー</span>
+                </div>
+              )}
+              <Field
+                label="社印画像URL"
+                value={stampUrl}
+                onChange={setStampUrl}
+                placeholder="https://example.com/stamp.png"
+              />
+              {stampUrl && (
+                <div className="flex items-center gap-2">
+                  <img src={stampUrl} alt="社印" className="h-12 object-contain" />
+                  <span className="text-xs text-slate-400">プレビュー</span>
+                </div>
+              )}
+            </div>
           </div>
-          <Field
-            label="振込先"
-            value={bankInfo}
-            onChange={setBankInfo}
-            multiline
-            placeholder={"〇〇銀行 △△支店\n普通 1234567\n口座名義 カ）〇〇"}
-          />
         </div>
+      </div>
 
-        <div className="bg-slate-50 rounded-xl p-5">
-          <div className="text-sm font-bold text-slate-700 mb-4">
-            ロゴ・社印
-          </div>
-          <div className="space-y-3">
-            <Field
-              label="ロゴ画像URL"
-              value={logoUrl}
-              onChange={setLogoUrl}
-              placeholder="https://example.com/logo.png"
-            />
-            {logoUrl && (
-              <div className="flex items-center gap-2">
-                <img src={logoUrl} alt="ロゴ" className="h-10 object-contain" />
-                <span className="text-xs text-slate-400">プレビュー</span>
-              </div>
-            )}
-            <Field
-              label="社印画像URL"
-              value={stampUrl}
-              onChange={setStampUrl}
-              placeholder="https://example.com/stamp.png"
-            />
-            {stampUrl && (
-              <div className="flex items-center gap-2">
-                <img src={stampUrl} alt="社印" className="h-12 object-contain" />
-                <span className="text-xs text-slate-400">プレビュー</span>
-              </div>
-            )}
-          </div>
-        </div>
-
-        <div className="flex items-center gap-3">
-          <button
-            className="px-7 py-2.5 bg-slate-800 text-white rounded-[10px] text-sm font-semibold cursor-pointer hover:bg-slate-700"
-            onClick={handleSave}
-          >
-            保存
-          </button>
-          {saved && (
-            <span className="text-sm text-green-600 font-medium">
-              保存しました
-            </span>
-          )}
-        </div>
+      <div className="flex items-center gap-3 mt-6">
+        <button
+          className="px-7 py-2.5 bg-slate-800 text-white rounded-[10px] text-sm font-semibold cursor-pointer hover:bg-slate-700"
+          onClick={handleSave}
+        >
+          保存
+        </button>
+        {saved && (
+          <span className="text-sm text-green-600 font-medium">
+            保存しました
+          </span>
+        )}
       </div>
     </div>
   );
