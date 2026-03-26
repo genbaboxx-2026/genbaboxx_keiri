@@ -62,7 +62,7 @@ export function ContractForm({
     contract?.duration_months || 12
   );
   const [monthlyFee, setMonthlyFee] = useState(contract?.monthly_fee || 0);
-  const [feeMonths, setFeeMonths] = useState(contract?.fee_months || 1);
+  const [feeMonths, setFeeMonths] = useState(contract?.fee_months || contract?.duration_months || 12);
   const [monthlyClose, setMonthlyClose] = useState<CloseOffset>(
     contract?.monthly_close || "0"
   );
@@ -312,11 +312,11 @@ export function ContractForm({
                   className="w-full px-3.5 py-2.5 border-[1.5px] border-slate-200 rounded-[10px] text-sm outline-none focus:border-blue-400"
                   inputMode="numeric"
                   value={durationMonths || ""}
-                  onChange={(e) =>
-                    setDurationMonths(
-                      parseInt(e.target.value.replace(/[^0-9]/g, "")) || 0
-                    )
-                  }
+                  onChange={(e) => {
+                    const v = parseInt(e.target.value.replace(/[^0-9]/g, "")) || 0;
+                    setDurationMonths(v);
+                    setFeeMonths(v);
+                  }}
                 />
               </div>
               <div>
