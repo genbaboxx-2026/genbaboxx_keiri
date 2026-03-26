@@ -708,18 +708,11 @@ export function InvoiceSection({
                 戻る
               </button>
               <button
-                className="px-7 py-2.5 bg-slate-100 border border-slate-300 text-slate-700 rounded-[10px] text-sm font-semibold cursor-pointer hover:bg-slate-200 disabled:opacity-40"
-                disabled={generating || !settings?.company_name || sendChecked.size === 0}
-                onClick={handleGenerate}
-              >
-                {generating ? "生成中..." : `${sendChecked.size}社のPDFをダウンロード`}
-              </button>
-              <button
-                className="px-7 py-2.5 bg-blue-600 text-white rounded-[10px] text-sm font-semibold cursor-pointer hover:bg-blue-700 disabled:opacity-40"
+                className="px-7 py-2.5 bg-slate-800 text-white rounded-[10px] text-sm font-bold cursor-pointer hover:bg-slate-700 disabled:opacity-40"
                 disabled={sending || !settings?.company_name || sendChecked.size === 0}
                 onClick={handleSendInvoices}
               >
-                {sending ? "送信中..." : `${sendChecked.size}社にメール送信`}
+                {sending ? "送信中..." : `${sendChecked.size}社の請求書を送付`}
               </button>
             </div>
 
