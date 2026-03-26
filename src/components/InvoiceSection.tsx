@@ -322,9 +322,9 @@ export function InvoiceSection({
           この月に請求対象の企業はありません
         </div>
       ) : viewMode === "list" ? (
-        <div className="flex gap-6">
+        <div className="flex gap-4">
           {/* 左: 企業一覧 */}
-          <div className="flex-1 min-w-0">
+          <div className="min-w-0" style={{ flex: "1 1 0", maxWidth: "calc(100% - 420px)" }}>
             <div className="border border-slate-200 rounded-xl overflow-hidden">
               <table className="w-full text-sm">
                 <thead>
@@ -421,7 +421,7 @@ export function InvoiceSection({
           </div>
 
           {/* 右: プレビュー（常にスペース確保） */}
-          <div className="w-[340px] flex-shrink-0">
+          <div className="w-[400px] flex-shrink-0">
             {previewInvoice && settings ? (
               <div className="relative" style={{ aspectRatio: "210/297" }}>
                 <button
@@ -1143,7 +1143,7 @@ function InvoicePreview({
 
   return (
     <div
-      className={`border border-slate-300 rounded bg-white shadow-sm ${large ? "" : "sticky top-4"}`}
+      className="border border-slate-300 rounded bg-white shadow-sm"
       style={{ width: "100%", height: "100%", overflow: "hidden", position: "relative" }}
     >
       <div style={{ width: 700, height: 990, transform: "scale(var(--inv-scale))", transformOrigin: "top left", fontFamily: "'Noto Sans JP', sans-serif", padding: "42px 48px 34px", boxSizing: "border-box", fontSize: 13, color: "#1a1a1a", lineHeight: 1.65, overflow: "hidden", display: "flex", flexDirection: "column", position: "absolute", top: 0, left: 0 } as React.CSSProperties}
