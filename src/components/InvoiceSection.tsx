@@ -565,12 +565,10 @@ function InvoicePreview({
         <div className="flex justify-between mt-4">
           {/* 左: 振込先 */}
           <div className={baseText}>
-            {settings.bank_info && (
-              <div>
-                <div className="text-slate-500 mb-0.5">振込先</div>
-                <div className="whitespace-pre-line">{settings.bank_info}</div>
-              </div>
-            )}
+            <div className="text-slate-500 mb-0.5">振込先</div>
+            <div className="whitespace-pre-line">
+              {settings.bank_info || "（設定ページで登録してください）"}
+            </div>
           </div>
 
           {/* 右: 合計テーブル */}
@@ -601,12 +599,12 @@ function InvoicePreview({
         </div>
 
         {/* 備考 */}
-        {notes && (
-          <div className={`mt-2 border border-slate-400 px-2 py-1.5 ${baseText}`}>
-            <div className="text-slate-500 mb-0.5">備考</div>
-            <div className="whitespace-pre-line">{notes}</div>
+        <div className={`mt-2 border border-slate-400 px-2 py-1.5 ${baseText}`}>
+          <div className="text-slate-500 mb-0.5">備考</div>
+          <div className="whitespace-pre-line min-h-[1.5em]">
+            {notes || ""}
           </div>
-        )}
+        </div>
       </div>
     </div>
   );
