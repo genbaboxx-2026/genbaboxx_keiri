@@ -66,7 +66,7 @@ export function ContractPage({
   if (showList) {
     return (
       <ContractDetailView
-        contracts={filteredContracts}
+        contracts={contracts}
         productFilter={productFilter}
         getCompanyName={getCompanyName}
         onBack={() => onShowList(false)}
@@ -323,7 +323,7 @@ function MonthlyRevenueTable({
 // ====== 契約一覧サブ画面 ======
 function ContractDetailView({
   contracts,
-  productFilter,
+  productFilter: initialFilter,
   getCompanyName,
   onBack,
   onAdd,
@@ -342,6 +342,9 @@ function ContractDetailView({
   addDropdownOpen: boolean;
   setAddDropdownOpen: (open: boolean) => void;
 }) {
+  const [productFilter, setProductFilter] = useState<ProductType | "all">(initialFilter);
+  const displayContracts = productFilter === "all" ? contracts : contracts.filter((c) => c.product_type === productFilter);
+
   const handleAdd = () => {
     if (productFilter !== "all") {
       onAdd(productFilter);
@@ -352,7 +355,7 @@ function ContractDetailView({
 
   return (
     <div>
-      <div className="flex justify-between items-center mb-6">
+      <div className="flex justify-between items-center mb-4">
         <div className="flex items-center gap-3">
           <button
             className="bg-slate-100 border-none rounded-lg px-3.5 py-2 text-[13px] font-semibold cursor-pointer text-slate-600 hover:bg-slate-200"
@@ -390,7 +393,27 @@ function ContractDetailView({
         </div>
       </div>
 
-      {contracts.length === 0 ? (
+      {/* フィルター */}
+      <div className="flex gap-2 mb-4">
+        <button
+          className={`px-3.5 py-1.5 rounded-lg text-xs font-semibold cursor-pointer border-none ${productFilter === "all" ? "bg-slate-800 text-white" : "bg-slate-100 text-slate-600 hover:bg-slate-200"}`}
+          onClick={() => setProductFilter("all")}
+        >
+          全て
+        </button>
+        {PRODUCTS.map((p) => (
+          <button
+            key={p.id}
+            className={`px-3.5 py-1.5 rounded-lg text-xs font-semibold cursor-pointer border-none ${productFilter === p.id ? "text-white" : "bg-slate-100 text-slate-600 hover:bg-slate-200"}`}
+            style={productFilter === p.id ? { background: p.hex } : undefined}
+            onClick={() => setProductFilter(p.id)}
+          >
+            {p.label}
+          </button>
+        ))}
+      </div>
+
+      {displayContracts.length === 0 ? (
         <div className="text-center py-16 text-slate-400 bg-slate-50 rounded-2xl">
           <div className="text-[40px] mb-3">📄</div>
           <div>契約がまだありません</div>
@@ -405,7 +428,7 @@ function ContractDetailView({
               { key: "auto_renewing" as ContractStatus, label: "自動更新", color: "amber", bg: "bg-amber-50", border: "border-amber-200", text: "text-amber-700", accent: "text-amber-900" },
             ];
             const grouped = statusGroups.map((sg) => {
-              const items = contracts.filter((c) => (c.contract_status || "initial") === sg.key);
+              const items = displayContracts.filter((c) => (c.contract_status || "initial") === sg.key);
               const monthlyTotal = items.reduce((s, c) => s + c.monthly_fee, 0);
               const initialTotal = items.reduce((s, c) => s + (c.has_initial_fee ? c.initial_fee : 0), 0);
               const optionTotal = items.reduce((s, c) => s + (c.has_option ? c.option_fee : 0), 0);
@@ -451,7 +474,7 @@ function ContractDetailView({
                 </tr>
               </thead>
               <tbody>
-                {contracts.map((c) => {
+                {displayContracts.map((c) => {
                   const bs = makeBillingStart(c.billing_month, c.billing_day);
                   const end = calcEndDate(bs, c.duration_months);
                   const status = c.contract_status || "initial";
