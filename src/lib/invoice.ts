@@ -255,19 +255,19 @@ export async function generateInvoicePDFBase64(
     container.innerHTML = html;
 
     const canvas = await html2canvas(container.firstElementChild as HTMLElement, {
-      scale: 2,
+      scale: 1.5,
       useCORS: true,
       backgroundColor: "#ffffff",
       width: 700,
       height: 990,
     });
 
-    const imgData = canvas.toDataURL("image/png");
-    doc.addImage(imgData, "PNG", 0, 0, 210, 297);
+    const imgData = canvas.toDataURL("image/jpeg", 0.85);
+    doc.addImage(imgData, "JPEG", 0, 0, 210, 297);
 
-    // base64でPDFデータを返す（data:application/pdf;base64,... のプレフィックスなし）
-    const pdfOutput = doc.output("datauristring");
-    return pdfOutput.split(",")[1]; // base64部分のみ
+    // base64でPDFデータを返す
+    const pdfBase64 = doc.output("datauristring").split(",")[1];
+    return pdfBase64;
   } finally {
     document.body.removeChild(container);
   }

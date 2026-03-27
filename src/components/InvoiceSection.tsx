@@ -289,46 +289,51 @@ export function InvoiceSection({
     if (!settings || sendChecked.size === 0) return;
     setSending(true);
     setSendResults(null);
+    const results: { companyName: string; email: string; success: boolean; error?: string }[] = [];
     try {
       const { generateInvoicePDFBase64 } = await import("@/lib/invoice");
       const invoicesToSend = selectedInvoices.filter((i) => sendChecked.has(i.companyId));
 
-      const recipients = [];
       for (const inv of invoicesToSend) {
         const co = getCompany(inv.companyId);
         const email = co?.invoice_email || "";
         if (!email) {
-          recipients.push({ companyName: inv.companyName, email: "", contactName: "", pdfBase64: "" });
+          results.push({ companyName: inv.companyName, email: "", success: false, error: "メールアドレス未設定" });
+          setSendResults([...results]);
           continue;
         }
-        const companyNote = companyNotes[inv.companyId] ?? invoiceTemplate?.notes;
-        const companyDue = dueDates[inv.companyId] ?? dueDate;
-        const pdfBase64 = await generateInvoicePDFBase64(settings, inv, selectedMonth, companyNote, companyDue);
-        recipients.push({
-          companyName: inv.companyName,
-          email,
-          contactName: co?.invoice_contact_name || "",
-          pdfBase64,
-        });
-      }
+        try {
+          const companyNote = companyNotes[inv.companyId] ?? invoiceTemplate?.notes;
+          const companyDue = dueDates[inv.companyId] ?? dueDate;
+          const pdfBase64 = await generateInvoicePDFBase64(settings, inv, selectedMonth, companyNote, companyDue);
 
-      const res = await fetch("/api/send-invoice", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          recipients,
-          subject: emailSubject,
-          body: emailBody,
-          senderName: settings.company_name || "",
-          invoiceMonth: selectedMonth,
-        }),
-      });
+          const res = await fetch("/api/send-invoice", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              recipients: [{
+                companyName: inv.companyName,
+                email,
+                contactName: co?.invoice_contact_name || "",
+                pdfBase64,
+              }],
+              subject: emailSubject,
+              body: emailBody,
+              senderName: settings.company_name || "",
+              invoiceMonth: selectedMonth,
+            }),
+          });
 
-      const data = await res.json();
-      if (data.results) {
-        setSendResults(data.results);
-      } else {
-        alert(data.error || "送信エラー");
+          const data = await res.json();
+          if (data.results?.[0]) {
+            results.push(data.results[0]);
+          } else {
+            results.push({ companyName: inv.companyName, email, success: false, error: data.error || "送信失敗" });
+          }
+        } catch (e) {
+          results.push({ companyName: inv.companyName, email, success: false, error: "送信エラー" });
+        }
+        setSendResults([...results]);
       }
     } catch (e) {
       console.error(e);
