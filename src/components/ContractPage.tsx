@@ -167,7 +167,7 @@ export function ContractPage({
             productFilter={productFilter}
           />
           <InvoiceSection
-            contracts={filteredContracts}
+            contracts={contracts}
             companies={companies}
             settings={settings}
             invoiceTemplates={invoiceTemplates}
