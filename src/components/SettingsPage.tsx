@@ -53,8 +53,10 @@ export function SettingsPage({ settings, onSave }: SettingsPageProps) {
   const [invoiceNumber, setInvoiceNumber] = useState(settings?.invoice_number ?? "");
   const [logoUrl, setLogoUrl] = useState(settings?.logo_url ?? "");
   const [stampUrl, setStampUrl] = useState(settings?.stamp_url ?? "");
-  const [emailSubjectTemplate, setEmailSubjectTemplate] = useState(settings?.email_subject_template ?? "");
-  const [emailBodyTemplate, setEmailBodyTemplate] = useState(settings?.email_body_template ?? "");
+  const defaultSubject = "【{会社名}】{月}分 請求書送付のご案内";
+  const defaultBody = "いつもお世話になっております。\n○○です。\n\n○月分の請求書を添付にてお送りいたします。\nご確認のほど、よろしくお願いいたします。\n\n何かご不明な点がございましたら、お気軽にお問い合わせください。\n\n○○";
+  const [emailSubjectTemplate, setEmailSubjectTemplate] = useState(settings?.email_subject_template || defaultSubject);
+  const [emailBodyTemplate, setEmailBodyTemplate] = useState(settings?.email_body_template || defaultBody);
   const [saved, setSaved] = useState(false);
   const [initialized, setInitialized] = useState(!!settings);
 
@@ -67,8 +69,8 @@ export function SettingsPage({ settings, onSave }: SettingsPageProps) {
       setInvoiceNumber(settings.invoice_number);
       setLogoUrl(settings.logo_url || "");
       setStampUrl(settings.stamp_url || "");
-      setEmailSubjectTemplate(settings.email_subject_template || "");
-      setEmailBodyTemplate(settings.email_body_template || "");
+      setEmailSubjectTemplate(settings.email_subject_template || defaultSubject);
+      setEmailBodyTemplate(settings.email_body_template || defaultBody);
       setInitialized(true);
     }
   }, [settings, initialized]);
