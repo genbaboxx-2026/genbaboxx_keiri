@@ -216,9 +216,9 @@ export function SettingsPage({ settings, onSave }: SettingsPageProps) {
                 <div className="text-sm font-medium text-slate-800">
                   {(emailSubjectTemplate || defaultSubject)
                     .replace(/\{会社名\}/g, companyName || "（会社名）")
-                    .replace(/\{月\}/g, "3月")
+                    .replace(/\{月\}/g, `${new Date().getMonth() + 1}月`)
                     .replace(/○○/g, companyName || "（会社名）")
-                    .replace(/○月/g, "3月")}
+                    .replace(/○月/g, `${new Date().getMonth() + 1}月`)}
                 </div>
               </div>
               <div className="border-t border-slate-100 pt-3">
