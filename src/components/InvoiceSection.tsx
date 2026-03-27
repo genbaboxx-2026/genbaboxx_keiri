@@ -8,6 +8,7 @@ import {
   type InvoiceLineItem,
 } from "@/lib/invoiceCalc";
 import { formatNumber, getCurrentMonth } from "@/lib/calc";
+import { Badge } from "./Badge";
 
 interface InvoiceSectionProps {
   contracts: Contract[];
@@ -228,6 +229,16 @@ export function InvoiceSection({
     (companyId: string) => companies.find((c) => c.id === companyId),
     [companies]
   );
+
+  // 企業ごとのプロダクトタイプを集計
+  const companyProducts = useMemo(() => {
+    const map: Record<string, Set<string>> = {};
+    for (const c of contracts) {
+      if (!map[c.company_id]) map[c.company_id] = new Set();
+      map[c.company_id].add(c.product_type);
+    }
+    return map;
+  }, [contracts]);
 
   const monthLabel = `${selectedMonth.split("-")[0]}年${parseInt(selectedMonth.split("-")[1])}月`;
 
@@ -460,6 +471,7 @@ export function InvoiceSection({
                         companyNote={companyNotes[inv.companyId] ?? invoiceTemplates?.[0]?.notes ?? ""}
                         onNoteChange={(v) => handleNoteChange(inv.companyId, v)}
                         sentAt={sentStatus[inv.companyId]}
+                        productTypes={[...(companyProducts[inv.companyId] || [])]}
                         onToggleCheck={() => toggleCheck(inv.companyId)}
                         onToggleExpand={() =>
                           setExpandedId(isExpanded ? null : inv.companyId)
@@ -1045,6 +1057,7 @@ function CompanyRow({
   companyNote,
   onNoteChange,
   sentAt,
+  productTypes,
   onToggleCheck,
   onToggleExpand,
   onAddItem,
@@ -1062,6 +1075,7 @@ function CompanyRow({
   companyNote: string;
   onNoteChange: (v: string) => void;
   sentAt?: string;
+  productTypes?: string[];
   onToggleCheck: () => void;
   onToggleExpand: () => void;
   onAddItem: () => void;
@@ -1101,6 +1115,9 @@ function CompanyRow({
             </span>
             <div className="flex items-center gap-2">
               <div className="font-medium">{inv.companyName}</div>
+              {productTypes && productTypes.map((pt) => (
+                <Badge key={pt} product={pt as import("@/lib/database.types").ProductType} />
+              ))}
               {sentAt && (
                 <span className="text-[10px] font-bold text-green-700 bg-green-100 border border-green-200 px-1.5 py-0.5 rounded-full">
                   送信済
