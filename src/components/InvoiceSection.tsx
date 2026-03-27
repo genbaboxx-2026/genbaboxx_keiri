@@ -450,6 +450,9 @@ export function InvoiceSection({
                     <th className="px-3 py-2.5 text-left font-bold text-xs text-slate-600">
                       企業名
                     </th>
+                    <th className="px-2 py-2.5 text-left font-bold text-xs text-slate-600 w-[180px]">
+                      製品
+                    </th>
                     <th className="px-3 py-2.5 text-right font-bold text-xs text-slate-600">
                       合計（税込）
                     </th>
@@ -1113,17 +1116,21 @@ function CompanyRow({
             <span className={`text-[10px] ${isExpanded ? "text-blue-500" : "text-slate-400"}`}>
               {isExpanded ? "▼" : "▶"}
             </span>
-            <div className="flex items-center gap-2">
+            <div>
               <div className="font-medium">{inv.companyName}</div>
-              {productTypes && productTypes.map((pt) => (
-                <Badge key={pt} product={pt as import("@/lib/database.types").ProductType} />
-              ))}
-              {sentAt && (
-                <span className="text-[10px] font-bold text-green-700 bg-green-100 border border-green-200 px-1.5 py-0.5 rounded-full">
-                  送信済
-                </span>
-              )}
             </div>
+          </div>
+        </td>
+        <td className="px-2 py-2.5">
+          <div className="flex items-center gap-1.5 flex-wrap">
+            {productTypes && productTypes.map((pt) => (
+              <Badge key={pt} product={pt as import("@/lib/database.types").ProductType} />
+            ))}
+            {sentAt && (
+              <span className="text-[10px] font-bold text-green-700 bg-green-100 border border-green-200 px-1.5 py-0.5 rounded-full">
+                送信済
+              </span>
+            )}
           </div>
         </td>
         <td className="px-3 py-2.5 text-right tabular-nums font-semibold">
@@ -1133,7 +1140,7 @@ function CompanyRow({
 
       {isExpanded && (
         <tr>
-          <td colSpan={3} className="p-0">
+          <td colSpan={4} className="p-0">
             <div className="border-t border-blue-200 bg-blue-50/40 border-l-[3px] border-l-blue-400">
               <table className="w-full text-xs ml-4" style={{ tableLayout: "fixed", width: "calc(100% - 16px)" }}>
                 <colgroup>
