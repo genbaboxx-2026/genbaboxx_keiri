@@ -217,8 +217,11 @@ function MonthlyRevenueTable({
       <table className="w-full border-collapse text-xs">
         <thead>
           <tr className="bg-slate-50">
-            <th className="px-3 py-2.5 text-left font-bold border-b-2 border-slate-200 sticky left-0 bg-slate-50 min-w-[180px] z-10">
+            <th className="px-3 py-2.5 text-left font-bold border-b-2 border-slate-200 sticky left-0 bg-slate-50 min-w-[130px] z-10">
               企業名
+            </th>
+            <th className="px-1 py-2.5 text-left font-bold border-b-2 border-slate-200 sticky left-[130px] bg-slate-50 min-w-[90px] z-10">
+              製品
             </th>
             {allMonths.map((m) => (
               <th
@@ -253,7 +256,9 @@ function MonthlyRevenueTable({
             return (
               <tr key={c.id}>
                 <td className="px-3 py-2.5 font-semibold border-b border-slate-100 sticky left-0 bg-white whitespace-nowrap z-10">
-                  <span className="mr-2">{getCompanyName(c.company_id)}</span>
+                  {getCompanyName(c.company_id)}
+                </td>
+                <td className="px-1 py-2.5 border-b border-slate-100 sticky left-[130px] bg-white z-10">
                   <Badge product={c.product_type} />
                 </td>
                 {allMonths.map((month) => {
@@ -297,7 +302,7 @@ function MonthlyRevenueTable({
           })}
           {/* 合計行 */}
           <tr className="bg-slate-50">
-            <td className="px-3 py-2.5 font-extrabold sticky left-0 bg-slate-50 z-10">
+            <td colSpan={2} className="px-3 py-2.5 font-extrabold sticky left-0 bg-slate-50 z-10">
               合計
             </td>
             {allMonths.map((m) => {
