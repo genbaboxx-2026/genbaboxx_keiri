@@ -521,10 +521,10 @@ export default function Home() {
   }
 
   return (
-    <div className="flex min-h-screen bg-white">
+    <div className="flex h-screen bg-white">
       {/* Sidebar */}
       <div
-        className="flex flex-col flex-shrink-0 bg-slate-900 text-white transition-all duration-300 overflow-hidden"
+        className="flex flex-col flex-shrink-0 bg-slate-900 text-white transition-all duration-300 overflow-hidden h-screen sticky top-0"
         style={{ width: sideOpen ? 220 : 56 }}
       >
         <div
