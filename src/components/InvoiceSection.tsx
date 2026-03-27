@@ -49,12 +49,14 @@ export function InvoiceSection({
   const [dueDate, setDueDate] = useState(() => getLastBusinessDay(currentMonth));
   const [dueDates, setDueDates] = useState<Record<string, string>>({});
   const [companyNotes, setCompanyNotes] = useState<Record<string, string>>({});
+  const [sentStatus, setSentStatus] = useState<Record<string, string>>({});
   const noteTimers = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
 
-  // 月変更時にDBから備考を読み込む
+  // 月変更時にDBから備考と送信ステータスを読み込む
   useEffect(() => {
-    import("@/lib/api").then(({ fetchInvoiceNotes }) => {
+    import("@/lib/api").then(({ fetchInvoiceNotes, fetchSentStatus }) => {
       fetchInvoiceNotes(selectedMonth).then(setCompanyNotes);
+      fetchSentStatus(selectedMonth).then(setSentStatus);
     });
   }, [selectedMonth]);
 
@@ -327,6 +329,12 @@ export function InvoiceSection({
           const data = await res.json();
           if (data.results?.[0]) {
             results.push(data.results[0]);
+            if (data.results[0]?.success) {
+              import("@/lib/api").then(({ markAsSent }) => {
+                markAsSent(inv.companyId, selectedMonth).catch(console.error);
+              });
+              setSentStatus((prev) => ({ ...prev, [inv.companyId]: new Date().toISOString() }));
+            }
           } else {
             results.push({ companyName: inv.companyName, email, success: false, error: data.error || "送信失敗" });
           }
@@ -451,6 +459,7 @@ export function InvoiceSection({
                         onDueDateChange={(v) => setDueDates((prev) => ({ ...prev, [inv.companyId]: v }))}
                         companyNote={companyNotes[inv.companyId] ?? invoiceTemplate?.notes ?? ""}
                         onNoteChange={(v) => handleNoteChange(inv.companyId, v)}
+                        sentAt={sentStatus[inv.companyId]}
                         onToggleCheck={() => toggleCheck(inv.companyId)}
                         onToggleExpand={() =>
                           setExpandedId(isExpanded ? null : inv.companyId)
@@ -1035,6 +1044,7 @@ function CompanyRow({
   onDueDateChange,
   companyNote,
   onNoteChange,
+  sentAt,
   onToggleCheck,
   onToggleExpand,
   onAddItem,
@@ -1051,6 +1061,7 @@ function CompanyRow({
   onDueDateChange: (v: string) => void;
   companyNote: string;
   onNoteChange: (v: string) => void;
+  sentAt?: string;
   onToggleCheck: () => void;
   onToggleExpand: () => void;
   onAddItem: () => void;
@@ -1088,8 +1099,13 @@ function CompanyRow({
             <span className={`text-[10px] ${isExpanded ? "text-blue-500" : "text-slate-400"}`}>
               {isExpanded ? "▼" : "▶"}
             </span>
-            <div>
+            <div className="flex items-center gap-2">
               <div className="font-medium">{inv.companyName}</div>
+              {sentAt && (
+                <span className="text-[10px] font-bold text-green-700 bg-green-100 border border-green-200 px-1.5 py-0.5 rounded-full">
+                  送信済
+                </span>
+              )}
             </div>
           </div>
         </td>

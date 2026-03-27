@@ -156,3 +156,28 @@ export async function upsertInvoiceNote(companyId: string, month: string, note: 
     );
   if (error) throw error;
 }
+
+// ========== Invoice Sent Status ==========
+
+export async function fetchSentStatus(month: string): Promise<Record<string, string>> {
+  const { data, error } = await supabase
+    .from("invoice_sent_status")
+    .select("company_id, sent_at")
+    .eq("month", month);
+  if (error) return {};
+  const map: Record<string, string> = {};
+  for (const row of data || []) {
+    map[row.company_id] = row.sent_at;
+  }
+  return map;
+}
+
+export async function markAsSent(companyId: string, month: string): Promise<void> {
+  const { error } = await supabase
+    .from("invoice_sent_status")
+    .upsert(
+      { company_id: companyId, month, sent_at: new Date().toISOString() } as Record<string, unknown>,
+      { onConflict: "company_id,month" }
+    );
+  if (error) throw error;
+}
