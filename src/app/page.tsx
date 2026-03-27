@@ -47,7 +47,7 @@ export default function Home() {
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [settings, setSettings] = useState<Settings | null>(null);
   const [invoiceTemplates, setInvoiceTemplates] = useState<InvoiceTemplate[]>([]);
-  const [tab, setTabState] = useState<TabId>("bakusoq");
+  const [tab, setTabState] = useState<TabId>("contracts");
   const [modal, setModalState] = useState<ModalState>(null);
   const [viewList, setViewListState] = useState(false);
   const [sideOpen, setSideOpen] = useState(true);
@@ -160,7 +160,7 @@ export default function Home() {
   // memberがcashflowタブにいる場合はリダイレクト
   useEffect(() => {
     if (profile?.role === "member" && tab === "cashflow") {
-      setTab("bakusoq");
+      setTab("contracts");
     }
   }, [profile, tab]);
 
@@ -192,9 +192,16 @@ export default function Home() {
       const companyId = params.get("company");
       const view = params.get("view");
       if (urlTab) {
+        // Map legacy product tab IDs to unified "contracts" tab
+        const legacyMap: Record<string, TabId> = {
+          bakusoq: "contracts",
+          ninkuboxx: "contracts",
+          other: "contracts",
+        };
+        const mapped = legacyMap[urlTab] || urlTab;
         const validTabs = TABS.map((t) => t.id) as string[];
-        if (validTabs.includes(urlTab)) {
-          setTabState(urlTab as TabId);
+        if (validTabs.includes(mapped)) {
+          setTabState(mapped as TabId);
         }
       }
       setViewListState(view === "list");
@@ -237,9 +244,15 @@ export default function Home() {
         const companyId = params.get("company");
         const view = params.get("view");
         if (urlTab) {
+          const legacyMap: Record<string, TabId> = {
+            bakusoq: "contracts",
+            ninkuboxx: "contracts",
+            other: "contracts",
+          };
+          const mapped = legacyMap[urlTab] || urlTab;
           const validTabs = TABS.map((t) => t.id) as string[];
-          if (validTabs.includes(urlTab)) {
-            setTabState(urlTab as TabId);
+          if (validTabs.includes(mapped)) {
+            setTabState(mapped as TabId);
           }
         }
         setViewListState(view === "list");
@@ -483,11 +496,10 @@ export default function Home() {
         onDelete={handleDeleteCompany}
       />
     );
-  } else {
+  } else if (tab === "contracts") {
     content = (
       <ContractPage
-        productType={tab}
-        contracts={contractsFor(tab)}
+        contracts={contracts}
         companies={companies}
         settings={settings}
         invoiceTemplates={invoiceTemplates}
@@ -496,11 +508,11 @@ export default function Home() {
         revenueFor={revenueFor}
         showList={viewList}
         onShowList={setViewList}
-        onAdd={() => setModal({ type: "contract", productType: tab })}
+        onAdd={(productType: ProductType) => setModal({ type: "contract", productType })}
         onEdit={(cn) => {
           const company = companies.find((c) => c.id === cn.company_id);
           if (company) {
-            setModal({ type: "company-detail", company, productFilter: tab as ProductType, mode: "contract" });
+            setModal({ type: "company-detail", company, productFilter: cn.product_type, mode: "contract" });
           }
         }}
         onDelete={handleDeleteContract}
@@ -534,8 +546,7 @@ export default function Home() {
           {visibleTabs.map((t, i) => {
             const showSeparator =
               i > 0 &&
-              visibleTabs[i - 1]?.id !== "cashflow" &&
-              visibleTabs[i - 1]?.id !== "companies" &&
+              visibleTabs[i - 1]?.id === "contracts" &&
               (t.id === "cashflow" || t.id === "companies");
             return (
               <div key={t.id}>

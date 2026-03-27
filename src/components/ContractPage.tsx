@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from "react";
 import type { Contract, Company, ProductType, ContractStatus, Settings, InvoiceTemplate } from "@/lib/database.types";
 import { PRODUCTS } from "@/lib/constants";
+import { Badge } from "./Badge";
 import { InvoiceSection } from "./InvoiceSection";
 import {
   makeBillingStart,
@@ -19,7 +20,6 @@ import {
 } from "@/lib/calc";
 
 interface ContractPageProps {
-  productType: ProductType;
   contracts: Contract[];
   companies: Company[];
   settings: Settings | null;
@@ -29,13 +29,12 @@ interface ContractPageProps {
   revenueFor: (month: string, productFilter?: string) => number;
   showList: boolean;
   onShowList: (show: boolean) => void;
-  onAdd: () => void;
+  onAdd: (productType: ProductType) => void;
   onEdit: (contract: Contract) => void;
   onDelete: (id: string) => void;
 }
 
 export function ContractPage({
-  productType,
   contracts,
   companies,
   settings,
@@ -49,77 +48,129 @@ export function ContractPage({
   onEdit,
   onDelete,
 }: ContractPageProps) {
-  const product = PRODUCTS.find((p) => p.id === productType)!;
+  const [productFilter, setProductFilter] = useState<ProductType | "all">("all");
+  const [addDropdownOpen, setAddDropdownOpen] = useState(false);
+
+  const filteredContracts = productFilter === "all"
+    ? contracts
+    : contracts.filter((c) => c.product_type === productFilter);
+
+  const handleAdd = () => {
+    if (productFilter !== "all") {
+      onAdd(productFilter);
+    } else {
+      setAddDropdownOpen((prev) => !prev);
+    }
+  };
 
   if (showList) {
     return (
       <ContractDetailView
-        product={product}
-        productType={productType}
-        contracts={contracts}
+        contracts={filteredContracts}
+        productFilter={productFilter}
         getCompanyName={getCompanyName}
         onBack={() => onShowList(false)}
         onAdd={onAdd}
         onEdit={onEdit}
         onDelete={onDelete}
+        addDropdownOpen={addDropdownOpen}
+        setAddDropdownOpen={setAddDropdownOpen}
       />
     );
   }
 
+  const filterButtons: { key: ProductType | "all"; label: string }[] = [
+    { key: "all", label: "全て" },
+    ...PRODUCTS.map((p) => ({ key: p.id as ProductType | "all", label: p.label })),
+  ];
+
   return (
     <div>
       <div className="flex justify-between items-center mb-6">
-        <h2 className="text-[22px] font-extrabold">
-          {product.label} 契約
-        </h2>
+        <h2 className="text-[22px] font-extrabold">契約</h2>
         <div className="flex gap-2.5">
           <button
-            className="px-5 py-2.5 bg-white rounded-[10px] text-sm font-semibold cursor-pointer hover:bg-slate-50 border-[1.5px]"
-            style={{ color: product.hex, borderColor: product.hex }}
+            className="px-5 py-2.5 bg-white rounded-[10px] text-sm font-semibold cursor-pointer hover:bg-slate-50 border-[1.5px] text-slate-600 border-slate-300"
             onClick={() => onShowList(true)}
           >
             契約一覧
           </button>
-          <button
-            className="px-7 py-2.5 text-white rounded-[10px] text-sm font-semibold cursor-pointer hover:opacity-90"
-            style={{ background: product.hex }}
-            onClick={onAdd}
-          >
-            + 契約を追加
-          </button>
+          <div className="relative">
+            <button
+              className="px-7 py-2.5 text-white rounded-[10px] text-sm font-semibold cursor-pointer hover:opacity-90 bg-slate-800"
+              onClick={handleAdd}
+            >
+              + 契約を追加
+            </button>
+            {addDropdownOpen && productFilter === "all" && (
+              <div className="absolute right-0 top-full mt-1 bg-white border border-slate-200 rounded-xl shadow-lg z-20 min-w-[180px]">
+                {PRODUCTS.map((p) => (
+                  <button
+                    key={p.id}
+                    className="w-full px-4 py-2.5 text-left text-sm font-semibold hover:bg-slate-50 cursor-pointer flex items-center gap-2 first:rounded-t-xl last:rounded-b-xl"
+                    onClick={() => {
+                      setAddDropdownOpen(false);
+                      onAdd(p.id);
+                    }}
+                  >
+                    <Badge product={p.id} />
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
         </div>
       </div>
 
-      {contracts.length === 0 ? (
+      {/* Filter buttons */}
+      <div className="flex gap-1.5 mb-6">
+        {filterButtons.map((fb) => {
+          const isActive = productFilter === fb.key;
+          const product = PRODUCTS.find((p) => p.id === fb.key);
+          return (
+            <button
+              key={fb.key}
+              className={`px-4 py-2 rounded-lg text-[13px] font-semibold cursor-pointer border transition-colors ${
+                isActive
+                  ? product
+                    ? `${product.bgClass} ${product.colorClass} ${product.borderClass}`
+                    : "bg-slate-800 text-white border-slate-800"
+                  : "bg-white text-slate-500 border-slate-200 hover:bg-slate-50"
+              }`}
+              onClick={() => setProductFilter(fb.key)}
+            >
+              {fb.label}
+            </button>
+          );
+        })}
+      </div>
+
+      {filteredContracts.length === 0 ? (
         <div className="text-center py-16 text-slate-400 bg-slate-50 rounded-2xl">
           <div className="text-[40px] mb-3">📄</div>
-          <div>{product.label}の契約がまだありません</div>
+          <div>契約がまだありません</div>
           <button
-            className="mt-4 px-7 py-2.5 text-white rounded-[10px] text-sm font-semibold cursor-pointer"
-            style={{ background: product.hex }}
-            onClick={onAdd}
+            className="mt-4 px-7 py-2.5 text-white rounded-[10px] text-sm font-semibold cursor-pointer bg-slate-800"
+            onClick={handleAdd}
           >
             最初の契約を追加
           </button>
         </div>
       ) : (
         <div>
-          <h3 className="text-lg font-bold mb-4">
-            月別売上（{product.label}）
-          </h3>
+          <h3 className="text-lg font-bold mb-4">月別売上</h3>
           <MonthlyRevenueTable
-            contracts={contracts}
+            contracts={filteredContracts}
             allMonths={allMonths}
             getCompanyName={getCompanyName}
             revenueFor={revenueFor}
-            productType={productType}
-            product={product}
+            productFilter={productFilter}
           />
           <InvoiceSection
-            contracts={contracts}
+            contracts={filteredContracts}
             companies={companies}
             settings={settings}
-            invoiceTemplate={invoiceTemplates.find((t) => t.product_type === productType)}
+            invoiceTemplates={invoiceTemplates}
             allMonths={allMonths}
           />
         </div>
@@ -134,15 +185,13 @@ function MonthlyRevenueTable({
   allMonths,
   getCompanyName,
   revenueFor,
-  productType,
-  product,
+  productFilter,
 }: {
   contracts: Contract[];
   allMonths: string[];
   getCompanyName: (id: string) => string;
   revenueFor: (month: string, productFilter?: string) => number;
-  productType: ProductType;
-  product: (typeof PRODUCTS)[number];
+  productFilter: ProductType | "all";
 }) {
   const currentMonth = getCurrentMonth();
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -168,7 +217,7 @@ function MonthlyRevenueTable({
       <table className="w-full border-collapse text-xs">
         <thead>
           <tr className="bg-slate-50">
-            <th className="px-3 py-2.5 text-left font-bold border-b-2 border-slate-200 sticky left-0 bg-slate-50 min-w-[120px] z-10">
+            <th className="px-3 py-2.5 text-left font-bold border-b-2 border-slate-200 sticky left-0 bg-slate-50 min-w-[180px] z-10">
               企業名
             </th>
             {allMonths.map((m) => (
@@ -204,7 +253,8 @@ function MonthlyRevenueTable({
             return (
               <tr key={c.id}>
                 <td className="px-3 py-2.5 font-semibold border-b border-slate-100 sticky left-0 bg-white whitespace-nowrap z-10">
-                  {getCompanyName(c.company_id)}
+                  <span className="mr-2">{getCompanyName(c.company_id)}</span>
+                  <Badge product={c.product_type} />
                 </td>
                 {allMonths.map((month) => {
                   let amt = 0;
@@ -251,12 +301,13 @@ function MonthlyRevenueTable({
               合計
             </td>
             {allMonths.map((m) => {
-              const total = revenueFor(m, productType);
+              const total = productFilter === "all"
+                ? revenueFor(m)
+                : revenueFor(m, productFilter);
               return (
                 <td
                   key={m}
-                  className={`px-2 py-2.5 text-right font-extrabold tabular-nums ${m === currentMonth ? "month-current" : ""}`}
-                  style={{ color: product.hex }}
+                  className={`px-2 py-2.5 text-right font-extrabold tabular-nums text-slate-800 ${m === currentMonth ? "month-current" : ""}`}
                 >
                   {total > 0 ? formatNumber(total) : "—"}
                 </td>
@@ -271,24 +322,34 @@ function MonthlyRevenueTable({
 
 // ====== 契約一覧サブ画面 ======
 function ContractDetailView({
-  product,
-  productType,
   contracts,
+  productFilter,
   getCompanyName,
   onBack,
   onAdd,
   onEdit,
   onDelete,
+  addDropdownOpen,
+  setAddDropdownOpen,
 }: {
-  product: (typeof PRODUCTS)[number];
-  productType: ProductType;
   contracts: Contract[];
+  productFilter: ProductType | "all";
   getCompanyName: (id: string) => string;
   onBack: () => void;
-  onAdd: () => void;
+  onAdd: (productType: ProductType) => void;
   onEdit: (contract: Contract) => void;
   onDelete: (id: string) => void;
+  addDropdownOpen: boolean;
+  setAddDropdownOpen: (open: boolean) => void;
 }) {
+  const handleAdd = () => {
+    if (productFilter !== "all") {
+      onAdd(productFilter);
+    } else {
+      setAddDropdownOpen(!addDropdownOpen);
+    }
+  };
+
   return (
     <div>
       <div className="flex justify-between items-center mb-6">
@@ -300,22 +361,39 @@ function ContractDetailView({
             ← 戻る
           </button>
           <h2 className="text-[22px] font-extrabold">
-            {product.label} 契約一覧
+            契約一覧
           </h2>
         </div>
-        <button
-          className="px-7 py-2.5 text-white rounded-[10px] text-sm font-semibold cursor-pointer hover:opacity-90"
-          style={{ background: product.hex }}
-          onClick={onAdd}
-        >
-          + 契約を追加
-        </button>
+        <div className="relative">
+          <button
+            className="px-7 py-2.5 text-white rounded-[10px] text-sm font-semibold cursor-pointer hover:opacity-90 bg-slate-800"
+            onClick={handleAdd}
+          >
+            + 契約を追加
+          </button>
+          {addDropdownOpen && productFilter === "all" && (
+            <div className="absolute right-0 top-full mt-1 bg-white border border-slate-200 rounded-xl shadow-lg z-20 min-w-[180px]">
+              {PRODUCTS.map((p) => (
+                <button
+                  key={p.id}
+                  className="w-full px-4 py-2.5 text-left text-sm font-semibold hover:bg-slate-50 cursor-pointer flex items-center gap-2 first:rounded-t-xl last:rounded-b-xl"
+                  onClick={() => {
+                    setAddDropdownOpen(false);
+                    onAdd(p.id);
+                  }}
+                >
+                  <Badge product={p.id} />
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
       </div>
 
       {contracts.length === 0 ? (
         <div className="text-center py-16 text-slate-400 bg-slate-50 rounded-2xl">
           <div className="text-[40px] mb-3">📄</div>
-          <div>{product.label}の契約がまだありません</div>
+          <div>契約がまだありません</div>
         </div>
       ) : (
         <>
@@ -365,7 +443,7 @@ function ContractDetailView({
             <table className="w-full border-collapse text-[13px]">
               <thead>
                 <tr className="bg-slate-50">
-                  {["企業名", "ステータス", "開始", "起算", "期間", "完了", "月額", "条件", "初期", "OP", ""].map((h, i) => (
+                  {["企業名", "製品", "ステータス", "開始", "起算", "期間", "完了", "月額", "条件", "初期", "OP", ""].map((h, i) => (
                     <th key={i} className="px-3 py-2 text-left font-bold text-slate-600 border-b-2 border-slate-200 whitespace-nowrap text-xs">
                       {h}
                     </th>
@@ -385,6 +463,9 @@ function ContractDetailView({
                   return (
                     <tr key={c.id} className="cursor-pointer hover:bg-slate-50 border-b border-slate-100" onClick={() => onEdit(c)}>
                       <td className="px-3 py-2.5 font-semibold">{getCompanyName(c.company_id)}</td>
+                      <td className="px-3 py-2.5">
+                        <Badge product={c.product_type} />
+                      </td>
                       <td className="px-3 py-2.5">
                         <span className={`${statusConfig.bg} ${statusConfig.text} ${statusConfig.border} border text-[10px] font-bold px-2 py-0.5 rounded-full whitespace-nowrap`}>
                           {statusConfig.label}

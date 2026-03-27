@@ -33,15 +33,18 @@ export function getInvoicesForMonth(
   month: string,
   contracts: Contract[],
   companies: Company[],
-  template?: InvoiceTemplate
+  templates?: InvoiceTemplate[]
 ): CompanyInvoice[] {
-  const monthlyLabel = template?.monthly_label || "月額料金";
-  const initialLabel = template?.initial_label || "初期導入費";
-  const optionLabel = template?.option_label || "オプション";
   const companyMap = new Map(companies.map((c) => [c.id, c.name]));
   const byCompany = new Map<string, InvoiceLineItem[]>();
 
   for (const c of contracts) {
+    // Find the matching template for this contract's product_type
+    const template = templates?.find((t) => t.product_type === c.product_type);
+    const monthlyLabel = template?.monthly_label || "月額料金";
+    const initialLabel = template?.initial_label || "初期導入費";
+    const optionLabel = template?.option_label || "オプション";
+
     const bs = makeBillingStart(c.billing_month, c.billing_day);
     const dur = effectiveDuration(
       c.billing_month,
@@ -122,11 +125,16 @@ export function getInvoicesForMonth(
     }
   }
 
-  // プリセットカスタム項目を各企業に追加
+  // プリセットカスタム項目を各企業に追加（全テンプレートのプリセットを集約）
   let presets: PresetItem[] = [];
   try {
-    if (template?.preset_items) {
-      presets = JSON.parse(template.preset_items);
+    if (templates) {
+      for (const template of templates) {
+        if (template.preset_items) {
+          const parsed = JSON.parse(template.preset_items) as PresetItem[];
+          presets = [...presets, ...parsed];
+        }
+      }
     }
   } catch { /* ignore */ }
 

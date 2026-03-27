@@ -13,7 +13,7 @@ interface InvoiceSectionProps {
   contracts: Contract[];
   companies: Company[];
   settings: Settings | null;
-  invoiceTemplate?: InvoiceTemplate;
+  invoiceTemplates?: InvoiceTemplate[];
   allMonths: string[];
 }
 
@@ -21,7 +21,7 @@ export function InvoiceSection({
   contracts,
   companies,
   settings,
-  invoiceTemplate,
+  invoiceTemplates,
   allMonths,
 }: InvoiceSectionProps) {
   const currentMonth = getCurrentMonth();
@@ -91,8 +91,8 @@ export function InvoiceSection({
   }, []);
 
   const baseInvoices = useMemo(
-    () => getInvoicesForMonth(selectedMonth, contracts, companies, invoiceTemplate),
-    [selectedMonth, contracts, companies, invoiceTemplate]
+    () => getInvoicesForMonth(selectedMonth, contracts, companies, invoiceTemplates),
+    [selectedMonth, contracts, companies, invoiceTemplates]
   );
 
   // カスタム項目を反映した請求データ
@@ -136,7 +136,7 @@ export function InvoiceSection({
     setDueDates({});
     setDeletedBaseItems({});
     setTimeout(() => {
-      const inv = getInvoicesForMonth(m, contracts, companies, invoiceTemplate);
+      const inv = getInvoicesForMonth(m, contracts, companies, invoiceTemplates);
       setChecked(new Set(inv.map((i) => i.companyId)));
     }, 0);
   };
@@ -263,7 +263,7 @@ export function InvoiceSection({
     setGenerating(true);
     try {
       const { generateInvoicePDF } = await import("@/lib/invoice");
-      await generateInvoicePDF(settings, selectedInvoices, selectedMonth, invoiceTemplate?.notes, dueDate, companyNotes, dueDates);
+      await generateInvoicePDF(settings, selectedInvoices, selectedMonth, invoiceTemplates?.[0]?.notes, dueDate, companyNotes, dueDates);
       setShowSendConfirm(false);
     } catch (e) {
       console.error(e);
@@ -278,7 +278,7 @@ export function InvoiceSection({
     setGenerating(true);
     try {
       const { generateInvoicePDF } = await import("@/lib/invoice");
-      await generateInvoicePDF(settings, [inv], selectedMonth, invoiceTemplate?.notes, dueDate, companyNotes, dueDates);
+      await generateInvoicePDF(settings, [inv], selectedMonth, invoiceTemplates?.[0]?.notes, dueDate, companyNotes, dueDates);
     } catch (e) {
       console.error(e);
       alert("PDF生成に失敗しました");
@@ -305,7 +305,7 @@ export function InvoiceSection({
           continue;
         }
         try {
-          const companyNote = companyNotes[inv.companyId] ?? invoiceTemplate?.notes;
+          const companyNote = companyNotes[inv.companyId] ?? invoiceTemplates?.[0]?.notes;
           const companyDue = dueDates[inv.companyId] ?? dueDate;
           const pdfBase64 = await generateInvoicePDFBase64(settings, inv, selectedMonth, companyNote, companyDue);
 
@@ -457,7 +457,7 @@ export function InvoiceSection({
                         extras={extras}
                         companyDueDate={dueDates[inv.companyId] ?? dueDate}
                         onDueDateChange={(v) => setDueDates((prev) => ({ ...prev, [inv.companyId]: v }))}
-                        companyNote={companyNotes[inv.companyId] ?? invoiceTemplate?.notes ?? ""}
+                        companyNote={companyNotes[inv.companyId] ?? invoiceTemplates?.[0]?.notes ?? ""}
                         onNoteChange={(v) => handleNoteChange(inv.companyId, v)}
                         sentAt={sentStatus[inv.companyId]}
                         onToggleCheck={() => toggleCheck(inv.companyId)}
@@ -513,7 +513,7 @@ export function InvoiceSection({
                   settings={settings}
                   issueDate={issueDate}
                   month={selectedMonth}
-                  notes={companyNotes[previewInvoice.companyId] ?? invoiceTemplate?.notes}
+                  notes={companyNotes[previewInvoice.companyId] ?? invoiceTemplates?.[0]?.notes}
                   dueDate={dueDates[previewInvoice.companyId] ?? dueDate}
                   invoiceNumber={getInvoiceNumber(previewInvoice.companyId)}
                 />
@@ -569,7 +569,7 @@ export function InvoiceSection({
                   settings={settings}
                   issueDate={issueDate}
                   month={selectedMonth}
-                  notes={companyNotes[previewInvoice.companyId] ?? invoiceTemplate?.notes}
+                  notes={companyNotes[previewInvoice.companyId] ?? invoiceTemplates?.[0]?.notes}
                   dueDate={dueDates[previewInvoice.companyId] ?? dueDate}
                   large
                   invoiceNumber={getInvoiceNumber(previewInvoice.companyId)}
@@ -585,7 +585,7 @@ export function InvoiceSection({
           settings={settings}
           issueDate={issueDate}
           month={selectedMonth}
-          notes={invoiceTemplate?.notes}
+          notes={invoiceTemplates?.[0]?.notes}
           companyNotes={companyNotes}
           dueDate={dueDate}
           dueDates={dueDates}
