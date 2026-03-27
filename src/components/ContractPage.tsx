@@ -122,29 +122,6 @@ export function ContractPage({
         </div>
       </div>
 
-      {/* Filter buttons */}
-      <div className="flex gap-1.5 mb-6">
-        {filterButtons.map((fb) => {
-          const isActive = productFilter === fb.key;
-          const product = PRODUCTS.find((p) => p.id === fb.key);
-          return (
-            <button
-              key={fb.key}
-              className={`px-4 py-2 rounded-lg text-[13px] font-semibold cursor-pointer border transition-colors ${
-                isActive
-                  ? product
-                    ? `${product.bgClass} ${product.colorClass} ${product.borderClass}`
-                    : "bg-slate-800 text-white border-slate-800"
-                  : "bg-white text-slate-500 border-slate-200 hover:bg-slate-50"
-              }`}
-              onClick={() => setProductFilter(fb.key)}
-            >
-              {fb.label}
-            </button>
-          );
-        })}
-      </div>
-
       {filteredContracts.length === 0 ? (
         <div className="text-center py-16 text-slate-400 bg-slate-50 rounded-2xl">
           <div className="text-[40px] mb-3">📄</div>
@@ -158,7 +135,30 @@ export function ContractPage({
         </div>
       ) : (
         <div>
-          <h3 className="text-lg font-bold mb-4">月別売上</h3>
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-lg font-bold">月別売上</h3>
+            <div className="flex gap-1.5">
+              {filterButtons.map((fb) => {
+                const isActive = productFilter === fb.key;
+                const product = PRODUCTS.find((p) => p.id === fb.key);
+                return (
+                  <button
+                    key={fb.key}
+                    className={`px-4 py-2 rounded-lg text-[13px] font-semibold cursor-pointer border transition-colors ${
+                      isActive
+                        ? product
+                          ? `${product.bgClass} ${product.colorClass} ${product.borderClass}`
+                          : "bg-slate-800 text-white border-slate-800"
+                        : "bg-white text-slate-500 border-slate-200 hover:bg-slate-50"
+                    }`}
+                    onClick={() => setProductFilter(fb.key)}
+                  >
+                    {fb.label}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
           <MonthlyRevenueTable
             contracts={filteredContracts}
             allMonths={allMonths}
