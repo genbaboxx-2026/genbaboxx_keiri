@@ -186,25 +186,52 @@ export function SettingsPage({ settings, onSave }: SettingsPageProps) {
         <div className="text-sm font-bold text-slate-700 mb-4">
           メール設定（請求書送付時のデフォルト）
         </div>
-        <div className="space-y-3">
-          <Field
-            label="件名テンプレート"
-            value={emailSubjectTemplate}
-            onChange={setEmailSubjectTemplate}
-            placeholder="【会社名】○月分 請求書送付のご案内"
-          />
-          <div className="text-[10px] text-slate-400 -mt-1">
-            ※ 空欄の場合は自動生成されます
+        <div className="text-[10px] text-slate-400 mb-4 bg-slate-100 rounded-lg px-3 py-2">
+          置換変数: <code className="font-mono bg-white px-1 rounded">○○</code> → 会社名、<code className="font-mono bg-white px-1 rounded">○月</code> → 対象月、<code className="font-mono bg-white px-1 rounded">{"{会社名}"}</code> → 会社名、<code className="font-mono bg-white px-1 rounded">{"{月}"}</code> → 対象月
+        </div>
+        <div className="flex gap-6">
+          {/* 左: テンプレート入力 */}
+          <div className="flex-1 space-y-3">
+            <div className="text-xs font-bold text-slate-500 mb-1">テンプレート</div>
+            <Field
+              label="件名"
+              value={emailSubjectTemplate}
+              onChange={setEmailSubjectTemplate}
+              placeholder="空欄時はデフォルトが適用されます"
+            />
+            <Field
+              label="本文"
+              value={emailBodyTemplate}
+              onChange={setEmailBodyTemplate}
+              multiline
+              placeholder="空欄時はデフォルトが適用されます"
+            />
           </div>
-          <Field
-            label="本文テンプレート"
-            value={emailBodyTemplate}
-            onChange={setEmailBodyTemplate}
-            multiline
-            placeholder={"いつもお世話になっております。\n○○です。\n\n○月分の請求書を添付にてお送りいたします。"}
-          />
-          <div className="text-[10px] text-slate-400 -mt-1">
-            ※ 空欄の場合は自動生成されます
+          {/* 右: 送信プレビュー */}
+          <div className="flex-1">
+            <div className="text-xs font-bold text-slate-500 mb-1">送信時の内容（プレビュー）</div>
+            <div className="bg-white border border-slate-200 rounded-xl p-4 space-y-3">
+              <div>
+                <div className="text-[10px] text-slate-400 mb-1">件名</div>
+                <div className="text-sm font-medium text-slate-800">
+                  {(emailSubjectTemplate || defaultSubject)
+                    .replace(/\{会社名\}/g, companyName || "（会社名）")
+                    .replace(/\{月\}/g, "3月")
+                    .replace(/○○/g, companyName || "（会社名）")
+                    .replace(/○月/g, "3月")}
+                </div>
+              </div>
+              <div className="border-t border-slate-100 pt-3">
+                <div className="text-[10px] text-slate-400 mb-1">本文</div>
+                <div className="text-xs text-slate-700 whitespace-pre-line leading-relaxed">
+                  {(emailBodyTemplate || defaultBody)
+                    .replace(/○○/g, companyName || "（会社名）")
+                    .replace(/○月/g, "3月")
+                    .replace(/\{会社名\}/g, companyName || "（会社名）")
+                    .replace(/\{月\}/g, "3月")}
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       </div>
