@@ -396,21 +396,23 @@ function ContractDetailView({
       {/* フィルター */}
       <div className="flex gap-2 mb-4">
         <button
-          className={`px-3.5 py-1.5 rounded-lg text-xs font-semibold cursor-pointer border-none ${productFilter === "all" ? "bg-slate-800 text-white" : "bg-slate-100 text-slate-600 hover:bg-slate-200"}`}
+          className={`px-4 py-2 rounded-lg text-[13px] font-semibold cursor-pointer border transition-colors ${productFilter === "all" ? "bg-slate-800 text-white border-slate-800" : "bg-white text-slate-500 border-slate-200 hover:bg-slate-50"}`}
           onClick={() => setProductFilter("all")}
         >
           全て
         </button>
-        {PRODUCTS.map((p) => (
-          <button
-            key={p.id}
-            className={`px-3.5 py-1.5 rounded-lg text-xs font-semibold cursor-pointer border-none ${productFilter === p.id ? "text-white" : "bg-slate-100 text-slate-600 hover:bg-slate-200"}`}
-            style={productFilter === p.id ? { background: p.hex } : undefined}
-            onClick={() => setProductFilter(p.id)}
-          >
-            {p.label}
-          </button>
-        ))}
+        {PRODUCTS.map((p) => {
+          const isActive = productFilter === p.id;
+          return (
+            <button
+              key={p.id}
+              className={`px-4 py-2 rounded-lg text-[13px] font-semibold cursor-pointer border transition-colors ${isActive ? `${p.bgClass} ${p.colorClass} ${p.borderClass}` : "bg-white text-slate-500 border-slate-200 hover:bg-slate-50"}`}
+              onClick={() => setProductFilter(p.id)}
+            >
+              {p.label}
+            </button>
+          );
+        })}
       </div>
 
       {displayContracts.length === 0 ? (
