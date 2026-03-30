@@ -468,7 +468,7 @@ export default function Home() {
   const visibleTabs = useMemo(
     () =>
       profile?.role === "member"
-        ? TABS.filter((t) => t.id !== "cashflow" && t.id !== "settings" && t.id !== "invoice_settings")
+        ? TABS.filter((t) => t.id !== "cashflow")
         : TABS,
     [profile]
   );
