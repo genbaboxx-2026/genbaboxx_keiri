@@ -678,8 +678,8 @@ function ProductRows({
       {isExpanded && companyIds.map((cid) => {
         const companyName = companies.find((c) => c.id === cid)?.name || "不明";
         return (
-          <tr key={cid} className="bg-slate-50/50">
-            <td className="pl-10 pr-3.5 py-1.5 border-b border-slate-50 sticky left-0 bg-slate-50/50 z-10 text-[11px] text-slate-500">
+          <tr key={cid} className="bg-slate-50">
+            <td className="pl-10 pr-3.5 py-1.5 border-b border-slate-50 sticky left-0 bg-slate-50 z-10 text-[11px] text-slate-500">
               {companyName}
             </td>
             {displayMonths.map((m) => {
