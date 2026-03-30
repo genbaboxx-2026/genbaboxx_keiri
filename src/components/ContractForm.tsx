@@ -106,7 +106,7 @@ export function ContractForm({
   const baseMonthNum = billingMonth
     ? parseInt(billingMonth.split("-")[1])
     : 0;
-  const valid = companyId && contractStartDate && billingMonth && durationMonths > 0;
+  const valid = companyId && (contractStatus === "auto_renewing" || (contractStartDate && billingMonth && durationMonths > 0));
 
   const handleAddCompany = () => {
     if (!newCompanyName.trim()) return;
