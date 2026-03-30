@@ -94,7 +94,9 @@ export default function Home() {
   const setTab = useCallback(
     (t: TabId) => {
       setTabState(t);
-      setModalState(null);
+      setModalState((prev) =>
+        prev?.type === "contract" || prev?.type === "company" ? prev : null
+      );
       setViewListState(false);
       pushUrl(t, null, false);
     },
