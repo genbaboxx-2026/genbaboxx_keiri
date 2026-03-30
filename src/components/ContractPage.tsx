@@ -332,7 +332,8 @@ function MonthlyRevenueTable({
           })}
           {/* 合計行 */}
           <tr className="bg-slate-50">
-            <td colSpan={3} className="px-3 py-2.5 font-extrabold sticky left-0 bg-slate-50 z-10">
+            <td className="px-2 py-2.5 sticky left-0 bg-slate-50 z-10" />
+            <td colSpan={2} className="px-3 py-2.5 font-extrabold sticky left-[36px] bg-slate-50 z-10">
               合計
             </td>
             {allMonths.map((m) => {
