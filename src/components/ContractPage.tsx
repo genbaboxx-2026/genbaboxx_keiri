@@ -332,8 +332,9 @@ function MonthlyRevenueTable({
               </tr>
             );
           })}
-          {/* 合計行 */}
-          <tr className="bg-slate-50">
+        </tbody>
+        <tfoot className="sticky bottom-0 z-20">
+          <tr className="bg-slate-50 border-t-2 border-slate-300">
             <td className="px-2 py-2 sticky left-0 bg-slate-50 z-10" />
             <td className="px-3 py-2 font-extrabold sticky left-[36px] bg-slate-50 z-10">
               合計
@@ -353,7 +354,7 @@ function MonthlyRevenueTable({
               );
             })}
           </tr>
-        </tbody>
+        </tfoot>
       </table>
     </div>
   );
