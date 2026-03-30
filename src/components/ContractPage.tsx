@@ -1,8 +1,10 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import type { Contract, Company, ProductType, ContractStatus, Settings, InvoiceTemplate } from "@/lib/database.types";
 import { PRODUCTS } from "@/lib/constants";
+
+const ALL_PRODUCT_IDS = new Set<ProductType>(PRODUCTS.map((p) => p.id));
 import { Badge } from "./Badge";
 import { InvoiceSection } from "./InvoiceSection";
 import {
@@ -48,16 +50,36 @@ export function ContractPage({
   onEdit,
   onDelete,
 }: ContractPageProps) {
-  const [productFilter, setProductFilter] = useState<ProductType | "all">("all");
+  const [selectedProducts, setSelectedProducts] = useState<Set<ProductType>>(new Set(ALL_PRODUCT_IDS));
   const [addDropdownOpen, setAddDropdownOpen] = useState(false);
 
-  const filteredContracts = productFilter === "all"
+  const isAllSelected = selectedProducts.size === ALL_PRODUCT_IDS.size;
+
+  const filteredContracts = isAllSelected
     ? contracts
-    : contracts.filter((c) => c.product_type === productFilter);
+    : contracts.filter((c) => selectedProducts.has(c.product_type));
+
+  const toggleProduct = (id: ProductType) => {
+    setSelectedProducts((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) {
+        if (next.size > 1) next.delete(id);
+      } else {
+        next.add(id);
+      }
+      return next;
+    });
+  };
+
+  const toggleAll = () => {
+    setSelectedProducts((prev) =>
+      prev.size === ALL_PRODUCT_IDS.size ? prev : new Set(ALL_PRODUCT_IDS)
+    );
+  };
 
   const handleAdd = () => {
-    if (productFilter !== "all") {
-      onAdd(productFilter);
+    if (selectedProducts.size === 1) {
+      onAdd([...selectedProducts][0]);
     } else {
       setAddDropdownOpen((prev) => !prev);
     }
@@ -67,7 +89,7 @@ export function ContractPage({
     return (
       <ContractDetailView
         contracts={contracts}
-        productFilter={productFilter}
+        productFilter={selectedProducts}
         getCompanyName={getCompanyName}
         onBack={() => onShowList(false)}
         onAdd={onAdd}
@@ -78,11 +100,6 @@ export function ContractPage({
       />
     );
   }
-
-  const filterButtons: { key: ProductType | "all"; label: string }[] = [
-    { key: "all", label: "全て" },
-    ...PRODUCTS.map((p) => ({ key: p.id as ProductType | "all", label: p.label })),
-  ];
 
   return (
     <div>
@@ -102,7 +119,7 @@ export function ContractPage({
             >
               + 契約を追加
             </button>
-            {addDropdownOpen && productFilter === "all" && (
+            {addDropdownOpen && selectedProducts.size !== 1 && (
               <div className="absolute right-0 top-full mt-1 bg-white border border-slate-200 rounded-xl shadow-lg z-20 min-w-[180px]">
                 {PRODUCTS.map((p) => (
                   <button
@@ -138,22 +155,29 @@ export function ContractPage({
           <div className="flex items-center justify-between mb-4">
             <h3 className="text-lg font-bold">月別売上</h3>
             <div className="flex gap-1.5">
-              {filterButtons.map((fb) => {
-                const isActive = productFilter === fb.key;
-                const product = PRODUCTS.find((p) => p.id === fb.key);
+              <button
+                className={`px-4 py-2 rounded-lg text-[13px] font-semibold cursor-pointer border transition-colors ${
+                  isAllSelected
+                    ? "bg-slate-800 text-white border-slate-800"
+                    : "bg-white text-slate-500 border-slate-200 hover:bg-slate-50"
+                }`}
+                onClick={toggleAll}
+              >
+                全て
+              </button>
+              {PRODUCTS.map((p) => {
+                const isActive = selectedProducts.has(p.id);
                 return (
                   <button
-                    key={fb.key}
+                    key={p.id}
                     className={`px-4 py-2 rounded-lg text-[13px] font-semibold cursor-pointer border transition-colors ${
                       isActive
-                        ? product
-                          ? `${product.bgClass} ${product.colorClass} ${product.borderClass}`
-                          : "bg-slate-800 text-white border-slate-800"
+                        ? `${p.bgClass} ${p.colorClass} ${p.borderClass}`
                         : "bg-white text-slate-500 border-slate-200 hover:bg-slate-50"
                     }`}
-                    onClick={() => setProductFilter(fb.key)}
+                    onClick={() => toggleProduct(p.id)}
                   >
-                    {fb.label}
+                    {p.label}
                   </button>
                 );
               })}
@@ -164,7 +188,7 @@ export function ContractPage({
             allMonths={allMonths}
             getCompanyName={getCompanyName}
             revenueFor={revenueFor}
-            productFilter={productFilter}
+            selectedProducts={selectedProducts}
           />
           <InvoiceSection
             contracts={contracts}
@@ -185,13 +209,13 @@ function MonthlyRevenueTable({
   allMonths,
   getCompanyName,
   revenueFor,
-  productFilter,
+  selectedProducts,
 }: {
   contracts: Contract[];
   allMonths: string[];
   getCompanyName: (id: string) => string;
   revenueFor: (month: string, productFilter?: string) => number;
-  productFilter: ProductType | "all";
+  selectedProducts: Set<ProductType>;
 }) {
   const currentMonth = getCurrentMonth();
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -312,9 +336,9 @@ function MonthlyRevenueTable({
               合計
             </td>
             {allMonths.map((m) => {
-              const total = productFilter === "all"
+              const total = selectedProducts.size === ALL_PRODUCT_IDS.size
                 ? revenueFor(m)
-                : revenueFor(m, productFilter);
+                : [...selectedProducts].reduce((sum, p) => sum + revenueFor(m, p), 0);
               return (
                 <td
                   key={m}
@@ -344,7 +368,7 @@ function ContractDetailView({
   setAddDropdownOpen,
 }: {
   contracts: Contract[];
-  productFilter: ProductType | "all";
+  productFilter: Set<ProductType>;
   getCompanyName: (id: string) => string;
   onBack: () => void;
   onAdd: (productType: ProductType) => void;
@@ -353,12 +377,31 @@ function ContractDetailView({
   addDropdownOpen: boolean;
   setAddDropdownOpen: (open: boolean) => void;
 }) {
-  const [productFilter, setProductFilter] = useState<ProductType | "all">(initialFilter);
-  const displayContracts = productFilter === "all" ? contracts : contracts.filter((c) => c.product_type === productFilter);
+  const [selectedProducts, setSelectedProducts] = useState<Set<ProductType>>(initialFilter);
+  const isAllSelected = selectedProducts.size === ALL_PRODUCT_IDS.size;
+  const displayContracts = isAllSelected ? contracts : contracts.filter((c) => selectedProducts.has(c.product_type));
+
+  const toggleProduct = (id: ProductType) => {
+    setSelectedProducts((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) {
+        if (next.size > 1) next.delete(id);
+      } else {
+        next.add(id);
+      }
+      return next;
+    });
+  };
+
+  const toggleAll = () => {
+    setSelectedProducts((prev) =>
+      prev.size === ALL_PRODUCT_IDS.size ? prev : new Set(ALL_PRODUCT_IDS)
+    );
+  };
 
   const handleAdd = () => {
-    if (productFilter !== "all") {
-      onAdd(productFilter);
+    if (selectedProducts.size === 1) {
+      onAdd([...selectedProducts][0]);
     } else {
       setAddDropdownOpen(!addDropdownOpen);
     }
@@ -385,7 +428,7 @@ function ContractDetailView({
           >
             + 契約を追加
           </button>
-          {addDropdownOpen && productFilter === "all" && (
+          {addDropdownOpen && selectedProducts.size !== 1 && (
             <div className="absolute right-0 top-full mt-1 bg-white border border-slate-200 rounded-xl shadow-lg z-20 min-w-[180px]">
               {PRODUCTS.map((p) => (
                 <button
@@ -407,18 +450,18 @@ function ContractDetailView({
       {/* フィルター */}
       <div className="flex gap-2 mb-4">
         <button
-          className={`px-4 py-2 rounded-lg text-[13px] font-semibold cursor-pointer border transition-colors ${productFilter === "all" ? "bg-slate-800 text-white border-slate-800" : "bg-white text-slate-500 border-slate-200 hover:bg-slate-50"}`}
-          onClick={() => setProductFilter("all")}
+          className={`px-4 py-2 rounded-lg text-[13px] font-semibold cursor-pointer border transition-colors ${isAllSelected ? "bg-slate-800 text-white border-slate-800" : "bg-white text-slate-500 border-slate-200 hover:bg-slate-50"}`}
+          onClick={toggleAll}
         >
           全て
         </button>
         {PRODUCTS.map((p) => {
-          const isActive = productFilter === p.id;
+          const isActive = selectedProducts.has(p.id);
           return (
             <button
               key={p.id}
               className={`px-4 py-2 rounded-lg text-[13px] font-semibold cursor-pointer border transition-colors ${isActive ? `${p.bgClass} ${p.colorClass} ${p.borderClass}` : "bg-white text-slate-500 border-slate-200 hover:bg-slate-50"}`}
-              onClick={() => setProductFilter(p.id)}
+              onClick={() => toggleProduct(p.id)}
             >
               {p.label}
             </button>
