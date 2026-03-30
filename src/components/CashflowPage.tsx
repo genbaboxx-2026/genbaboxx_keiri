@@ -490,9 +490,9 @@ export function CashflowPage({
 
             {/* 収支 */}
             <tr className="bg-slate-100 border-t-2 border-slate-400">
-              <td className="px-3.5 py-3 font-extrabold text-sm sticky left-0 bg-slate-100 text-slate-900 z-10">収支</td>
+              <td className="px-3.5 py-3 font-extrabold text-sm sticky left-0 bg-slate-100 text-slate-900 z-10">収支<span className="text-[10px] font-normal text-slate-400 ml-1">(税込)</span></td>
               {allMonths.map((m) => {
-                const rev = revenueFor(m);
+                const rev = Math.floor(revenueFor(m) * 1.1);
                 const exp = expenseForMonth(m);
                 const diff = rev - exp;
                 return (
@@ -547,7 +547,7 @@ export function CashflowPage({
               {(() => {
                 let cumulative = 0;
                 return allMonths.map((m) => {
-                  const rev = revenueFor(m);
+                  const rev = Math.floor(revenueFor(m) * 1.1);
                   const exp = expenseForMonth(m);
                   const adj = adjustments[m] || 0;
                   cumulative += rev - exp + adj;
