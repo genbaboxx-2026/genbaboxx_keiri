@@ -106,7 +106,7 @@ export function ContractForm({
   const baseMonthNum = billingMonth
     ? parseInt(billingMonth.split("-")[1])
     : 0;
-  const valid = companyId && (contractStatus === "auto_renewing" || (contractStartDate && billingMonth && durationMonths > 0));
+  const valid = companyId && contractStartDate && billingMonth && (contractStatus === "auto_renewing" || durationMonths > 0);
 
   const handleAddCompany = () => {
     if (!newCompanyName.trim()) return;
@@ -257,52 +257,53 @@ export function ContractForm({
             );
           })}
         </div>
-        {contractStatus === "auto_renewing" ? (
+        {contractStatus === "auto_renewing" && (
           <div className="text-[11px] text-amber-600 font-medium">
             ※ 自動更新中：当月まで自動的に請求月が延長されます
           </div>
-        ) : (
+        )}
+        <div>
+          <label className="block text-[13px] font-semibold text-slate-600 mb-1.5">
+            契約開始日 *
+          </label>
+          <input
+            type="date"
+            className="w-full px-3.5 py-2.5 border-[1.5px] border-slate-200 rounded-[10px] text-sm outline-none focus:border-blue-400"
+            value={contractStartDate}
+            onChange={(e) => {
+              setContractStartDate(e.target.value);
+              setBillingMonth("");
+            }}
+          />
+        </div>
+        <div className="grid grid-cols-2 gap-3 mt-3">
+          <div>
+            <label className="block text-[13px] font-semibold text-slate-600 mb-1.5">
+              起算月 *
+            </label>
+            <input
+              type="month"
+              className="w-full px-3.5 py-2.5 border-[1.5px] border-slate-200 rounded-[10px] text-sm outline-none focus:border-blue-400"
+              value={billingMonth}
+              onChange={(e) => setBillingMonth(e.target.value)}
+            />
+          </div>
+          <div>
+            <label className="block text-[13px] font-semibold text-slate-600 mb-1.5">
+              起算日 *
+            </label>
+            <select
+              className="w-full px-3.5 py-2.5 border-[1.5px] border-slate-200 rounded-[10px] text-sm outline-none focus:border-blue-400"
+              value={billingDay}
+              onChange={(e) => setBillingDay(e.target.value as BillingDay)}
+            >
+              <option value="1">1日</option>
+              <option value="16">16日</option>
+            </select>
+          </div>
+        </div>
+        {contractStatus !== "auto_renewing" && (
           <>
-            <div>
-              <label className="block text-[13px] font-semibold text-slate-600 mb-1.5">
-                契約開始日 *
-              </label>
-              <input
-                type="date"
-                className="w-full px-3.5 py-2.5 border-[1.5px] border-slate-200 rounded-[10px] text-sm outline-none focus:border-blue-400"
-                value={contractStartDate}
-                onChange={(e) => {
-                  setContractStartDate(e.target.value);
-                  setBillingMonth("");
-                }}
-              />
-            </div>
-            <div className="grid grid-cols-2 gap-3 mt-3">
-              <div>
-                <label className="block text-[13px] font-semibold text-slate-600 mb-1.5">
-                  起算月 *
-                </label>
-                <input
-                  type="month"
-                  className="w-full px-3.5 py-2.5 border-[1.5px] border-slate-200 rounded-[10px] text-sm outline-none focus:border-blue-400"
-                  value={billingMonth}
-                  onChange={(e) => setBillingMonth(e.target.value)}
-                />
-              </div>
-              <div>
-                <label className="block text-[13px] font-semibold text-slate-600 mb-1.5">
-                  起算日 *
-                </label>
-                <select
-                  className="w-full px-3.5 py-2.5 border-[1.5px] border-slate-200 rounded-[10px] text-sm outline-none focus:border-blue-400"
-                  value={billingDay}
-                  onChange={(e) => setBillingDay(e.target.value as BillingDay)}
-                >
-                  <option value="1">1日</option>
-                  <option value="16">16日</option>
-                </select>
-              </div>
-            </div>
             <div className="grid grid-cols-2 gap-3 mt-3">
               <div>
                 <label className="block text-[13px] font-semibold text-slate-600 mb-1.5">
