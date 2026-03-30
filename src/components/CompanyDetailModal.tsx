@@ -30,6 +30,7 @@ const CONTRACT_STATUS_CONFIG: Record<
   initial: { label: "初回契約", color: "text-blue-600", bg: "bg-blue-100" },
   renewed: { label: "継続契約中", color: "text-emerald-600", bg: "bg-emerald-100" },
   auto_renewing: { label: "自動更新中", color: "text-amber-600", bg: "bg-amber-100" },
+  cancelled: { label: "解約", color: "text-red-600", bg: "bg-red-100" },
 };
 
 function ContractStatusBadge({ status }: { status: ContractStatus }) {

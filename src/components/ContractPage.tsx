@@ -34,6 +34,7 @@ interface ContractPageProps {
   onAdd: (productType: ProductType) => void;
   onEdit: (contract: Contract) => void;
   onDelete: (id: string) => void;
+  onStatusChange: (contract: Contract, cancelled: boolean) => void;
 }
 
 export function ContractPage({
@@ -49,6 +50,7 @@ export function ContractPage({
   onAdd,
   onEdit,
   onDelete,
+  onStatusChange,
 }: ContractPageProps) {
   const [selectedProducts, setSelectedProducts] = useState<Set<ProductType>>(new Set(ALL_PRODUCT_IDS));
   const [addDropdownOpen, setAddDropdownOpen] = useState(false);
@@ -94,7 +96,7 @@ export function ContractPage({
         onBack={() => onShowList(false)}
         onAdd={onAdd}
         onEdit={onEdit}
-        onDelete={onDelete}
+        onStatusChange={onStatusChange}
         addDropdownOpen={addDropdownOpen}
         setAddDropdownOpen={setAddDropdownOpen}
       />
@@ -364,7 +366,7 @@ function ContractDetailView({
   onBack,
   onAdd,
   onEdit,
-  onDelete,
+  onStatusChange,
   addDropdownOpen,
   setAddDropdownOpen,
 }: {
@@ -374,7 +376,7 @@ function ContractDetailView({
   onBack: () => void;
   onAdd: (productType: ProductType) => void;
   onEdit: (contract: Contract) => void;
-  onDelete: (id: string) => void;
+  onStatusChange: (contract: Contract, cancelled: boolean) => void;
   addDropdownOpen: boolean;
   setAddDropdownOpen: (open: boolean) => void;
 }) {
@@ -483,6 +485,7 @@ function ContractDetailView({
               { key: "initial" as ContractStatus, label: "初回契約", color: "blue", bg: "bg-blue-50", border: "border-blue-200", text: "text-blue-700", accent: "text-blue-900" },
               { key: "renewed" as ContractStatus, label: "継続契約", color: "emerald", bg: "bg-emerald-50", border: "border-emerald-200", text: "text-emerald-700", accent: "text-emerald-900" },
               { key: "auto_renewing" as ContractStatus, label: "自動更新", color: "amber", bg: "bg-amber-50", border: "border-amber-200", text: "text-amber-700", accent: "text-amber-900" },
+              { key: "cancelled" as ContractStatus, label: "解約", color: "red", bg: "bg-red-50", border: "border-red-200", text: "text-red-600", accent: "text-red-800" },
             ];
             const grouped = statusGroups.map((sg) => {
               const items = displayContracts.filter((c) => (c.contract_status || "initial") === sg.key);
@@ -523,7 +526,7 @@ function ContractDetailView({
             <table className="w-full border-collapse text-[13px]">
               <thead>
                 <tr className="bg-slate-50">
-                  {["企業名", "製品", "ステータス", "開始", "起算", "期間", "完了", "月額", "条件", "初期", "OP", ""].map((h, i) => (
+                  {["企業名", "製品", "ステータス", "開始", "起算", "期間", "完了", "月額", "条件", "初期", "OP", "契約状態"].map((h, i) => (
                     <th key={i} className="px-3 py-2 text-left font-bold text-slate-600 border-b-2 border-slate-200 whitespace-nowrap text-xs">
                       {h}
                     </th>
@@ -539,6 +542,7 @@ function ContractDetailView({
                     initial: { label: "初回", bg: "bg-blue-50", text: "text-blue-700", border: "border-blue-200" },
                     renewed: { label: "継続", bg: "bg-emerald-50", text: "text-emerald-700", border: "border-emerald-200" },
                     auto_renewing: { label: "自動更新", bg: "bg-amber-50", text: "text-amber-700", border: "border-amber-200" },
+                    cancelled: { label: "解約", bg: "bg-red-50", text: "text-red-600", border: "border-red-200" },
                   }[status];
                   return (
                     <tr key={c.id} className="cursor-pointer hover:bg-slate-50 border-b border-slate-100" onClick={() => onEdit(c)}>
@@ -584,12 +588,21 @@ function ContractDetailView({
                         ) : <span className="text-slate-300">—</span>}
                       </td>
                       <td className="px-3 py-2">
-                        <button
-                          className="px-4 py-2 bg-red-50 text-red-600 border border-red-200 rounded-lg text-[13px] font-medium cursor-pointer hover:bg-red-100"
-                          onClick={(e) => { e.stopPropagation(); onDelete(c.id); }}
-                        >
-                          削除
-                        </button>
+                        {status === "cancelled" ? (
+                          <button
+                            className="px-3 py-1.5 bg-emerald-50 text-emerald-600 border border-emerald-200 rounded-lg text-[11px] font-bold cursor-pointer hover:bg-emerald-100"
+                            onClick={(e) => { e.stopPropagation(); onStatusChange(c, false); }}
+                          >
+                            契約に戻す
+                          </button>
+                        ) : (
+                          <button
+                            className="px-3 py-1.5 bg-red-50 text-red-600 border border-red-200 rounded-lg text-[11px] font-bold cursor-pointer hover:bg-red-100"
+                            onClick={(e) => { e.stopPropagation(); onStatusChange(c, true); }}
+                          >
+                            解約
+                          </button>
+                        )}
                       </td>
                     </tr>
                   );

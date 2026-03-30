@@ -3,7 +3,7 @@ export type CloseOffset = "-1" | "0" | "1";
 export type PayType = "same_end" | "next_end" | "next_10" | "next2_10";
 export type BillingDay = "1" | "16";
 export type BillingType = "monthly" | "lump_sum";
-export type ContractStatus = "initial" | "renewed" | "auto_renewing";
+export type ContractStatus = "initial" | "renewed" | "auto_renewing" | "cancelled";
 
 export interface Company {
   id: string;

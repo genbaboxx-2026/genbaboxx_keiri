@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback, useMemo, useRef } from "react";
-import type { Company, Contract, ProductType, Profile, Expense, Settings, InvoiceTemplate } from "@/lib/database.types";
+import type { Company, Contract, ContractStatus, ProductType, Profile, Expense, Settings, InvoiceTemplate } from "@/lib/database.types";
 import {
   fetchCompanies,
   fetchContracts,
@@ -360,6 +360,17 @@ export default function Home() {
     }
   };
 
+  const handleContractStatusChange = async (contract: Contract, cancelled: boolean) => {
+    const newStatus = cancelled ? "cancelled" : (contract.contract_status === "cancelled" ? "initial" : contract.contract_status);
+    try {
+      const saved = await upsertContract({ ...contract, contract_status: newStatus as ContractStatus });
+      setContracts((prev) => prev.map((c) => (c.id === saved.id ? saved : c)));
+    } catch (e) {
+      console.error(e);
+      alert("ステータス変更に失敗しました");
+    }
+  };
+
   const handleDeleteContract = async (id: string) => {
     if (!confirm("この契約を削除しますか？")) return;
     try {
@@ -520,6 +531,7 @@ export default function Home() {
           }
         }}
         onDelete={handleDeleteContract}
+        onStatusChange={handleContractStatusChange}
       />
     );
   }
