@@ -239,7 +239,7 @@ function MonthlyRevenueTable({
   }, [allMonths, contracts]);
 
   return (
-    <div ref={scrollRef} className="overflow-auto rounded-xl border border-slate-200 max-h-[720px]">
+    <div ref={scrollRef} className="overflow-auto rounded-xl border border-slate-200 max-h-[720px] scrollbar-hide" style={{ scrollbarWidth: "none" }}>
       <table className="w-full border-collapse text-[11px]">
         <thead className="sticky top-0 z-20">
           <tr className="bg-slate-50">
