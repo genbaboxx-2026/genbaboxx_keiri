@@ -107,14 +107,14 @@ export function ContractPage({
         <h2 className="text-[22px] font-extrabold">契約</h2>
         <div className="flex gap-2.5">
           <button
-            className="px-5 py-2.5 bg-white rounded-[10px] text-sm font-semibold cursor-pointer hover:bg-slate-50 border-[1.5px] text-slate-600 border-slate-300"
+            className="px-5 py-2 bg-white rounded-[10px] text-sm font-semibold cursor-pointer hover:bg-slate-50 border-[1.5px] text-slate-600 border-slate-300"
             onClick={() => onShowList(true)}
           >
             契約一覧
           </button>
           <div className="relative">
             <button
-              className="px-7 py-2.5 text-white rounded-[10px] text-sm font-semibold cursor-pointer hover:opacity-90 bg-slate-800"
+              className="px-7 py-2 text-white rounded-[10px] text-sm font-semibold cursor-pointer hover:opacity-90 bg-slate-800"
               onClick={handleAdd}
             >
               + 契約を追加
@@ -124,7 +124,7 @@ export function ContractPage({
                 {PRODUCTS.map((p) => (
                   <button
                     key={p.id}
-                    className="w-full px-4 py-2.5 text-left text-sm font-semibold hover:bg-slate-50 cursor-pointer flex items-center gap-2 first:rounded-t-xl last:rounded-b-xl"
+                    className="w-full px-4 py-2 text-left text-sm font-semibold hover:bg-slate-50 cursor-pointer flex items-center gap-2 first:rounded-t-xl last:rounded-b-xl"
                     onClick={() => {
                       setAddDropdownOpen(false);
                       onAdd(p.id);
@@ -144,7 +144,7 @@ export function ContractPage({
           <div className="text-[40px] mb-3">📄</div>
           <div>契約がまだありません</div>
           <button
-            className="mt-4 px-7 py-2.5 text-white rounded-[10px] text-sm font-semibold cursor-pointer bg-slate-800"
+            className="mt-4 px-7 py-2 text-white rounded-[10px] text-sm font-semibold cursor-pointer bg-slate-800"
             onClick={handleAdd}
           >
             最初の契約を追加
@@ -237,24 +237,24 @@ function MonthlyRevenueTable({
   }, [allMonths, contracts]);
 
   return (
-    <div ref={scrollRef} className="overflow-x-auto rounded-xl border border-slate-200">
-      <table className="w-full border-collapse text-xs">
-        <thead>
+    <div ref={scrollRef} className="overflow-auto rounded-xl border border-slate-200 max-h-[720px]">
+      <table className="w-full border-collapse text-[11px]">
+        <thead className="sticky top-0 z-20">
           <tr className="bg-slate-50">
-            <th className="px-2 py-2.5 text-center font-bold border-b-2 border-slate-200 sticky left-0 bg-slate-50 min-w-[36px] z-10">
+            <th className="px-2 py-2 text-center font-bold border-b-2 border-slate-200 sticky left-0 bg-slate-50 min-w-[36px] z-30">
               No
             </th>
-            <th className="px-3 py-2.5 text-left font-bold border-b-2 border-slate-200 sticky left-[36px] bg-slate-50 min-w-[130px] z-10">
+            <th className="px-3 py-2 text-left font-bold border-b-2 border-slate-200 sticky left-[36px] bg-slate-50 min-w-[130px] z-30">
               企業名
             </th>
-            <th className="px-1 py-2.5 text-left font-bold border-b-2 border-slate-200 sticky left-[166px] bg-slate-50 min-w-[90px] z-10">
+            <th className="px-1 py-2 text-left font-bold border-b-2 border-slate-200 sticky left-[166px] bg-slate-50 min-w-[90px] z-30">
               製品
             </th>
             {allMonths.map((m) => (
               <th
                 key={m}
                 {...(m === prevMonth ? { "data-scroll-target": true } : {})}
-                className={`px-2 py-2.5 text-right font-semibold text-slate-500 border-b-2 border-slate-200 whitespace-nowrap min-w-[85px] ${m === currentMonth ? "month-current" : ""}`}
+                className={`px-2 py-2 text-right font-semibold text-slate-500 border-b-2 border-slate-200 whitespace-nowrap min-w-[85px] ${m === currentMonth ? "month-current" : ""}`}
               >
                 {parseInt(m.split("-")[1])}月
                 <br />
@@ -282,13 +282,13 @@ function MonthlyRevenueTable({
             const serviceMonths = new Set(ms);
             return (
               <tr key={c.id}>
-                <td className="px-2 py-2.5 text-center text-slate-400 border-b border-slate-100 sticky left-0 bg-white z-10">
+                <td className="px-2 py-2 text-center text-slate-400 border-b border-slate-100 sticky left-0 bg-white z-10">
                   {idx + 1}
                 </td>
-                <td className="px-3 py-2.5 font-semibold border-b border-slate-100 sticky left-[36px] bg-white whitespace-nowrap z-10">
+                <td className="px-3 py-2 font-semibold border-b border-slate-100 sticky left-[36px] bg-white whitespace-nowrap z-10">
                   {getCompanyName(c.company_id)}
                 </td>
-                <td className="px-1 py-2.5 border-b border-slate-100 sticky left-[166px] bg-white z-10">
+                <td className="px-1 py-2 border-b border-slate-100 sticky left-[166px] bg-white z-10">
                   <Badge product={c.product_type} />
                 </td>
                 {allMonths.map((month) => {
@@ -317,7 +317,7 @@ function MonthlyRevenueTable({
                   return (
                     <td
                       key={month}
-                      className={`px-2 py-2.5 text-right border-b tabular-nums ${
+                      className={`px-2 py-2 text-right border-b tabular-nums ${
                         inService
                           ? "bg-amber-50 border-b-amber-100"
                           : "border-b-slate-100"
@@ -332,8 +332,8 @@ function MonthlyRevenueTable({
           })}
           {/* 合計行 */}
           <tr className="bg-slate-50">
-            <td className="px-2 py-2.5 sticky left-0 bg-slate-50 z-10" />
-            <td colSpan={2} className="px-3 py-2.5 font-extrabold sticky left-[36px] bg-slate-50 z-10">
+            <td className="px-2 py-2 sticky left-0 bg-slate-50 z-10" />
+            <td colSpan={2} className="px-3 py-2 font-extrabold sticky left-[36px] bg-slate-50 z-10">
               合計
             </td>
             {allMonths.map((m) => {
@@ -343,7 +343,7 @@ function MonthlyRevenueTable({
               return (
                 <td
                   key={m}
-                  className={`px-2 py-2.5 text-right font-extrabold tabular-nums text-slate-800 ${m === currentMonth ? "month-current" : ""}`}
+                  className={`px-2 py-2 text-right font-extrabold tabular-nums text-slate-800 ${m === currentMonth ? "month-current" : ""}`}
                 >
                   {total > 0 ? formatNumber(total) : "—"}
                 </td>
@@ -424,7 +424,7 @@ function ContractDetailView({
         </div>
         <div className="relative">
           <button
-            className="px-7 py-2.5 text-white rounded-[10px] text-sm font-semibold cursor-pointer hover:opacity-90 bg-slate-800"
+            className="px-7 py-2 text-white rounded-[10px] text-sm font-semibold cursor-pointer hover:opacity-90 bg-slate-800"
             onClick={handleAdd}
           >
             + 契約を追加
@@ -434,7 +434,7 @@ function ContractDetailView({
               {PRODUCTS.map((p) => (
                 <button
                   key={p.id}
-                  className="w-full px-4 py-2.5 text-left text-sm font-semibold hover:bg-slate-50 cursor-pointer flex items-center gap-2 first:rounded-t-xl last:rounded-b-xl"
+                  className="w-full px-4 py-2 text-left text-sm font-semibold hover:bg-slate-50 cursor-pointer flex items-center gap-2 first:rounded-t-xl last:rounded-b-xl"
                   onClick={() => {
                     setAddDropdownOpen(false);
                     onAdd(p.id);
@@ -542,20 +542,20 @@ function ContractDetailView({
                   }[status];
                   return (
                     <tr key={c.id} className="cursor-pointer hover:bg-slate-50 border-b border-slate-100" onClick={() => onEdit(c)}>
-                      <td className="px-3 py-2.5 font-semibold">{getCompanyName(c.company_id)}</td>
-                      <td className="px-3 py-2.5">
+                      <td className="px-3 py-2 font-semibold">{getCompanyName(c.company_id)}</td>
+                      <td className="px-3 py-2">
                         <Badge product={c.product_type} />
                       </td>
-                      <td className="px-3 py-2.5">
+                      <td className="px-3 py-2">
                         <span className={`${statusConfig.bg} ${statusConfig.text} ${statusConfig.border} border text-[10px] font-bold px-2 py-0.5 rounded-full whitespace-nowrap`}>
                           {statusConfig.label}
                         </span>
                       </td>
-                      <td className="px-3 py-2.5 text-xs">{formatDate(c.contract_start_date)}</td>
-                      <td className="px-3 py-2.5 text-xs">{formatDate(bs)}</td>
-                      <td className="px-3 py-2.5">{c.duration_months}ヶ月</td>
-                      <td className="px-3 py-2.5 text-xs font-semibold text-blue-800">{formatDate(end)}</td>
-                      <td className="px-3 py-2.5 font-semibold">
+                      <td className="px-3 py-2 text-xs">{formatDate(c.contract_start_date)}</td>
+                      <td className="px-3 py-2 text-xs">{formatDate(bs)}</td>
+                      <td className="px-3 py-2">{c.duration_months}ヶ月</td>
+                      <td className="px-3 py-2 text-xs font-semibold text-blue-800">{formatDate(end)}</td>
+                      <td className="px-3 py-2 font-semibold">
                         {formatYen(c.monthly_fee)}
                         {c.fee_months > 1 && (
                           <span className="ml-1 text-[10px] text-slate-500">{c.fee_months}ヶ月</span>
@@ -564,8 +564,8 @@ function ContractDetailView({
                           <span className="ml-1 text-[10px] font-bold text-amber-600 bg-amber-50 px-1.5 py-0.5 rounded">一括</span>
                         )}
                       </td>
-                      <td className="px-3 py-2.5 text-[10px] text-slate-500">{payDescriptionGeneric(c.monthly_close, c.monthly_pay)}</td>
-                      <td className="px-3 py-2.5 text-xs">
+                      <td className="px-3 py-2 text-[10px] text-slate-500">{payDescriptionGeneric(c.monthly_close, c.monthly_pay)}</td>
+                      <td className="px-3 py-2 text-xs">
                         {c.has_initial_fee ? (
                           <span>
                             {formatYen(c.initial_fee)}
@@ -574,7 +574,7 @@ function ContractDetailView({
                           </span>
                         ) : <span className="text-slate-300">—</span>}
                       </td>
-                      <td className="px-3 py-2.5 text-xs">
+                      <td className="px-3 py-2 text-xs">
                         {c.has_option ? (
                           <span>
                             {c.option_name} {formatYen(c.option_fee)}/月
@@ -583,7 +583,7 @@ function ContractDetailView({
                           </span>
                         ) : <span className="text-slate-300">—</span>}
                       </td>
-                      <td className="px-3 py-2.5">
+                      <td className="px-3 py-2">
                         <button
                           className="px-4 py-2 bg-red-50 text-red-600 border border-red-200 rounded-lg text-[13px] font-medium cursor-pointer hover:bg-red-100"
                           onClick={(e) => { e.stopPropagation(); onDelete(c.id); }}
