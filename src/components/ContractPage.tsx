@@ -208,7 +208,7 @@ function MonthlyRevenueTable({
     if (!container) return;
     const cell = container.querySelector<HTMLElement>("[data-scroll-target]");
     if (cell) {
-      container.scrollLeft = cell.offsetLeft - 130;
+      container.scrollLeft = cell.offsetLeft - 166;
     }
   }, [allMonths, contracts]);
 
@@ -217,10 +217,13 @@ function MonthlyRevenueTable({
       <table className="w-full border-collapse text-xs">
         <thead>
           <tr className="bg-slate-50">
-            <th className="px-3 py-2.5 text-left font-bold border-b-2 border-slate-200 sticky left-0 bg-slate-50 min-w-[130px] z-10">
+            <th className="px-2 py-2.5 text-center font-bold border-b-2 border-slate-200 sticky left-0 bg-slate-50 min-w-[36px] z-10">
+              No
+            </th>
+            <th className="px-3 py-2.5 text-left font-bold border-b-2 border-slate-200 sticky left-[36px] bg-slate-50 min-w-[130px] z-10">
               企業名
             </th>
-            <th className="px-1 py-2.5 text-left font-bold border-b-2 border-slate-200 sticky left-[130px] bg-slate-50 min-w-[90px] z-10">
+            <th className="px-1 py-2.5 text-left font-bold border-b-2 border-slate-200 sticky left-[166px] bg-slate-50 min-w-[90px] z-10">
               製品
             </th>
             {allMonths.map((m) => (
@@ -239,7 +242,7 @@ function MonthlyRevenueTable({
           </tr>
         </thead>
         <tbody>
-          {contracts.map((c) => {
+          {contracts.map((c, idx) => {
             const bs = makeBillingStart(c.billing_month, c.billing_day);
             const dur = effectiveDuration(c.billing_month, c.billing_day, c.duration_months, c.contract_status);
             const ms = billingMonths(bs, dur);
@@ -255,10 +258,13 @@ function MonthlyRevenueTable({
             const serviceMonths = new Set(ms);
             return (
               <tr key={c.id}>
-                <td className="px-3 py-2.5 font-semibold border-b border-slate-100 sticky left-0 bg-white whitespace-nowrap z-10">
+                <td className="px-2 py-2.5 text-center text-slate-400 border-b border-slate-100 sticky left-0 bg-white z-10">
+                  {idx + 1}
+                </td>
+                <td className="px-3 py-2.5 font-semibold border-b border-slate-100 sticky left-[36px] bg-white whitespace-nowrap z-10">
                   {getCompanyName(c.company_id)}
                 </td>
-                <td className="px-1 py-2.5 border-b border-slate-100 sticky left-[130px] bg-white z-10">
+                <td className="px-1 py-2.5 border-b border-slate-100 sticky left-[166px] bg-white z-10">
                   <Badge product={c.product_type} />
                 </td>
                 {allMonths.map((month) => {
@@ -302,7 +308,7 @@ function MonthlyRevenueTable({
           })}
           {/* 合計行 */}
           <tr className="bg-slate-50">
-            <td colSpan={2} className="px-3 py-2.5 font-extrabold sticky left-0 bg-slate-50 z-10">
+            <td colSpan={3} className="px-3 py-2.5 font-extrabold sticky left-0 bg-slate-50 z-10">
               合計
             </td>
             {allMonths.map((m) => {
