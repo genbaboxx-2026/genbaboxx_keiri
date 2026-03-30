@@ -228,6 +228,41 @@ export function CashflowPage({
     setEditAdjValue("");
   };
 
+  // 期間フィルター
+  type PeriodMode = "all" | "year" | "fiscal";
+  const [periodMode, setPeriodMode] = useState<PeriodMode>("all");
+
+  const now = new Date();
+  const currentYear = now.getFullYear();
+
+  // 年・期の選択肢を生成
+  const yearOptions = [...new Set(allMonths.map((m) => parseInt(m.split("-")[0])))].sort();
+  const [selectedYear, setSelectedYear] = useState(currentYear);
+
+  // 期(5月〜4月)の選択肢: "2026" = 2026年5月〜2027年4月
+  const fiscalOptions = [...new Set(allMonths.map((m) => {
+    const [y, mo] = m.split("-").map(Number);
+    return mo >= 5 ? y : y - 1;
+  }))].sort();
+  const [selectedFiscal, setSelectedFiscal] = useState(() => (now.getMonth() + 1 >= 5 ? currentYear : currentYear - 1));
+
+  const displayMonths = (() => {
+    if (periodMode === "year") {
+      return allMonths.filter((m) => {
+        const y = parseInt(m.split("-")[0]);
+        return y === selectedYear;
+      });
+    }
+    if (periodMode === "fiscal") {
+      return allMonths.filter((m) => {
+        const [y, mo] = m.split("-").map(Number);
+        const fy = mo >= 5 ? y : y - 1;
+        return fy === selectedFiscal;
+      });
+    }
+    return allMonths;
+  })();
+
   const summaryCards = [
     { label: "企業数", value: companiesCount, unit: "社" },
     { label: "BAKUSOQ", value: contractsFor("bakusoq").length, unit: "件" },
@@ -251,6 +286,47 @@ export function CashflowPage({
         ))}
       </div>
 
+      {/* 期間フィルター */}
+      <div className="flex items-center gap-2 mb-4">
+        {(["all", "year", "fiscal"] as PeriodMode[]).map((mode) => {
+          const label = { all: "全期間", year: "年（1〜12月）", fiscal: "期（5〜4月）" }[mode];
+          const isActive = periodMode === mode;
+          return (
+            <button
+              key={mode}
+              className={`px-4 py-2 rounded-lg text-[13px] font-semibold cursor-pointer border transition-colors ${
+                isActive ? "bg-slate-800 text-white border-slate-800" : "bg-white text-slate-500 border-slate-200 hover:bg-slate-50"
+              }`}
+              onClick={() => setPeriodMode(mode)}
+            >
+              {label}
+            </button>
+          );
+        })}
+        {periodMode === "year" && (
+          <select
+            className="px-3 py-2 border border-slate-200 rounded-lg text-[13px] outline-none"
+            value={selectedYear}
+            onChange={(e) => setSelectedYear(parseInt(e.target.value))}
+          >
+            {yearOptions.map((y) => (
+              <option key={y} value={y}>{y}年</option>
+            ))}
+          </select>
+        )}
+        {periodMode === "fiscal" && (
+          <select
+            className="px-3 py-2 border border-slate-200 rounded-lg text-[13px] outline-none"
+            value={selectedFiscal}
+            onChange={(e) => setSelectedFiscal(parseInt(e.target.value))}
+          >
+            {fiscalOptions.map((y) => (
+              <option key={y} value={y}>{y}年5月〜{y + 1}年4月</option>
+            ))}
+          </select>
+        )}
+      </div>
+
       <div ref={scrollRef} className="overflow-x-auto rounded-xl border border-slate-200">
         <table className="w-full border-collapse text-xs">
           <thead>
@@ -258,7 +334,7 @@ export function CashflowPage({
               <th className="px-3.5 py-2.5 text-left font-bold sticky left-0 bg-slate-50 border-b-2 border-slate-200 min-w-[160px] z-10">
                 項目
               </th>
-              {allMonths.map((m) => (
+              {displayMonths.map((m) => (
                 <th
                   key={m}
                   {...(m === prevMonth ? { "data-scroll-target": true } : {})}
@@ -285,7 +361,7 @@ export function CashflowPage({
                   companyIds={companyIds}
                   companies={companies}
                   contracts={productContracts}
-                  allMonths={allMonths}
+                  displayMonths={displayMonths}
                   revenueFor={revenueFor}
                   currentMonth={currentMonth}
                 />
@@ -297,7 +373,7 @@ export function CashflowPage({
               <td className="px-3.5 py-2 font-extrabold text-sm sticky left-0 bg-slate-50 text-slate-800 z-10">
                 売上合計<span className="text-[10px] font-normal text-slate-400 ml-1">(税別)</span>
               </td>
-              {allMonths.map((m) => {
+              {displayMonths.map((m) => {
                 const v = revenueFor(m);
                 return (
                   <td key={m} className="px-2 py-2 text-right font-extrabold text-[13px] text-slate-800 tabular-nums">
@@ -311,7 +387,7 @@ export function CashflowPage({
               <td className="px-3.5 py-2 font-extrabold text-sm sticky left-0 bg-slate-50 text-blue-800 z-10">
                 売上合計<span className="text-[10px] font-normal text-blue-400 ml-1">(税込)</span>
               </td>
-              {allMonths.map((m) => {
+              {displayMonths.map((m) => {
                 const v = Math.floor(revenueFor(m) * 1.1);
                 return (
                   <td key={m} className="px-2 py-2 text-right font-extrabold text-[13px] text-blue-800 tabular-nums">
@@ -323,7 +399,7 @@ export function CashflowPage({
 
             {/* スペーサー */}
             <tr>
-              <td colSpan={allMonths.length + 1} className="h-4 bg-white border-none" />
+              <td colSpan={displayMonths.length + 1} className="h-4 bg-white border-none" />
             </tr>
 
             {/* 支出ヘッダー */}
@@ -332,7 +408,7 @@ export function CashflowPage({
                 <span className="inline-block w-4 text-[10px]">{expenseExpanded ? "▼" : "▶"}</span>
                 支出
               </td>
-              {allMonths.map((m) => (
+              {displayMonths.map((m) => (
                 <td key={m} className="bg-slate-100" />
               ))}
             </tr>
@@ -386,7 +462,7 @@ export function CashflowPage({
                     </div>
                   )}
                 </td>
-                {allMonths.map((m) => {
+                {displayMonths.map((m) => {
                   const items = expenses.filter((e) => e.name === name && e.month === m);
                   const total = items.reduce((s, e) => s + e.amount, 0);
                   const isEditing = editingCell?.name === name && editingCell?.month === m;
@@ -434,7 +510,7 @@ export function CashflowPage({
                     + 行を追加
                   </button>
                 </td>
-                {allMonths.map((m) => (
+                {displayMonths.map((m) => (
                   <td key={m} />
                 ))}
               </tr>
@@ -471,7 +547,7 @@ export function CashflowPage({
                     </button>
                   </div>
                 </td>
-                {allMonths.map((m) => (
+                {displayMonths.map((m) => (
                   <td key={m} className="border-b border-slate-100" />
                 ))}
               </tr>
@@ -480,7 +556,7 @@ export function CashflowPage({
             {/* 支出合計 */}
             <tr className="bg-slate-50 border-t-2 border-slate-300">
               <td className="px-3.5 py-3 font-extrabold text-sm sticky left-0 bg-slate-50 text-slate-800 z-10">支出合計</td>
-              {allMonths.map((m) => {
+              {displayMonths.map((m) => {
                 const v = expenseForMonth(m);
                 return (
                   <td key={m} className={`px-2 py-3 text-right font-extrabold text-[13px] text-slate-800 tabular-nums`}>
@@ -493,7 +569,7 @@ export function CashflowPage({
             {/* 収支 */}
             <tr className="bg-slate-100 border-t-2 border-slate-400">
               <td className="px-3.5 py-3 font-extrabold text-sm sticky left-0 bg-slate-100 text-slate-900 z-10">収支<span className="text-[10px] font-normal text-slate-400 ml-1">(税込)</span></td>
-              {allMonths.map((m) => {
+              {displayMonths.map((m) => {
                 const rev = Math.floor(revenueFor(m) * 1.1);
                 const exp = expenseForMonth(m);
                 const diff = rev - exp;
@@ -508,7 +584,7 @@ export function CashflowPage({
             {/* 調整 */}
             <tr className="border-b border-slate-200">
               <td className="px-3.5 py-2 font-semibold text-xs sticky left-0 bg-white text-slate-600 z-10">調整</td>
-              {allMonths.map((m) => {
+              {displayMonths.map((m) => {
                 const val = adjustments[m] || 0;
                 const isEditing = editingAdj === m;
                 return (
@@ -548,7 +624,7 @@ export function CashflowPage({
               <td className="px-3.5 py-3 font-extrabold text-sm sticky left-0 bg-slate-200 text-slate-900 z-10">累計残高</td>
               {(() => {
                 let cumulative = 0;
-                return allMonths.map((m) => {
+                return displayMonths.map((m) => {
                   const rev = Math.floor(revenueFor(m) * 1.1);
                   const exp = expenseForMonth(m);
                   const adj = adjustments[m] || 0;
@@ -569,7 +645,7 @@ export function CashflowPage({
 }
 
 function ProductRows({
-  product, isExpanded, onToggle, companyIds, companies, contracts, allMonths, revenueFor, currentMonth,
+  product, isExpanded, onToggle, companyIds, companies, contracts, displayMonths, revenueFor, currentMonth,
 }: {
   product: (typeof PRODUCTS)[number];
   isExpanded: boolean;
@@ -577,7 +653,7 @@ function ProductRows({
   companyIds: string[];
   companies: Company[];
   contracts: Contract[];
-  allMonths: string[];
+  displayMonths: string[];
   revenueFor: (month: string, productFilter?: string) => number;
   currentMonth: string;
 }) {
@@ -590,7 +666,7 @@ function ProductRows({
             <Badge product={product.id} />
           </span>
         </td>
-        {allMonths.map((m) => {
+        {displayMonths.map((m) => {
           const v = revenueFor(m, product.id);
           return (
             <td key={m} className={`px-2 py-2 text-right border-b border-slate-100 tabular-nums font-semibold ${v > 0 ? "text-slate-700" : "text-slate-200"}`}>
@@ -606,7 +682,7 @@ function ProductRows({
             <td className="pl-10 pr-3.5 py-1.5 border-b border-slate-50 sticky left-0 bg-slate-50/50 z-10 text-[11px] text-slate-500">
               {companyName}
             </td>
-            {allMonths.map((m) => {
+            {displayMonths.map((m) => {
               const v = companyRevenueForMonth(contracts, cid, m);
               return (
                 <td key={m} className={`px-2 py-1.5 text-right border-b border-slate-50 tabular-nums text-[11px] ${v > 0 ? "text-slate-500" : "text-slate-200"}`}>
