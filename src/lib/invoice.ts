@@ -3,7 +3,7 @@ import type { CompanyInvoice } from "./invoiceCalc";
 
 const fmt = (n: number) => n.toLocaleString();
 
-function generateInvoiceNumber(): string {
+export function generateInvoiceNumber(): string {
   const ts = Date.now().toString();
   const last10 = ts.slice(-10).padStart(10, "0");
   return `INV-${last10}`;
@@ -12,7 +12,7 @@ function generateInvoiceNumber(): string {
 /**
  * InvoicePageのHTMLを生成（invoice-preview.jsxと完全一致）
  */
-function buildInvoiceHTML(
+export function buildInvoiceHTML(
   inv: CompanyInvoice,
   settings: Settings,
   issueDate: string,
@@ -221,6 +221,34 @@ export async function generateInvoicePDF(
   } finally {
     document.body.removeChild(container);
   }
+}
+
+/**
+ * 単一企業のPDFをArrayBufferで生成（ZIP用）
+ */
+export async function renderInvoicePDFBytes(
+  inv: CompanyInvoice,
+  settings: Settings,
+  issueDate: string,
+  invoiceNumber: string,
+  container: HTMLDivElement,
+  html2canvas: (el: HTMLElement, opts: Record<string, unknown>) => Promise<HTMLCanvasElement>,
+  jsPDFClass: typeof import("jspdf").jsPDF,
+  dueDate?: string,
+  notes?: string
+): Promise<ArrayBuffer> {
+  const html = buildInvoiceHTML(inv, settings, issueDate, invoiceNumber, dueDate, notes);
+  container.innerHTML = html;
+  const canvas = await html2canvas(container.firstElementChild as HTMLElement, {
+    scale: 2,
+    useCORS: true,
+    backgroundColor: "#ffffff",
+    width: 700,
+    height: 990,
+  });
+  const doc = new jsPDFClass({ orientation: "portrait", unit: "mm", format: "a4" });
+  doc.addImage(canvas.toDataURL("image/png"), "PNG", 0, 0, 210, 297);
+  return doc.output("arraybuffer");
 }
 
 /**

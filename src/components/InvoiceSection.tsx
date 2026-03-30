@@ -269,18 +269,34 @@ export function InvoiceSection({
     setShowSendConfirm(true);
   };
 
+  const [zipProgress, setZipProgress] = useState<{ current: number; total: number } | null>(null);
+
   const handleGenerate = async () => {
     if (!settings || selectedInvoices.length === 0) return;
     setGenerating(true);
+    setZipProgress(null);
     try {
-      const { generateInvoicePDF } = await import("@/lib/invoice");
-      await generateInvoicePDF(settings, selectedInvoices, selectedMonth, invoiceTemplates?.[0]?.notes, dueDate, companyNotes, dueDates);
+      const { generateInvoiceZIP } = await import("@/lib/invoiceZip");
+      await generateInvoiceZIP(
+        settings,
+        selectedInvoices,
+        contracts,
+        companies,
+        selectedMonth,
+        invoiceTemplates,
+        invoiceTemplates?.[0]?.notes,
+        dueDate,
+        companyNotes,
+        dueDates,
+        (current, total) => setZipProgress({ current, total })
+      );
       setShowSendConfirm(false);
     } catch (e) {
       console.error(e);
-      alert("PDF生成に失敗しました");
+      alert("ZIP生成に失敗しました");
     } finally {
       setGenerating(false);
+      setZipProgress(null);
     }
   };
 
@@ -548,7 +564,11 @@ export function InvoiceSection({
                 }
                 onClick={handleGenerate}
               >
-                {generating ? "生成中..." : `全${selectedInvoices.length}社を一括PDFダウンロード`}
+                {generating
+                  ? zipProgress
+                    ? `ZIP生成中... (${zipProgress.current}/${zipProgress.total})`
+                    : "ZIP生成中..."
+                  : `全${selectedInvoices.length}社を請求書ZIPダウンロード`}
               </button>
               <button
                 className="w-full py-3 bg-slate-800 text-white rounded-[10px] text-sm font-bold cursor-pointer hover:bg-slate-700 disabled:opacity-40"
