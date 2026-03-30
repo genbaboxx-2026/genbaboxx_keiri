@@ -219,6 +219,28 @@ function MonthlyRevenueTable({
   revenueFor: (month: string, productFilter?: string) => number;
   selectedProducts: Set<ProductType>;
 }) {
+  const [sortKey, setSortKey] = useState<"no" | "company" | "product" | null>(null);
+  const [sortDir, setSortDir] = useState<"asc" | "desc">("asc");
+
+  const toggleSort = (key: "no" | "company" | "product") => {
+    if (sortKey === key) {
+      setSortDir((d) => (d === "asc" ? "desc" : "asc"));
+    } else {
+      setSortKey(key);
+      setSortDir("asc");
+    }
+  };
+
+  const sortedContracts = useMemo(() => {
+    if (!sortKey) return contracts;
+    const sorted = [...contracts].sort((a, b) => {
+      if (sortKey === "company") return getCompanyName(a.company_id).localeCompare(getCompanyName(b.company_id));
+      if (sortKey === "product") return a.product_type.localeCompare(b.product_type);
+      return 0;
+    });
+    return sortDir === "desc" ? sorted.reverse() : sorted;
+  }, [contracts, sortKey, sortDir, getCompanyName]);
+
   const currentMonth = getCurrentMonth();
   const scrollRef = useRef<HTMLDivElement>(null);
 
@@ -243,14 +265,14 @@ function MonthlyRevenueTable({
       <table className="w-full border-collapse text-[11px]">
         <thead className="sticky top-0 z-20">
           <tr className="bg-slate-50">
-            <th className="px-2 py-2 text-center font-bold border-b-2 border-slate-200 sticky left-0 bg-slate-50 min-w-[36px] z-30">
-              No
+            <th className="px-2 py-2 text-center font-bold border-b-2 border-slate-200 sticky left-0 bg-slate-50 min-w-[36px] z-30 cursor-pointer hover:bg-slate-100" onClick={() => { setSortKey(null); }}>
+              No {sortKey === null && ""}
             </th>
-            <th className="px-3 py-2 text-left font-bold border-b-2 border-slate-200 sticky left-[36px] bg-slate-50 min-w-[130px] z-30">
-              企業名
+            <th className="px-3 py-2 text-left font-bold border-b-2 border-slate-200 sticky left-[36px] bg-slate-50 min-w-[130px] z-30 cursor-pointer hover:bg-slate-100" onClick={() => toggleSort("company")}>
+              企業名 <span className="text-[9px] text-slate-400">{sortKey === "company" ? (sortDir === "asc" ? "▲" : "▼") : ""}</span>
             </th>
-            <th className="px-1 py-2 text-left font-bold border-b-2 border-slate-200 sticky left-[166px] bg-slate-50 min-w-[90px] z-30">
-              製品
+            <th className="px-1 py-2 text-left font-bold border-b-2 border-slate-200 sticky left-[166px] bg-slate-50 min-w-[90px] z-30 cursor-pointer hover:bg-slate-100" onClick={() => toggleSort("product")}>
+              製品 <span className="text-[9px] text-slate-400">{sortKey === "product" ? (sortDir === "asc" ? "▲" : "▼") : ""}</span>
             </th>
             {allMonths.map((m) => (
               <th
@@ -268,7 +290,7 @@ function MonthlyRevenueTable({
           </tr>
         </thead>
         <tbody>
-          {contracts.map((c, idx) => {
+          {sortedContracts.map((c, idx) => {
             const bs = makeBillingStart(c.billing_month, c.billing_day);
             const dur = effectiveDuration(c.billing_month, c.billing_day, c.duration_months, c.contract_status);
             const ms = billingMonths(bs, dur);
@@ -404,6 +426,42 @@ function ContractDetailView({
     );
   };
 
+  type DetailSortKey = "company" | "product" | "status" | "start" | "billing" | "duration" | "end" | "fee" | "state";
+  const [detailSortKey, setDetailSortKey] = useState<DetailSortKey | null>(null);
+  const [detailSortDir, setDetailSortDir] = useState<"asc" | "desc">("asc");
+
+  const toggleDetailSort = (key: DetailSortKey) => {
+    if (detailSortKey === key) {
+      setDetailSortDir((d) => (d === "asc" ? "desc" : "asc"));
+    } else {
+      setDetailSortKey(key);
+      setDetailSortDir("asc");
+    }
+  };
+
+  const sortedDetailContracts = useMemo(() => {
+    if (!detailSortKey) return displayContracts;
+    const sorted = [...displayContracts].sort((a, b) => {
+      switch (detailSortKey) {
+        case "company": return getCompanyName(a.company_id).localeCompare(getCompanyName(b.company_id));
+        case "product": return a.product_type.localeCompare(b.product_type);
+        case "status": return (a.contract_status || "initial").localeCompare(b.contract_status || "initial");
+        case "start": return (a.contract_start_date || "").localeCompare(b.contract_start_date || "");
+        case "billing": return (a.billing_month || "").localeCompare(b.billing_month || "");
+        case "duration": return a.duration_months - b.duration_months;
+        case "end": {
+          const ae = calcEndDate(makeBillingStart(a.billing_month, a.billing_day), a.duration_months) || "";
+          const be = calcEndDate(makeBillingStart(b.billing_month, b.billing_day), b.duration_months) || "";
+          return ae.localeCompare(be);
+        }
+        case "fee": return a.monthly_fee - b.monthly_fee;
+        case "state": return (a.contract_status === "cancelled" ? 1 : 0) - (b.contract_status === "cancelled" ? 1 : 0);
+        default: return 0;
+      }
+    });
+    return detailSortDir === "desc" ? sorted.reverse() : sorted;
+  }, [displayContracts, detailSortKey, detailSortDir, getCompanyName]);
+
   const handleAdd = () => {
     if (selectedProducts.size === 1) {
       onAdd([...selectedProducts][0]);
@@ -528,15 +586,35 @@ function ContractDetailView({
             <table className="w-full border-collapse text-[13px]">
               <thead>
                 <tr className="bg-slate-50">
-                  {["企業名", "製品", "ステータス", "開始", "起算", "期間", "完了", "月額", "条件", "初期", "OP", "契約状態"].map((h, i) => (
-                    <th key={i} className="px-3 py-2 text-left font-bold text-slate-600 border-b-2 border-slate-200 whitespace-nowrap text-xs">
-                      {h}
+                  {([
+                    { label: "企業名", key: "company" },
+                    { label: "製品", key: "product" },
+                    { label: "ステータス", key: "status" },
+                    { label: "開始", key: "start" },
+                    { label: "起算", key: "billing" },
+                    { label: "期間", key: "duration" },
+                    { label: "完了", key: "end" },
+                    { label: "月額", key: "fee" },
+                    { label: "条件", key: null },
+                    { label: "初期", key: null },
+                    { label: "OP", key: null },
+                    { label: "契約状態", key: "state" },
+                  ] as { label: string; key: DetailSortKey | null }[]).map((h, i) => (
+                    <th
+                      key={i}
+                      className={`px-3 py-2 text-left font-bold text-slate-600 border-b-2 border-slate-200 whitespace-nowrap text-xs ${h.key ? "cursor-pointer hover:bg-slate-100" : ""}`}
+                      onClick={() => h.key && toggleDetailSort(h.key)}
+                    >
+                      {h.label}
+                      {h.key && detailSortKey === h.key && (
+                        <span className="text-[9px] text-slate-400 ml-0.5">{detailSortDir === "asc" ? "▲" : "▼"}</span>
+                      )}
                     </th>
                   ))}
                 </tr>
               </thead>
               <tbody>
-                {displayContracts.map((c) => {
+                {sortedDetailContracts.map((c) => {
                   const bs = makeBillingStart(c.billing_month, c.billing_day);
                   const end = calcEndDate(bs, c.duration_months);
                   const status = c.contract_status || "initial";
