@@ -76,6 +76,7 @@ export function CashflowPage({
   const [editValue, setEditValue] = useState("");
   const [newRowName, setNewRowName] = useState("");
   const [showNewRow, setShowNewRow] = useState(false);
+  const [expenseExpanded, setExpenseExpanded] = useState(true);
   const [editingName, setEditingName] = useState<string | null>(null);
   const [editNameValue, setEditNameValue] = useState("");
   const [adjustments, setAdjustments] = useState<Record<string, number>>(() => {
@@ -326,8 +327,9 @@ export function CashflowPage({
             </tr>
 
             {/* 支出ヘッダー */}
-            <tr>
+            <tr className="cursor-pointer" onClick={() => setExpenseExpanded((p) => !p)}>
               <td className="px-3.5 py-2 bg-slate-100 font-bold text-sm text-slate-600 sticky left-0 z-10">
+                <span className="inline-block w-4 text-[10px]">{expenseExpanded ? "▼" : "▶"}</span>
                 支出
               </td>
               {allMonths.map((m) => (
@@ -336,7 +338,7 @@ export function CashflowPage({
             </tr>
 
             {/* 支出行 */}
-            {expenseNames.map((name) => (
+            {expenseExpanded && expenseNames.map((name) => (
               <tr key={name} className="border-b border-slate-100">
                 <td className="px-3.5 py-2 sticky left-0 bg-white z-10 font-medium text-slate-700 group">
                   {editingName === name ? (
@@ -422,7 +424,7 @@ export function CashflowPage({
             ))}
 
             {/* 行を追加ボタン */}
-            {!showNewRow && (
+            {expenseExpanded && !showNewRow && (
               <tr>
                 <td className="px-3.5 py-1.5 sticky left-0 bg-white z-10">
                   <button
@@ -439,7 +441,7 @@ export function CashflowPage({
             )}
 
             {/* 新規行入力 */}
-            {showNewRow && (
+            {expenseExpanded && showNewRow && (
               <tr className="border-b border-slate-100">
                 <td className="px-1 py-1 sticky left-0 bg-white z-10">
                   <div className="flex gap-1">
