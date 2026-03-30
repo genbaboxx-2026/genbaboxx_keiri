@@ -376,7 +376,7 @@ export function ContractForm({
               onChange={setMonthlyFee}
               placeholder="30,000"
             />
-            {billingType === "monthly" && (
+            {billingType === "monthly" && contractStatus !== "auto_renewing" && (
               <div className="flex items-center gap-1.5 mt-1.5">
                 <span className="text-[11px] text-slate-500">×</span>
                 <input
