@@ -453,6 +453,24 @@ export function CashflowPage({
                 );
               })}
             </tr>
+
+            {/* 累計残高 */}
+            <tr className="bg-slate-200">
+              <td className="px-3.5 py-3 font-extrabold text-sm sticky left-0 bg-slate-200 text-slate-900 z-10">累計残高</td>
+              {(() => {
+                let cumulative = 0;
+                return allMonths.map((m) => {
+                  const rev = revenueFor(m);
+                  const exp = expenseForMonth(m);
+                  cumulative += rev - exp;
+                  return (
+                    <td key={m} className={`px-2 py-3 text-right font-extrabold text-[13px] tabular-nums ${cumulative < 0 ? "text-red-600" : "text-slate-900"}`}>
+                      {formatNumber(cumulative)}
+                    </td>
+                  );
+                });
+              })()}
+            </tr>
           </tbody>
         </table>
       </div>
