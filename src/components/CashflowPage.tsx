@@ -78,6 +78,14 @@ export function CashflowPage({
   const [showNewRow, setShowNewRow] = useState(false);
   const [editingName, setEditingName] = useState<string | null>(null);
   const [editNameValue, setEditNameValue] = useState("");
+  const [adjustments, setAdjustments] = useState<Record<string, number>>(() => {
+    try {
+      const saved = localStorage.getItem("cashflow_adjustments");
+      return saved ? JSON.parse(saved) : {};
+    } catch { return {}; }
+  });
+  const [editingAdj, setEditingAdj] = useState<string | null>(null);
+  const [editAdjValue, setEditAdjValue] = useState("");
 
   const currentMonth = getCurrentMonth();
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -187,6 +195,26 @@ export function CashflowPage({
     }
     setEditingName(null);
     setEditNameValue("");
+  };
+
+  const startEditAdj = (month: string) => {
+    setEditingAdj(month);
+    setEditAdjValue(adjustments[month] ? String(adjustments[month]) : "");
+  };
+
+  const commitAdj = () => {
+    if (!editingAdj) return;
+    const val = parseInt(editAdjValue.replace(/[^0-9-]/g, "")) || 0;
+    const next = { ...adjustments };
+    if (val === 0) {
+      delete next[editingAdj];
+    } else {
+      next[editingAdj] = val;
+    }
+    setAdjustments(next);
+    localStorage.setItem("cashflow_adjustments", JSON.stringify(next));
+    setEditingAdj(null);
+    setEditAdjValue("");
   };
 
   const summaryCards = [
@@ -454,6 +482,44 @@ export function CashflowPage({
               })}
             </tr>
 
+            {/* 調整 */}
+            <tr className="border-b border-slate-200">
+              <td className="px-3.5 py-2 font-semibold text-xs sticky left-0 bg-white text-slate-600 z-10">調整</td>
+              {allMonths.map((m) => {
+                const val = adjustments[m] || 0;
+                const isEditing = editingAdj === m;
+                return (
+                  <td
+                    key={m}
+                    className={`px-0 py-0 text-right tabular-nums ${!isEditing ? "cursor-pointer hover:bg-blue-50" : ""}`}
+                    onClick={() => !isEditing && startEditAdj(m)}
+                  >
+                    {isEditing ? (
+                      <input
+                        className="w-full px-2 py-2 text-right text-xs border-2 border-blue-400 outline-none bg-blue-50"
+                        autoFocus
+                        value={editAdjValue}
+                        onChange={(e) => setEditAdjValue(e.target.value.replace(/[^0-9-]/g, ""))}
+                        onBlur={commitAdj}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter") commitAdj();
+                          if (e.key === "Escape") { setEditingAdj(null); setEditAdjValue(""); }
+                        }}
+                      />
+                    ) : (
+                      <div className="px-2 py-2">
+                        {val !== 0 ? (
+                          <span className={val < 0 ? "text-red-600" : "text-blue-600"}>{formatNumber(val)}</span>
+                        ) : (
+                          <span className="text-slate-200">—</span>
+                        )}
+                      </div>
+                    )}
+                  </td>
+                );
+              })}
+            </tr>
+
             {/* 累計残高 */}
             <tr className="bg-slate-200">
               <td className="px-3.5 py-3 font-extrabold text-sm sticky left-0 bg-slate-200 text-slate-900 z-10">累計残高</td>
@@ -462,7 +528,8 @@ export function CashflowPage({
                 return allMonths.map((m) => {
                   const rev = revenueFor(m);
                   const exp = expenseForMonth(m);
-                  cumulative += rev - exp;
+                  const adj = adjustments[m] || 0;
+                  cumulative += rev - exp + adj;
                   return (
                     <td key={m} className={`px-2 py-3 text-right font-extrabold text-[13px] tabular-nums ${cumulative < 0 ? "text-red-600" : "text-slate-900"}`}>
                       {formatNumber(cumulative)}
