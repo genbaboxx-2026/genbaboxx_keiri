@@ -291,15 +291,29 @@ export function CashflowPage({
               );
             })}
 
-            {/* 売上合計 */}
+            {/* 売上合計(税別) */}
             <tr className="bg-slate-50 border-t-2 border-slate-300">
-              <td className="px-3.5 py-3 font-extrabold text-sm sticky left-0 bg-slate-50 text-slate-800 z-10">
-                売上合計
+              <td className="px-3.5 py-2 font-extrabold text-sm sticky left-0 bg-slate-50 text-slate-800 z-10">
+                売上合計<span className="text-[10px] font-normal text-slate-400 ml-1">(税別)</span>
               </td>
               {allMonths.map((m) => {
                 const v = revenueFor(m);
                 return (
-                  <td key={m} className={`px-2 py-3 text-right font-extrabold text-[13px] text-slate-800 tabular-nums`}>
+                  <td key={m} className="px-2 py-2 text-right font-extrabold text-[13px] text-slate-800 tabular-nums">
+                    {v > 0 ? formatNumber(v) : "—"}
+                  </td>
+                );
+              })}
+            </tr>
+            {/* 売上合計(税込) */}
+            <tr className="bg-slate-50">
+              <td className="px-3.5 py-2 font-extrabold text-sm sticky left-0 bg-slate-50 text-blue-800 z-10">
+                売上合計<span className="text-[10px] font-normal text-blue-400 ml-1">(税込)</span>
+              </td>
+              {allMonths.map((m) => {
+                const v = Math.floor(revenueFor(m) * 1.1);
+                return (
+                  <td key={m} className="px-2 py-2 text-right font-extrabold text-[13px] text-blue-800 tabular-nums">
                     {v > 0 ? formatNumber(v) : "—"}
                   </td>
                 );
