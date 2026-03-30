@@ -587,22 +587,22 @@ function ContractDetailView({
                           </span>
                         ) : <span className="text-slate-300">—</span>}
                       </td>
-                      <td className="px-3 py-2">
-                        {status === "cancelled" ? (
-                          <button
-                            className="px-3 py-1.5 bg-emerald-50 text-emerald-600 border border-emerald-200 rounded-lg text-[11px] font-bold cursor-pointer hover:bg-emerald-100"
-                            onClick={(e) => { e.stopPropagation(); onStatusChange(c, false); }}
-                          >
-                            契約に戻す
-                          </button>
-                        ) : (
-                          <button
-                            className="px-3 py-1.5 bg-red-50 text-red-600 border border-red-200 rounded-lg text-[11px] font-bold cursor-pointer hover:bg-red-100"
-                            onClick={(e) => { e.stopPropagation(); onStatusChange(c, true); }}
-                          >
-                            解約
-                          </button>
-                        )}
+                      <td className="px-2 py-2">
+                        <select
+                          className={`px-2 py-1.5 rounded-lg text-[11px] font-bold border cursor-pointer outline-none ${
+                            status === "cancelled"
+                              ? "bg-red-50 text-red-600 border-red-200"
+                              : "bg-emerald-50 text-emerald-600 border-emerald-200"
+                          }`}
+                          value={status === "cancelled" ? "cancelled" : "active"}
+                          onClick={(e) => e.stopPropagation()}
+                          onChange={(e) => {
+                            onStatusChange(c, e.target.value === "cancelled");
+                          }}
+                        >
+                          <option value="active">契約中</option>
+                          <option value="cancelled">解約</option>
+                        </select>
                       </td>
                     </tr>
                   );
