@@ -207,21 +207,22 @@ export default function Home() {
         }
       }
       setViewListState(view === "list");
-      if (companyId) {
-        const company = companies.find((c) => c.id === companyId);
-        if (company) {
-          const pf = params.get("product") as ProductType | null;
-          setModalState({
-            type: "company-detail",
-            company,
-            productFilter: pf || undefined,
-          });
+      setModalState((prev) => {
+        // contract/company モーダルが開いている場合は維持
+        if (prev?.type === "contract" || prev?.type === "company") return prev;
+        if (companyId) {
+          const company = companies.find((c) => c.id === companyId);
+          if (company) {
+            const pf = params.get("product") as ProductType | null;
+            return {
+              type: "company-detail" as const,
+              company,
+              productFilter: pf || undefined,
+            };
+          }
         }
-      } else {
-        setModalState((prev) =>
-          prev?.type === "contract" || prev?.type === "company" ? prev : null
-        );
-      }
+        return null;
+      });
     },
     [companies]
   );
