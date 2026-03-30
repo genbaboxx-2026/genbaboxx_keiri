@@ -24,6 +24,7 @@ interface CashflowPageProps {
   expenses: Expense[];
   onAddExpense: (name: string, month: string, amount: number) => void;
   onDeleteExpense: (id: string) => void;
+  onRenameExpense: (oldName: string, newName: string) => void;
 }
 
 function companyRevenueForMonth(
@@ -68,12 +69,15 @@ export function CashflowPage({
   expenses,
   onAddExpense,
   onDeleteExpense,
+  onRenameExpense,
 }: CashflowPageProps) {
   const [expandedProducts, setExpandedProducts] = useState<Set<string>>(new Set());
   const [editingCell, setEditingCell] = useState<{ name: string; month: string } | null>(null);
   const [editValue, setEditValue] = useState("");
   const [newRowName, setNewRowName] = useState("");
   const [showNewRow, setShowNewRow] = useState(false);
+  const [editingName, setEditingName] = useState<string | null>(null);
+  const [editNameValue, setEditNameValue] = useState("");
 
   const currentMonth = getCurrentMonth();
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -139,6 +143,21 @@ export function CashflowPage({
     onAddExpense(newRowName.trim(), currentMonth, 0);
     setNewRowName("");
     setShowNewRow(false);
+  };
+
+  const startEditName = (name: string) => {
+    setEditingName(name);
+    setEditNameValue(name);
+  };
+
+  const commitEditName = () => {
+    if (!editingName) return;
+    const trimmed = editNameValue.trim();
+    if (trimmed && trimmed !== editingName) {
+      onRenameExpense(editingName, trimmed);
+    }
+    setEditingName(null);
+    setEditNameValue("");
   };
 
   const summaryCards = [
@@ -238,17 +257,38 @@ export function CashflowPage({
             {/* 支出行 */}
             {expenseNames.map((name) => (
               <tr key={name} className="border-b border-slate-100">
-                <td className="px-3.5 py-2 sticky left-0 bg-white z-10 font-medium text-slate-700 flex items-center justify-between group">
-                  <span>{name}</span>
-                  <button
-                    className="text-red-400 hover:text-red-600 text-[10px] cursor-pointer bg-transparent border-none opacity-0 group-hover:opacity-100"
-                    onClick={() => {
-                      if (!confirm(`「${name}」の支出行を全て削除しますか？`)) return;
-                      expenses.filter((e) => e.name === name).forEach((e) => onDeleteExpense(e.id));
-                    }}
-                  >
-                    ✕
-                  </button>
+                <td className="px-3.5 py-2 sticky left-0 bg-white z-10 font-medium text-slate-700 group">
+                  {editingName === name ? (
+                    <input
+                      className="w-full px-2 py-1 border-2 border-blue-400 rounded text-xs outline-none bg-blue-50"
+                      autoFocus
+                      value={editNameValue}
+                      onChange={(e) => setEditNameValue(e.target.value)}
+                      onBlur={commitEditName}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") commitEditName();
+                        if (e.key === "Escape") { setEditingName(null); setEditNameValue(""); }
+                      }}
+                    />
+                  ) : (
+                    <div className="flex items-center justify-between">
+                      <span
+                        className="cursor-pointer hover:text-blue-600"
+                        onClick={() => startEditName(name)}
+                      >
+                        {name}
+                      </span>
+                      <button
+                        className="text-red-400 hover:text-red-600 text-[10px] cursor-pointer bg-transparent border-none opacity-0 group-hover:opacity-100"
+                        onClick={() => {
+                          if (!confirm(`「${name}」の支出行を全て削除しますか？`)) return;
+                          expenses.filter((e) => e.name === name).forEach((e) => onDeleteExpense(e.id));
+                        }}
+                      >
+                        ✕
+                      </button>
+                    </div>
+                  )}
                 </td>
                 {allMonths.map((m) => {
                   const items = expenses.filter((e) => e.name === name && e.month === m);

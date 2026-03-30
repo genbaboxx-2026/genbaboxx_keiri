@@ -403,6 +403,24 @@ export default function Home() {
     }
   };
 
+  const handleRenameExpense = async (oldName: string, newName: string) => {
+    try {
+      const targets = expenses.filter((e) => e.name === oldName);
+      const updated = await Promise.all(
+        targets.map((e) => upsertExpense({ ...e, name: newName }))
+      );
+      setExpenses((prev) =>
+        prev.map((e) => {
+          const u = updated.find((u) => u.id === e.id);
+          return u || e;
+        })
+      );
+    } catch (e) {
+      console.error(e);
+      alert("名前の変更に失敗しました");
+    }
+  };
+
   const handleDeleteExpense = async (id: string) => {
     try {
       await deleteExpense(id);
@@ -489,6 +507,7 @@ export default function Home() {
         expenses={expenses}
         onAddExpense={handleAddExpense}
         onDeleteExpense={handleDeleteExpense}
+        onRenameExpense={handleRenameExpense}
       />
     );
   } else if (tab === "invoice_settings") {
