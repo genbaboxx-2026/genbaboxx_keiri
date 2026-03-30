@@ -118,24 +118,27 @@ export function CashflowPage({
   const expenseForMonth = (month: string) =>
     expenses.filter((e) => e.month === month).reduce((s, e) => s + e.amount, 0);
 
-  const rawNames = [...new Set(expenses.map((e) => e.name))];
-
-  // localStorageから順序を復元し、新しい名前は末尾に追加
-  const [expenseOrder, setExpenseOrder] = useState<string[]>(() => {
+  // 行の名前リストをlocalStorageで管理（expenses有無に依存しない）
+  const [expenseNames, setExpenseNames] = useState<string[]>(() => {
     try {
       const saved = localStorage.getItem("expense_order");
       return saved ? JSON.parse(saved) : [];
     } catch { return []; }
   });
 
-  const expenseNames = (() => {
-    const ordered = expenseOrder.filter((n) => rawNames.includes(n));
-    const rest = rawNames.filter((n) => !expenseOrder.includes(n));
-    return [...ordered, ...rest];
-  })();
+  // expensesに存在するがexpenseNamesにない名前を末尾に追加
+  useEffect(() => {
+    const dataNames = [...new Set(expenses.map((e) => e.name))];
+    const missing = dataNames.filter((n) => !expenseNames.includes(n));
+    if (missing.length > 0) {
+      const next = [...expenseNames, ...missing];
+      setExpenseNames(next);
+      localStorage.setItem("expense_order", JSON.stringify(next));
+    }
+  }, [expenses]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const saveOrder = (newOrder: string[]) => {
-    setExpenseOrder(newOrder);
+    setExpenseNames(newOrder);
     localStorage.setItem("expense_order", JSON.stringify(newOrder));
   };
 
@@ -146,6 +149,12 @@ export function CashflowPage({
     const next = [...expenseNames];
     [next[idx], next[newIdx]] = [next[newIdx], next[idx]];
     saveOrder(next);
+  };
+
+  const removeRow = (name: string) => {
+    if (!confirm(`「${name}」の支出行を全て削除しますか？`)) return;
+    expenses.filter((e) => e.name === name).forEach((e) => onDeleteExpense(e.id));
+    saveOrder(expenseNames.filter((n) => n !== name));
   };
 
   // セルクリックで編集開始
@@ -173,10 +182,11 @@ export function CashflowPage({
 
   // 新規行追加
   const addNewRow = () => {
-    if (!newRowName.trim()) return;
-    // 空の行を追加（名前だけ登録、金額は各セルで入力）
-    // 最初のセルとして当月に0円で追加して行を作る
-    onAddExpense(newRowName.trim(), currentMonth, 0);
+    const trimmed = newRowName.trim();
+    if (!trimmed) return;
+    if (!expenseNames.includes(trimmed)) {
+      saveOrder([...expenseNames, trimmed]);
+    }
     setNewRowName("");
     setShowNewRow(false);
   };
@@ -353,10 +363,7 @@ export function CashflowPage({
                       </div>
                       <button
                         className="text-red-400 hover:text-red-600 text-[10px] cursor-pointer bg-transparent border-none opacity-0 group-hover:opacity-100"
-                        onClick={() => {
-                          if (!confirm(`「${name}」の支出行を全て削除しますか？`)) return;
-                          expenses.filter((e) => e.name === name).forEach((e) => onDeleteExpense(e.id));
-                        }}
+                        onClick={() => removeRow(name)}
                       >
                         ✕
                       </button>
