@@ -116,7 +116,7 @@ export function effectiveDuration(
   const now = new Date();
   // 翌月まで延長（当月+1）
   const monthsToNext = (now.getFullYear() - sy) * 12 + (now.getMonth() + 1 - sm) + 2;
-  return Math.max(durationMonths, monthsToNext);
+  return Math.max(1, monthsToNext);
 }
 
 /** 全契約から表示対象の全月リスト(sorted)を生成 */
