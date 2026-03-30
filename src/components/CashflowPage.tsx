@@ -110,7 +110,35 @@ export function CashflowPage({
   const expenseForMonth = (month: string) =>
     expenses.filter((e) => e.month === month).reduce((s, e) => s + e.amount, 0);
 
-  const expenseNames = [...new Set(expenses.map((e) => e.name))];
+  const rawNames = [...new Set(expenses.map((e) => e.name))];
+
+  // localStorageから順序を復元し、新しい名前は末尾に追加
+  const [expenseOrder, setExpenseOrder] = useState<string[]>(() => {
+    try {
+      const saved = localStorage.getItem("expense_order");
+      return saved ? JSON.parse(saved) : [];
+    } catch { return []; }
+  });
+
+  const expenseNames = (() => {
+    const ordered = expenseOrder.filter((n) => rawNames.includes(n));
+    const rest = rawNames.filter((n) => !expenseOrder.includes(n));
+    return [...ordered, ...rest];
+  })();
+
+  const saveOrder = (newOrder: string[]) => {
+    setExpenseOrder(newOrder);
+    localStorage.setItem("expense_order", JSON.stringify(newOrder));
+  };
+
+  const moveRow = (name: string, dir: -1 | 1) => {
+    const idx = expenseNames.indexOf(name);
+    const newIdx = idx + dir;
+    if (newIdx < 0 || newIdx >= expenseNames.length) return;
+    const next = [...expenseNames];
+    [next[idx], next[newIdx]] = [next[newIdx], next[idx]];
+    saveOrder(next);
+  };
 
   // セルクリックで編集開始
   const startEdit = (name: string, month: string) => {
@@ -155,6 +183,7 @@ export function CashflowPage({
     const trimmed = editNameValue.trim();
     if (trimmed && trimmed !== editingName) {
       onRenameExpense(editingName, trimmed);
+      saveOrder(expenseNames.map((n) => n === editingName ? trimmed : n));
     }
     setEditingName(null);
     setEditNameValue("");
@@ -272,12 +301,28 @@ export function CashflowPage({
                     />
                   ) : (
                     <div className="flex items-center justify-between">
-                      <span
-                        className="cursor-pointer hover:text-blue-600"
-                        onClick={() => startEditName(name)}
-                      >
-                        {name}
-                      </span>
+                      <div className="flex items-center gap-1">
+                        <div className="flex flex-col opacity-0 group-hover:opacity-100">
+                          <button
+                            className="text-[9px] text-slate-400 hover:text-slate-700 cursor-pointer bg-transparent border-none leading-none"
+                            onClick={() => moveRow(name, -1)}
+                          >
+                            ▲
+                          </button>
+                          <button
+                            className="text-[9px] text-slate-400 hover:text-slate-700 cursor-pointer bg-transparent border-none leading-none"
+                            onClick={() => moveRow(name, 1)}
+                          >
+                            ▼
+                          </button>
+                        </div>
+                        <span
+                          className="cursor-pointer hover:text-blue-600"
+                          onClick={() => startEditName(name)}
+                        >
+                          {name}
+                        </span>
+                      </div>
                       <button
                         className="text-red-400 hover:text-red-600 text-[10px] cursor-pointer bg-transparent border-none opacity-0 group-hover:opacity-100"
                         onClick={() => {
