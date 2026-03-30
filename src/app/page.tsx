@@ -218,7 +218,9 @@ export default function Home() {
           });
         }
       } else {
-        setModalState(null);
+        setModalState((prev) =>
+          prev?.type === "contract" || prev?.type === "company" ? prev : null
+        );
       }
     },
     [companies]
