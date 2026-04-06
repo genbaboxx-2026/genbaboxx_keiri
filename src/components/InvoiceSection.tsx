@@ -95,36 +95,35 @@ export function InvoiceSection({
     });
   }, [selectedMonth]);
 
-  // Refs to always have latest state for debounced save
-  const customItemsRef = useRef(customItems);
-  customItemsRef.current = customItems;
-  const baseOverridesRef = useRef(baseOverrides);
-  baseOverridesRef.current = baseOverrides;
-  const deletedBaseItemsRef = useRef(deletedBaseItems);
-  deletedBaseItemsRef.current = deletedBaseItems;
-  const dueDatesRef = useRef(dueDates);
-  dueDatesRef.current = dueDates;
-  const issueDatesRef = useRef(issueDates);
-  issueDatesRef.current = issueDates;
-  const selectedMonthRef = useRef(selectedMonth);
-  selectedMonthRef.current = selectedMonth;
+  // 変更があった企業IDを追跡
+  const pendingSaveRef = useRef<Set<string>>(new Set());
 
-  // カスタマイズ変更時にDBに自動保存（debounce 1秒）
-  const saveCustomization = useCallback((companyId: string) => {
+  // カスタマイズ変更時にDBに自動保存（useEffectで確実に最新stateを使う）
+  useEffect(() => {
     if (!customizationsLoaded.current) return;
-    if (customizationTimers.current[companyId]) clearTimeout(customizationTimers.current[companyId]);
-    customizationTimers.current[companyId] = setTimeout(() => {
-      const data = {
-        customItems: { [companyId]: customItemsRef.current[companyId] || [] },
-        baseOverrides: { [companyId]: baseOverridesRef.current[companyId] || {} },
-        deletedBaseItems: { [companyId]: [...(deletedBaseItemsRef.current[companyId] || [])] },
-        dueDates: { [companyId]: dueDatesRef.current[companyId] || "" },
-        issueDates: { [companyId]: issueDatesRef.current[companyId] || "" },
-      };
-      import("@/lib/api").then(({ upsertInvoiceCustomization }) => {
-        upsertInvoiceCustomization(companyId, selectedMonthRef.current, data).catch(console.error);
-      });
-    }, 1000);
+    const companiesToSave = new Set(pendingSaveRef.current);
+    if (companiesToSave.size === 0) return;
+    pendingSaveRef.current.clear();
+
+    for (const companyId of companiesToSave) {
+      if (customizationTimers.current[companyId]) clearTimeout(customizationTimers.current[companyId]);
+      customizationTimers.current[companyId] = setTimeout(() => {
+        const data = {
+          customItems: { [companyId]: customItems[companyId] || [] },
+          baseOverrides: { [companyId]: baseOverrides[companyId] || {} },
+          deletedBaseItems: { [companyId]: [...(deletedBaseItems[companyId] || [])] },
+          dueDates: { [companyId]: dueDates[companyId] || "" },
+          issueDates: { [companyId]: issueDates[companyId] || "" },
+        };
+        import("@/lib/api").then(({ upsertInvoiceCustomization }) => {
+          upsertInvoiceCustomization(companyId, selectedMonth, data).catch(console.error);
+        });
+      }, 1000);
+    }
+  }, [customItems, baseOverrides, deletedBaseItems, dueDates, issueDates, selectedMonth]);
+
+  const queueSave = useCallback((companyId: string) => {
+    pendingSaveRef.current.add(companyId);
   }, []);
 
   // 備考変更時にDBに自動保存（debounce 1秒）
@@ -231,7 +230,7 @@ export function InvoiceSection({
         { description: "", quantity: 1, unit: "", unitPrice: 0, taxRate: 10, amount: 0 },
       ],
     }));
-    setTimeout(() => saveCustomization(companyId), 0);
+    queueSave(companyId);
   };
 
   const updateCustomItem = (
@@ -259,7 +258,7 @@ export function InvoiceSection({
       items[index] = item;
       return { ...prev, [companyId]: items };
     });
-    setTimeout(() => saveCustomization(companyId), 0);
+    queueSave(companyId);
   };
 
   const updateBaseItem = (
@@ -279,7 +278,7 @@ export function InvoiceSection({
       companyOv[index] = itemOv;
       return { ...prev, [companyId]: companyOv };
     });
-    setTimeout(() => saveCustomization(companyId), 0);
+    queueSave(companyId);
   };
 
   const removeCustomItem = (companyId: string, index: number) => {
@@ -288,7 +287,7 @@ export function InvoiceSection({
       items.splice(index, 1);
       return { ...prev, [companyId]: items };
     });
-    setTimeout(() => saveCustomization(companyId), 0);
+    queueSave(companyId);
   };
 
   const selectedInvoices = invoices.filter((i) => checked.has(i.companyId));
@@ -564,9 +563,9 @@ export function InvoiceSection({
                         isChecked={checked.has(inv.companyId)}
                         extras={extras}
                         companyDueDate={dueDates[inv.companyId] ?? dueDate}
-                        onDueDateChange={(v) => { setDueDates((prev) => ({ ...prev, [inv.companyId]: v })); setTimeout(() => saveCustomization(inv.companyId), 0); }}
+                        onDueDateChange={(v) => { setDueDates((prev) => ({ ...prev, [inv.companyId]: v })); queueSave(inv.companyId); }}
                         companyIssueDate={issueDates[inv.companyId] ?? defaultIssueDate}
-                        onIssueDateChange={(v) => { setIssueDates((prev) => ({ ...prev, [inv.companyId]: v })); setTimeout(() => saveCustomization(inv.companyId), 0); }}
+                        onIssueDateChange={(v) => { setIssueDates((prev) => ({ ...prev, [inv.companyId]: v })); queueSave(inv.companyId); }}
                         companyNote={companyNotes[inv.companyId] ?? invoiceTemplates?.[0]?.notes ?? ""}
                         onNoteChange={(v) => handleNoteChange(inv.companyId, v)}
                         sentAt={sentStatus[inv.companyId]}
@@ -608,7 +607,7 @@ export function InvoiceSection({
                             s.add(i);
                             return { ...prev, [inv.companyId]: s };
                           });
-                          setTimeout(() => saveCustomization(inv.companyId), 0);
+                          queueSave(inv.companyId);
                         }}
                       />
                     );
