@@ -53,14 +53,79 @@ export function InvoiceSection({
   const [companyNotes, setCompanyNotes] = useState<Record<string, string>>({});
   const [sentStatus, setSentStatus] = useState<Record<string, string>>({});
   const noteTimers = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
+  const customizationTimers = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
+  const customizationsLoaded = useRef(false);
 
-  // 月変更時にDBから備考と送信ステータスを読み込む
+  // 月変更時にDBから備考・送信ステータス・カスタマイズを読み込む
   useEffect(() => {
-    import("@/lib/api").then(({ fetchInvoiceNotes, fetchSentStatus }) => {
+    customizationsLoaded.current = false;
+    import("@/lib/api").then(({ fetchInvoiceNotes, fetchSentStatus, fetchInvoiceCustomizations }) => {
       fetchInvoiceNotes(selectedMonth).then(setCompanyNotes);
       fetchSentStatus(selectedMonth).then(setSentStatus);
+      fetchInvoiceCustomizations(selectedMonth).then((allData) => {
+        const loadedCustomItems: Record<string, InvoiceLineItem[]> = {};
+        const loadedBaseOverrides: Record<string, Record<number, Partial<InvoiceLineItem>>> = {};
+        const loadedDeletedBaseItems: Record<string, Set<number>> = {};
+        const loadedDueDates: Record<string, string> = {};
+        const loadedIssueDates: Record<string, string> = {};
+        for (const [companyId, data] of Object.entries(allData)) {
+          if (data.customItems?.[companyId]) {
+            loadedCustomItems[companyId] = data.customItems[companyId] as unknown as InvoiceLineItem[];
+          }
+          if (data.baseOverrides?.[companyId]) {
+            loadedBaseOverrides[companyId] = data.baseOverrides[companyId] as unknown as Record<number, Partial<InvoiceLineItem>>;
+          }
+          if (data.deletedBaseItems?.[companyId]) {
+            loadedDeletedBaseItems[companyId] = new Set(data.deletedBaseItems[companyId] as number[]);
+          }
+          if (data.dueDates?.[companyId]) {
+            loadedDueDates[companyId] = data.dueDates[companyId];
+          }
+          if (data.issueDates?.[companyId]) {
+            loadedIssueDates[companyId] = data.issueDates[companyId];
+          }
+        }
+        setCustomItems(loadedCustomItems);
+        setBaseOverrides(loadedBaseOverrides);
+        setDeletedBaseItems(loadedDeletedBaseItems);
+        setDueDates(loadedDueDates);
+        setIssueDates(loadedIssueDates);
+        customizationsLoaded.current = true;
+      });
     });
   }, [selectedMonth]);
+
+  // Refs to always have latest state for debounced save
+  const customItemsRef = useRef(customItems);
+  customItemsRef.current = customItems;
+  const baseOverridesRef = useRef(baseOverrides);
+  baseOverridesRef.current = baseOverrides;
+  const deletedBaseItemsRef = useRef(deletedBaseItems);
+  deletedBaseItemsRef.current = deletedBaseItems;
+  const dueDatesRef = useRef(dueDates);
+  dueDatesRef.current = dueDates;
+  const issueDatesRef = useRef(issueDates);
+  issueDatesRef.current = issueDates;
+  const selectedMonthRef = useRef(selectedMonth);
+  selectedMonthRef.current = selectedMonth;
+
+  // カスタマイズ変更時にDBに自動保存（debounce 1秒）
+  const saveCustomization = useCallback((companyId: string) => {
+    if (!customizationsLoaded.current) return;
+    if (customizationTimers.current[companyId]) clearTimeout(customizationTimers.current[companyId]);
+    customizationTimers.current[companyId] = setTimeout(() => {
+      const data = {
+        customItems: { [companyId]: customItemsRef.current[companyId] || [] },
+        baseOverrides: { [companyId]: baseOverridesRef.current[companyId] || {} },
+        deletedBaseItems: { [companyId]: [...(deletedBaseItemsRef.current[companyId] || [])] },
+        dueDates: { [companyId]: dueDatesRef.current[companyId] || "" },
+        issueDates: { [companyId]: issueDatesRef.current[companyId] || "" },
+      };
+      import("@/lib/api").then(({ upsertInvoiceCustomization }) => {
+        upsertInvoiceCustomization(companyId, selectedMonthRef.current, data).catch(console.error);
+      });
+    }, 1000);
+  }, []);
 
   // 備考変更時にDBに自動保存（debounce 1秒）
   const handleNoteChange = useCallback((companyId: string, note: string) => {
@@ -136,6 +201,7 @@ export function InvoiceSection({
     setExpandedId(null);
     setDueDate(getLastBusinessDay(m));
     setDueDates({});
+    setIssueDates({});
     setDeletedBaseItems({});
     setTimeout(() => {
       const inv = getInvoicesForMonth(m, contracts, companies, invoiceTemplates);
@@ -165,6 +231,7 @@ export function InvoiceSection({
         { description: "", quantity: 1, unit: "", unitPrice: 0, taxRate: 10, amount: 0 },
       ],
     }));
+    setTimeout(() => saveCustomization(companyId), 0);
   };
 
   const updateCustomItem = (
@@ -192,6 +259,7 @@ export function InvoiceSection({
       items[index] = item;
       return { ...prev, [companyId]: items };
     });
+    setTimeout(() => saveCustomization(companyId), 0);
   };
 
   const updateBaseItem = (
@@ -211,6 +279,7 @@ export function InvoiceSection({
       companyOv[index] = itemOv;
       return { ...prev, [companyId]: companyOv };
     });
+    setTimeout(() => saveCustomization(companyId), 0);
   };
 
   const removeCustomItem = (companyId: string, index: number) => {
@@ -219,6 +288,7 @@ export function InvoiceSection({
       items.splice(index, 1);
       return { ...prev, [companyId]: items };
     });
+    setTimeout(() => saveCustomization(companyId), 0);
   };
 
   const selectedInvoices = invoices.filter((i) => checked.has(i.companyId));
@@ -494,9 +564,9 @@ export function InvoiceSection({
                         isChecked={checked.has(inv.companyId)}
                         extras={extras}
                         companyDueDate={dueDates[inv.companyId] ?? dueDate}
-                        onDueDateChange={(v) => setDueDates((prev) => ({ ...prev, [inv.companyId]: v }))}
+                        onDueDateChange={(v) => { setDueDates((prev) => ({ ...prev, [inv.companyId]: v })); setTimeout(() => saveCustomization(inv.companyId), 0); }}
                         companyIssueDate={issueDates[inv.companyId] ?? defaultIssueDate}
-                        onIssueDateChange={(v) => setIssueDates((prev) => ({ ...prev, [inv.companyId]: v }))}
+                        onIssueDateChange={(v) => { setIssueDates((prev) => ({ ...prev, [inv.companyId]: v })); setTimeout(() => saveCustomization(inv.companyId), 0); }}
                         companyNote={companyNotes[inv.companyId] ?? invoiceTemplates?.[0]?.notes ?? ""}
                         onNoteChange={(v) => handleNoteChange(inv.companyId, v)}
                         sentAt={sentStatus[inv.companyId]}
@@ -532,13 +602,14 @@ export function InvoiceSection({
                         onRemoveItem={(i) =>
                           removeCustomItem(inv.companyId, i)
                         }
-                        onDeleteBaseItem={(i) =>
+                        onDeleteBaseItem={(i) => {
                           setDeletedBaseItems((prev) => {
                             const s = new Set(prev[inv.companyId] || []);
                             s.add(i);
                             return { ...prev, [inv.companyId]: s };
-                          })
-                        }
+                          });
+                          setTimeout(() => saveCustomization(inv.companyId), 0);
+                        }}
                       />
                     );
                   })}

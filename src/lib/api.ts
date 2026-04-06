@@ -190,3 +190,36 @@ export async function unmarkAsSent(companyId: string, month: string): Promise<vo
     .eq("month", month);
   if (error) throw error;
 }
+
+// ========== Invoice Customizations ==========
+
+export interface InvoiceCustomizationData {
+  customItems?: Record<string, unknown[]>;
+  baseOverrides?: Record<string, Record<number, Record<string, unknown>>>;
+  deletedBaseItems?: Record<string, number[]>;
+  dueDates?: Record<string, string>;
+  issueDates?: Record<string, string>;
+}
+
+export async function fetchInvoiceCustomizations(month: string): Promise<Record<string, InvoiceCustomizationData>> {
+  const { data, error } = await supabase
+    .from("invoice_customizations")
+    .select("company_id, data")
+    .eq("month", month);
+  if (error) return {};
+  const map: Record<string, InvoiceCustomizationData> = {};
+  for (const row of data || []) {
+    map[row.company_id] = row.data as InvoiceCustomizationData;
+  }
+  return map;
+}
+
+export async function upsertInvoiceCustomization(companyId: string, month: string, data: InvoiceCustomizationData): Promise<void> {
+  const { error } = await supabase
+    .from("invoice_customizations")
+    .upsert(
+      { company_id: companyId, month, data } as Record<string, unknown>,
+      { onConflict: "company_id,month" }
+    );
+  if (error) throw error;
+}
