@@ -471,8 +471,11 @@ export function InvoiceSection({
                     <th className="px-3 py-2.5 text-left font-bold text-xs text-slate-600">
                       企業名
                     </th>
-                    <th className="px-2 py-2.5 text-left font-bold text-xs text-slate-600 w-[180px]">
+                    <th className="px-2 py-2.5 text-left font-bold text-xs text-slate-600 w-[150px]">
                       製品
+                    </th>
+                    <th className="px-2 py-2.5 text-left font-bold text-xs text-slate-600 w-[90px]">
+                      状態
                     </th>
                     <th className="px-3 py-2.5 text-right font-bold text-xs text-slate-600">
                       合計（税込）
@@ -1153,7 +1156,7 @@ function CompanyRow({
 
   return (
     <>
-      <tr className={`border-b border-slate-100 hover:bg-slate-50 ${isExpanded ? "bg-blue-50/60" : ""} ${sentAt ? "bg-green-50/50" : ""}`}>
+      <tr className={`border-b border-slate-100 hover:bg-slate-50 ${isExpanded ? "bg-blue-50/60" : ""}`}>
         <td className="px-3 py-2.5">
           <input
             type="checkbox"
@@ -1180,19 +1183,23 @@ function CompanyRow({
             {productTypes && productTypes.map((pt) => (
               <Badge key={pt} product={pt as import("@/lib/database.types").ProductType} />
             ))}
-            <button
-              type="button"
-              className={`text-[10px] font-bold px-2 py-0.5 rounded-full cursor-pointer border transition-colors ${
-                sentAt
-                  ? "text-green-700 bg-green-100 border-green-300 hover:bg-green-200"
-                  : "text-slate-400 bg-slate-50 border-slate-200 hover:bg-slate-100 hover:text-slate-600"
-              }`}
-              onClick={(e) => { e.stopPropagation(); onToggleSent(); }}
-              title={sentAt ? `送信済（${new Date(sentAt).toLocaleDateString("ja-JP")}）\nクリックで取消` : "クリックで送信済にする"}
-            >
-              {sentAt ? "✓ 送信済" : "未送信"}
-            </button>
           </div>
+        </td>
+        <td className="px-2 py-2.5">
+          <select
+            className={`text-[11px] font-bold px-2 py-1 rounded-md cursor-pointer border outline-none appearance-none pr-5 ${
+              sentAt
+                ? "text-white bg-blue-600 border-blue-600"
+                : "text-orange-600 bg-orange-50 border-orange-300"
+            }`}
+            style={{ backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='${sentAt ? "%23fff" : "%23c2410c"}'/%3E%3C/svg%3E")`, backgroundRepeat: "no-repeat", backgroundPosition: "right 6px center" }}
+            value={sentAt ? "sent" : "unsent"}
+            onChange={(e) => { e.stopPropagation(); if ((e.target.value === "sent") !== !!sentAt) onToggleSent(); }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <option value="unsent">未送信</option>
+            <option value="sent">送信済</option>
+          </select>
         </td>
         <td className="px-3 py-2.5 text-right tabular-nums font-semibold">
           ¥{formatNumber(inv.total)}
@@ -1201,7 +1208,7 @@ function CompanyRow({
 
       {isExpanded && (
         <tr>
-          <td colSpan={4} className="p-0">
+          <td colSpan={5} className="p-0">
             <div className="border-t border-blue-200 bg-blue-50/40 border-l-[3px] border-l-blue-400">
               <table className="w-full text-xs ml-4" style={{ tableLayout: "fixed", width: "calc(100% - 16px)" }}>
                 <colgroup>
