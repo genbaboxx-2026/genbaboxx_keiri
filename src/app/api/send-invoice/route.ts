@@ -42,6 +42,7 @@ export async function POST(req: NextRequest) {
     }[] = [];
 
     const from = process.env.EMAIL_FROM || `${senderName || "請求書送付"} <onboarding@resend.dev>`;
+    const bcc = process.env.EMAIL_BCC ? process.env.EMAIL_BCC.split(",").map((e) => e.trim()).filter(Boolean) : [];
 
     for (const recipient of recipients) {
       // Support both legacy single email and new multiple emails
@@ -74,6 +75,7 @@ export async function POST(req: NextRequest) {
         await resend.emails.send({
           from,
           to: toEmails,
+          ...(bcc.length > 0 ? { bcc } : {}),
           subject: personalizedSubject,
           text: personalizedBody,
           attachments: [
