@@ -172,14 +172,24 @@ export async function fetchSentStatus(month: string): Promise<Record<string, str
   return map;
 }
 
-export async function markAsSent(companyId: string, month: string): Promise<void> {
+export async function markAsSent(companyId: string, month: string, amount?: number): Promise<void> {
   const { error } = await supabase
     .from("invoice_sent_status")
     .upsert(
-      { company_id: companyId, month, sent_at: new Date().toISOString() } as Record<string, unknown>,
+      { company_id: companyId, month, sent_at: new Date().toISOString(), amount: amount ?? null } as Record<string, unknown>,
       { onConflict: "company_id,month" }
     );
   if (error) throw error;
+}
+
+/** 全月の送信済み金額を取得（資金繰り表用） */
+export async function fetchAllSentAmounts(): Promise<{ company_id: string; month: string; amount: number }[]> {
+  const { data, error } = await supabase
+    .from("invoice_sent_status")
+    .select("company_id, month, amount")
+    .not("amount", "is", null);
+  if (error) return [];
+  return (data || []) as { company_id: string; month: string; amount: number }[];
 }
 
 export async function unmarkAsSent(companyId: string, month: string): Promise<void> {

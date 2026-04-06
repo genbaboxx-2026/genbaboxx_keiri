@@ -471,7 +471,7 @@ export function InvoiceSection({
             results.push(data.results[0]);
             if (data.results[0]?.success) {
               import("@/lib/api").then(({ markAsSent }) => {
-                markAsSent(inv.companyId, selectedMonth).catch(console.error);
+                markAsSent(inv.companyId, selectedMonth, inv.subtotal).catch(console.error);
               });
               setSentStatus((prev) => ({ ...prev, [inv.companyId]: new Date().toISOString() }));
             }
@@ -636,7 +636,7 @@ export function InvoiceSection({
                             });
                           } else {
                             import("@/lib/api").then(({ markAsSent }) => {
-                              markAsSent(inv.companyId, selectedMonth).catch(console.error);
+                              markAsSent(inv.companyId, selectedMonth, inv.subtotal).catch(console.error);
                             });
                             setSentStatus((prev) => ({ ...prev, [inv.companyId]: new Date().toISOString() }));
                           }

@@ -102,19 +102,25 @@ export function suggestBillingMonth(
   return `${ny}-${String(nmm).padStart(2, "0")}`;
 }
 
-/** 自動更新中の契約は翌月まで期間を延長 */
+/** 自動更新中の契約は翌月まで期間を延長（楽観モードでは36ヶ月先まで延長） */
 export function effectiveDuration(
   billingMonth: string,
   billingDay: string,
   durationMonths: number,
-  contractStatus?: ContractStatus
+  contractStatus?: ContractStatus,
+  optimistic?: boolean
 ): number {
   if (contractStatus !== "auto_renewing") return durationMonths;
   const bs = makeBillingStart(billingMonth, billingDay);
   if (!bs) return durationMonths;
   const [sy, sm] = bs.split("-").map(Number);
   const now = new Date();
-  // 翌月まで延長（当月+1）
+  if (optimistic) {
+    // 楽観: 現在から36ヶ月先まで延長
+    const monthsToFuture = (now.getFullYear() - sy) * 12 + (now.getMonth() + 1 - sm) + 36;
+    return Math.max(durationMonths, monthsToFuture);
+  }
+  // 悲観（デフォルト）: 翌月まで延長（当月+1）
   const monthsToNext = (now.getFullYear() - sy) * 12 + (now.getMonth() + 1 - sm) + 2;
   return Math.max(1, monthsToNext);
 }
@@ -135,12 +141,13 @@ export function getAllMonths(
     has_initial_fee: boolean;
     initial_close: CloseOffset;
     initial_pay: PayType;
-  }[]
+  }[],
+  optimistic?: boolean
 ): string[] {
   const set = new Set<string>();
   contracts.forEach((c) => {
     const bs = makeBillingStart(c.billing_month, c.billing_day);
-    const dur = effectiveDuration(c.billing_month, c.billing_day, c.duration_months, c.contract_status);
+    const dur = effectiveDuration(c.billing_month, c.billing_day, c.duration_months, c.contract_status, optimistic);
     const ms = billingMonths(bs, dur);
     const mo = calcPayOffset(c.monthly_close, c.monthly_pay);
     const isLump = c.billing_type === "lump_sum";
@@ -166,9 +173,10 @@ export function getAllMonths(
       set.add(shiftMonth(ms[0], io));
     }
   });
-  // 現在から18ヶ月分を追加
+  // 現在から18ヶ月分を追加（楽観モードでは36ヶ月）
   const now = new Date();
-  for (let i = 0; i < 18; i++) {
+  const futureMonths = optimistic ? 36 : 18;
+  for (let i = 0; i < futureMonths; i++) {
     const d = new Date(now.getFullYear(), now.getMonth() + i, 1);
     set.add(
       `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`
@@ -200,13 +208,14 @@ export function getRevenue(
     option_pay: PayType;
     product_type: string;
   }[],
-  productFilter?: string
+  productFilter?: string,
+  optimistic?: boolean
 ): number {
   return contracts
     .filter((c) => !productFilter || c.product_type === productFilter)
     .reduce((sum, c) => {
       const bs = makeBillingStart(c.billing_month, c.billing_day);
-      const dur = effectiveDuration(c.billing_month, c.billing_day, c.duration_months, c.contract_status);
+      const dur = effectiveDuration(c.billing_month, c.billing_day, c.duration_months, c.contract_status, optimistic);
       const ms = billingMonths(bs, dur);
       let amt = 0;
       const mo = calcPayOffset(c.monthly_close, c.monthly_pay);
