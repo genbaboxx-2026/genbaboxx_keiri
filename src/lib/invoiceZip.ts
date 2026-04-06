@@ -31,7 +31,8 @@ export async function generateInvoiceZIP(
   dueDate?: string,
   notesMap?: Record<string, string>,
   dueDatesMap?: Record<string, string>,
-  onProgress?: (current: number, total: number) => void
+  onProgress?: (current: number, total: number) => void,
+  issueDatesMap?: Record<string, string>
 ): Promise<void> {
   const [JSZip, { jsPDF }, { default: html2canvas }] = await Promise.all([
     import("jszip").then((m) => m.default),
@@ -40,7 +41,7 @@ export async function generateInvoiceZIP(
   ]);
 
   const today = new Date();
-  const issueDate = `${today.getFullYear()}/${String(today.getMonth() + 1).padStart(2, "0")}/${String(today.getDate()).padStart(2, "0")}`;
+  const defaultIssueDate = `${today.getFullYear()}/${String(today.getMonth() + 1).padStart(2, "0")}/${String(today.getDate()).padStart(2, "0")}`;
 
   // Load font
   const fontLink = document.createElement("link");
@@ -92,8 +93,9 @@ export async function generateInvoiceZIP(
       const companyDueDate = dueDatesMap?.[inv.companyId] ?? dueDate;
       const fileName = `${inv.companyName}御中_請求書_${invNum}.pdf`;
 
+      const companyIssueDate = issueDatesMap?.[inv.companyId] ? issueDatesMap[inv.companyId].replace(/-/g, "/") : defaultIssueDate;
       const bytes = await renderInvoicePDFBytes(
-        inv, settings, issueDate, invNum, container,
+        inv, settings, companyIssueDate, invNum, container,
         html2canvas as unknown as (el: HTMLElement, opts: Record<string, unknown>) => Promise<HTMLCanvasElement>,
         jsPDF, companyDueDate, notes
       );
@@ -131,8 +133,9 @@ export async function generateInvoiceZIP(
         const companyDueDate = dueDatesMap?.[inv.companyId] ?? dueDate;
         const fileName = `${inv.companyName}御中_請求書_${invNum}.pdf`;
 
+        const gbIssueDate = issueDatesMap?.[inv.companyId] ? issueDatesMap[inv.companyId].replace(/-/g, "/") : defaultIssueDate;
         const bytes = await renderInvoicePDFBytes(
-          inv, settings, issueDate, invNum, container,
+          inv, settings, gbIssueDate, invNum, container,
           html2canvas as unknown as (el: HTMLElement, opts: Record<string, unknown>) => Promise<HTMLCanvasElement>,
           jsPDF, companyDueDate, notes
         );
@@ -174,8 +177,9 @@ export async function generateInvoiceZIP(
         const companyDueDate = dueDatesMap?.[inv.companyId] ?? dueDate;
         const fileName = `${inv.companyName}御中_請求書_${invNum}.pdf`;
 
+        const unknownIssueDate = issueDatesMap?.[inv.companyId] ? issueDatesMap[inv.companyId].replace(/-/g, "/") : defaultIssueDate;
         const bytes = await renderInvoicePDFBytes(
-          inv, settings, issueDate, invNum, container,
+          inv, settings, unknownIssueDate, invNum, container,
           html2canvas as unknown as (el: HTMLElement, opts: Record<string, unknown>) => Promise<HTMLCanvasElement>,
           jsPDF, companyDueDate, notes
         );

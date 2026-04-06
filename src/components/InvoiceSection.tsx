@@ -49,6 +49,7 @@ export function InvoiceSection({
   };
   const [dueDate, setDueDate] = useState(() => getLastBusinessDay(currentMonth));
   const [dueDates, setDueDates] = useState<Record<string, string>>({});
+  const [issueDates, setIssueDates] = useState<Record<string, string>>({});
   const [companyNotes, setCompanyNotes] = useState<Record<string, string>>({});
   const [sentStatus, setSentStatus] = useState<Record<string, string>>({});
   const noteTimers = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
@@ -288,7 +289,8 @@ export function InvoiceSection({
         dueDate,
         companyNotes,
         dueDates,
-        (current, total) => setZipProgress({ current, total })
+        (current, total) => setZipProgress({ current, total }),
+        issueDates
       );
       setShowSendConfirm(false);
     } catch (e) {
@@ -305,7 +307,7 @@ export function InvoiceSection({
     setGenerating(true);
     try {
       const { generateInvoicePDF } = await import("@/lib/invoice");
-      await generateInvoicePDF(settings, [inv], selectedMonth, invoiceTemplates?.[0]?.notes, dueDate, companyNotes, dueDates);
+      await generateInvoicePDF(settings, [inv], selectedMonth, invoiceTemplates?.[0]?.notes, dueDate, companyNotes, dueDates, issueDates);
     } catch (e) {
       console.error(e);
       alert("PDF生成に失敗しました");
@@ -335,7 +337,8 @@ export function InvoiceSection({
         try {
           const companyNote = companyNotes[inv.companyId] ?? invoiceTemplates?.[0]?.notes;
           const companyDue = dueDates[inv.companyId] ?? dueDate;
-          const pdfBase64 = await generateInvoicePDFBase64(settings, inv, selectedMonth, companyNote, companyDue);
+          const companyIssue = issueDates[inv.companyId] ? issueDates[inv.companyId].replace(/-/g, "/") : undefined;
+          const pdfBase64 = await generateInvoicePDFBase64(settings, inv, selectedMonth, companyNote, companyDue, companyIssue);
 
           const res = await fetch("/api/send-invoice", {
             method: "POST",
@@ -380,7 +383,8 @@ export function InvoiceSection({
   };
 
   const today = new Date();
-  const issueDate = `${today.getFullYear()}/${String(today.getMonth() + 1).padStart(2, "0")}/${String(today.getDate()).padStart(2, "0")}`;
+  const defaultIssueDate = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
+  const issueDate = defaultIssueDate.replace(/-/g, "/");
 
   return (
     <div className="mt-8">
@@ -488,6 +492,8 @@ export function InvoiceSection({
                         extras={extras}
                         companyDueDate={dueDates[inv.companyId] ?? dueDate}
                         onDueDateChange={(v) => setDueDates((prev) => ({ ...prev, [inv.companyId]: v }))}
+                        companyIssueDate={issueDates[inv.companyId] ?? defaultIssueDate}
+                        onIssueDateChange={(v) => setIssueDates((prev) => ({ ...prev, [inv.companyId]: v }))}
                         companyNote={companyNotes[inv.companyId] ?? invoiceTemplates?.[0]?.notes ?? ""}
                         onNoteChange={(v) => handleNoteChange(inv.companyId, v)}
                         sentAt={sentStatus[inv.companyId]}
@@ -543,7 +549,7 @@ export function InvoiceSection({
                 <InvoicePreview
                   inv={previewInvoice}
                   settings={settings}
-                  issueDate={issueDate}
+                  issueDate={(issueDates[previewInvoice.companyId] ?? defaultIssueDate).replace(/-/g, "/")}
                   month={selectedMonth}
                   notes={companyNotes[previewInvoice.companyId] ?? invoiceTemplates?.[0]?.notes}
                   dueDate={dueDates[previewInvoice.companyId] ?? dueDate}
@@ -603,7 +609,7 @@ export function InvoiceSection({
                 <InvoicePreview
                   inv={previewInvoice}
                   settings={settings}
-                  issueDate={issueDate}
+                  issueDate={(issueDates[previewInvoice.companyId] ?? defaultIssueDate).replace(/-/g, "/")}
                   month={selectedMonth}
                   notes={companyNotes[previewInvoice.companyId] ?? invoiceTemplates?.[0]?.notes}
                   dueDate={dueDates[previewInvoice.companyId] ?? dueDate}
@@ -620,6 +626,7 @@ export function InvoiceSection({
           invoices={selectedInvoices.length > 0 ? selectedInvoices : invoices}
           settings={settings}
           issueDate={issueDate}
+          issueDates={issueDates}
           month={selectedMonth}
           notes={invoiceTemplates?.[0]?.notes}
           companyNotes={companyNotes}
@@ -814,6 +821,7 @@ function PreviewGallery({
   invoices,
   settings,
   issueDate,
+  issueDates,
   month,
   notes,
   companyNotes,
@@ -831,6 +839,7 @@ function PreviewGallery({
   invoices: CompanyInvoice[];
   settings: Settings | null;
   issueDate: string;
+  issueDates?: Record<string, string>;
   month: string;
   notes?: string;
   companyNotes?: Record<string, string>;
@@ -955,7 +964,7 @@ function PreviewGallery({
                 <InvoicePreview
                   inv={prevInv}
                   settings={settings}
-                  issueDate={issueDate}
+                  issueDate={issueDates?.[prevInv.companyId] ? issueDates[prevInv.companyId].replace(/-/g, "/") : issueDate}
                   month={month}
                   notes={companyNotes?.[prevInv.companyId] ?? notes}
                   dueDate={dueDates?.[prevInv.companyId] ?? dueDate}
@@ -987,7 +996,7 @@ function PreviewGallery({
                 <InvoicePreview
                   inv={nextInv}
                   settings={settings}
-                  issueDate={issueDate}
+                  issueDate={issueDates?.[nextInv.companyId] ? issueDates[nextInv.companyId].replace(/-/g, "/") : issueDate}
                   month={month}
                   notes={companyNotes?.[nextInv.companyId] ?? notes}
                   dueDate={dueDates?.[nextInv.companyId] ?? dueDate}
@@ -1012,7 +1021,7 @@ function PreviewGallery({
               <InvoicePreview
                 inv={current}
                 settings={settings}
-                issueDate={issueDate}
+                issueDate={issueDates?.[current.companyId] ? issueDates[current.companyId].replace(/-/g, "/") : issueDate}
                 month={month}
                 notes={companyNotes?.[current.companyId] ?? notes}
                 dueDate={dueDates?.[current.companyId] ?? dueDate}
@@ -1079,6 +1088,8 @@ function CompanyRow({
   extras,
   companyDueDate,
   onDueDateChange,
+  companyIssueDate,
+  onIssueDateChange,
   companyNote,
   onNoteChange,
   sentAt,
@@ -1097,6 +1108,8 @@ function CompanyRow({
   extras: InvoiceLineItem[];
   companyDueDate: string;
   onDueDateChange: (v: string) => void;
+  companyIssueDate: string;
+  onIssueDateChange: (v: string) => void;
   companyNote: string;
   onNoteChange: (v: string) => void;
   sentAt?: string;
@@ -1272,6 +1285,15 @@ function CompanyRow({
                   >
                     + 項目を追加
                   </button>
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-[10px] text-slate-500">請求日:</span>
+                    <input
+                      type="date"
+                      className="px-1.5 py-0.5 border border-slate-200 rounded text-[11px] outline-none focus:border-blue-400 bg-white"
+                      value={companyIssueDate}
+                      onChange={(e) => onIssueDateChange(e.target.value)}
+                    />
+                  </div>
                   <div className="flex items-center gap-1.5">
                     <span className="text-[10px] text-slate-500">入金期日:</span>
                     <input

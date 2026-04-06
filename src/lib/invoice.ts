@@ -164,7 +164,8 @@ export async function generateInvoicePDF(
   templateNotes?: string,
   dueDate?: string,
   notesMap?: Record<string, string>,
-  dueDatesMap?: Record<string, string>
+  dueDatesMap?: Record<string, string>,
+  issueDatesMap?: Record<string, string>
 ) {
   const [{ jsPDF }, { default: html2canvas }] = await Promise.all([
     import("jspdf"),
@@ -172,7 +173,7 @@ export async function generateInvoicePDF(
   ]);
 
   const today = new Date();
-  const issueDate = `${today.getFullYear()}/${String(today.getMonth() + 1).padStart(2, "0")}/${String(today.getDate()).padStart(2, "0")}`;
+  const defaultIssueDate = `${today.getFullYear()}/${String(today.getMonth() + 1).padStart(2, "0")}/${String(today.getDate()).padStart(2, "0")}`;
 
   const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
 
@@ -199,7 +200,8 @@ export async function generateInvoicePDF(
       const invoiceNumber = generateInvoiceNumber();
       const companyNotes = notesMap?.[inv.companyId] ?? templateNotes;
       const companyDueDate = dueDatesMap?.[inv.companyId] ?? dueDate;
-      const html = buildInvoiceHTML(inv, settings, issueDate, invoiceNumber, companyDueDate, companyNotes);
+      const companyIssueDate = issueDatesMap?.[inv.companyId] ? issueDatesMap[inv.companyId].replace(/-/g, "/") : defaultIssueDate;
+      const html = buildInvoiceHTML(inv, settings, companyIssueDate, invoiceNumber, companyDueDate, companyNotes);
 
       container.innerHTML = html;
 
@@ -259,7 +261,8 @@ export async function generateInvoicePDFBase64(
   inv: CompanyInvoice,
   invoiceMonth: string,
   templateNotes?: string,
-  dueDate?: string
+  dueDate?: string,
+  overrideIssueDate?: string
 ): Promise<string> {
   const [{ jsPDF }, { default: html2canvas }] = await Promise.all([
     import("jspdf"),
@@ -267,7 +270,7 @@ export async function generateInvoicePDFBase64(
   ]);
 
   const today = new Date();
-  const issueDate = `${today.getFullYear()}/${String(today.getMonth() + 1).padStart(2, "0")}/${String(today.getDate()).padStart(2, "0")}`;
+  const issueDate = overrideIssueDate || `${today.getFullYear()}/${String(today.getMonth() + 1).padStart(2, "0")}/${String(today.getDate()).padStart(2, "0")}`;
 
   const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
 
