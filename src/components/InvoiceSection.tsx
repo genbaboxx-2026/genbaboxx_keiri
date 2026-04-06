@@ -222,6 +222,46 @@ export function InvoiceSection({
     else setChecked(new Set(invoices.map((i) => i.companyId)));
   };
 
+  const applyLastMonth = async (companyId: string) => {
+    const [y, m] = selectedMonth.split("-").map(Number);
+    const prevMonth = m === 1 ? `${y - 1}-12` : `${y}-${String(m - 1).padStart(2, "0")}`;
+    try {
+      const { fetchInvoiceCustomizations } = await import("@/lib/api");
+      const prevData = await fetchInvoiceCustomizations(prevMonth);
+      const companyData = prevData[companyId];
+
+      // 先月のカスタマイズを適用
+      if (companyData?.customItems?.[companyId]) {
+        setCustomItems((prev) => ({ ...prev, [companyId]: companyData.customItems![companyId] as unknown as InvoiceLineItem[] }));
+      }
+      if (companyData?.baseOverrides?.[companyId]) {
+        setBaseOverrides((prev) => ({ ...prev, [companyId]: companyData.baseOverrides![companyId] as unknown as Record<number, Partial<InvoiceLineItem>> }));
+      }
+      if (companyData?.deletedBaseItems?.[companyId]) {
+        setDeletedBaseItems((prev) => ({ ...prev, [companyId]: new Set(companyData.deletedBaseItems![companyId] as number[]) }));
+      }
+      queueSave(companyId);
+
+      // 先月のカスタマイズがない場合、先月の請求書データから項目を反映
+      if (!companyData) {
+        const prevInvoices = getInvoicesForMonth(prevMonth, contracts, companies, invoiceTemplates);
+        const prevInv = prevInvoices.find((i) => i.companyId === companyId);
+        if (prevInv) {
+          // 先月のベース項目と現在のベース項目の差分をカスタム項目として追加
+          const currentBase = baseInvoices.find((i) => i.companyId === companyId);
+          const currentDescs = new Set((currentBase?.items ?? []).map((it) => `${it.description}|${it.unitPrice}`));
+          const extraItems = prevInv.items.filter((it) => !currentDescs.has(`${it.description}|${it.unitPrice}`));
+          if (extraItems.length > 0) {
+            setCustomItems((prev) => ({ ...prev, [companyId]: [...(prev[companyId] || []), ...extraItems] }));
+            queueSave(companyId);
+          }
+        }
+      }
+    } catch (e) {
+      console.error("先月データの取得に失敗:", e);
+    }
+  };
+
   const addCustomItem = (companyId: string) => {
     setCustomItems((prev) => ({
       ...prev,
@@ -607,6 +647,7 @@ export function InvoiceSection({
                           setExpandedId(isExpanded ? null : inv.companyId)
                         }
                         onAddItem={() => addCustomItem(inv.companyId)}
+                        onApplyLastMonth={() => applyLastMonth(inv.companyId)}
                         onUpdateItem={(i, f, v) =>
                           updateCustomItem(inv.companyId, i, f, v)
                         }
@@ -1203,6 +1244,7 @@ function CompanyRow({
   onToggleCheck,
   onToggleExpand,
   onAddItem,
+  onApplyLastMonth,
   onUpdateItem,
   onUpdateBaseItem,
   onRemoveItem,
@@ -1224,6 +1266,7 @@ function CompanyRow({
   onToggleCheck: () => void;
   onToggleExpand: () => void;
   onAddItem: () => void;
+  onApplyLastMonth: () => void;
   onUpdateItem: (
     index: number,
     field: keyof InvoiceLineItem,
@@ -1307,7 +1350,18 @@ function CompanyRow({
                 </colgroup>
                 <thead>
                   <tr className="bg-slate-50 border-b border-slate-200">
-                    <th className="px-2 py-2 text-left font-semibold text-slate-500">摘要</th>
+                    <th className="px-2 py-2 text-left font-semibold text-slate-500">
+                      <div className="flex items-center gap-2">
+                        摘要
+                        <button
+                          type="button"
+                          className="text-[10px] text-purple-500 hover:text-purple-700 hover:bg-purple-50 px-1.5 py-0.5 rounded border border-purple-200 cursor-pointer bg-white font-medium"
+                          onClick={onApplyLastMonth}
+                        >
+                          先月を反映
+                        </button>
+                      </div>
+                    </th>
                     <th className="px-1 py-2 text-center font-semibold text-slate-500">数量</th>
                     <th className="px-1 py-2 text-center font-semibold text-slate-500">単位</th>
                     <th className="px-1 py-2 text-right font-semibold text-slate-500">単価</th>
