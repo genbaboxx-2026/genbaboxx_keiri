@@ -181,3 +181,12 @@ export async function markAsSent(companyId: string, month: string): Promise<void
     );
   if (error) throw error;
 }
+
+export async function unmarkAsSent(companyId: string, month: string): Promise<void> {
+  const { error } = await supabase
+    .from("invoice_sent_status")
+    .delete()
+    .eq("company_id", companyId)
+    .eq("month", month);
+  if (error) throw error;
+}

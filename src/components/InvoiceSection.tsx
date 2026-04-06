@@ -497,6 +497,23 @@ export function InvoiceSection({
                         companyNote={companyNotes[inv.companyId] ?? invoiceTemplates?.[0]?.notes ?? ""}
                         onNoteChange={(v) => handleNoteChange(inv.companyId, v)}
                         sentAt={sentStatus[inv.companyId]}
+                        onToggleSent={() => {
+                          if (sentStatus[inv.companyId]) {
+                            import("@/lib/api").then(({ unmarkAsSent }) => {
+                              unmarkAsSent(inv.companyId, selectedMonth).catch(console.error);
+                            });
+                            setSentStatus((prev) => {
+                              const next = { ...prev };
+                              delete next[inv.companyId];
+                              return next;
+                            });
+                          } else {
+                            import("@/lib/api").then(({ markAsSent }) => {
+                              markAsSent(inv.companyId, selectedMonth).catch(console.error);
+                            });
+                            setSentStatus((prev) => ({ ...prev, [inv.companyId]: new Date().toISOString() }));
+                          }
+                        }}
                         productTypes={[...(companyProducts[inv.companyId] || [])]}
                         onToggleCheck={() => toggleCheck(inv.companyId)}
                         onToggleExpand={() =>
@@ -1093,6 +1110,7 @@ function CompanyRow({
   companyNote,
   onNoteChange,
   sentAt,
+  onToggleSent,
   productTypes,
   onToggleCheck,
   onToggleExpand,
@@ -1113,6 +1131,7 @@ function CompanyRow({
   companyNote: string;
   onNoteChange: (v: string) => void;
   sentAt?: string;
+  onToggleSent: () => void;
   productTypes?: string[];
   onToggleCheck: () => void;
   onToggleExpand: () => void;
@@ -1134,7 +1153,7 @@ function CompanyRow({
 
   return (
     <>
-      <tr className={`border-b border-slate-100 hover:bg-slate-50 ${isExpanded ? "bg-blue-50/60" : ""}`}>
+      <tr className={`border-b border-slate-100 hover:bg-slate-50 ${isExpanded ? "bg-blue-50/60" : ""} ${sentAt ? "bg-green-50/50" : ""}`}>
         <td className="px-3 py-2.5">
           <input
             type="checkbox"
@@ -1161,11 +1180,18 @@ function CompanyRow({
             {productTypes && productTypes.map((pt) => (
               <Badge key={pt} product={pt as import("@/lib/database.types").ProductType} />
             ))}
-            {sentAt && (
-              <span className="text-[10px] font-bold text-green-700 bg-green-100 border border-green-200 px-1.5 py-0.5 rounded-full">
-                送信済
-              </span>
-            )}
+            <button
+              type="button"
+              className={`text-[10px] font-bold px-2 py-0.5 rounded-full cursor-pointer border transition-colors ${
+                sentAt
+                  ? "text-green-700 bg-green-100 border-green-300 hover:bg-green-200"
+                  : "text-slate-400 bg-slate-50 border-slate-200 hover:bg-slate-100 hover:text-slate-600"
+              }`}
+              onClick={(e) => { e.stopPropagation(); onToggleSent(); }}
+              title={sentAt ? `送信済（${new Date(sentAt).toLocaleDateString("ja-JP")}）\nクリックで取消` : "クリックで送信済にする"}
+            >
+              {sentAt ? "✓ 送信済" : "未送信"}
+            </button>
           </div>
         </td>
         <td className="px-3 py-2.5 text-right tabular-nums font-semibold">
