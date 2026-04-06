@@ -42,6 +42,8 @@ export function CompaniesPage({
                 <th className="px-4 py-2.5 text-left font-bold text-xs text-slate-600">企業名</th>
                 <th className="px-4 py-2.5 text-left font-bold text-xs text-slate-600">プロダクト</th>
                 <th className="px-4 py-2.5 text-left font-bold text-xs text-slate-600">担当者</th>
+                <th className="px-4 py-2.5 text-left font-bold text-xs text-slate-600">請求担当者</th>
+                <th className="px-4 py-2.5 text-left font-bold text-xs text-slate-600">請求メール</th>
                 <th className="px-4 py-2.5 text-left font-bold text-xs text-slate-600 w-16">契約数</th>
                 <th className="w-16" />
               </tr>
@@ -70,6 +72,18 @@ export function CompaniesPage({
                       </div>
                     </td>
                     <td className="px-4 py-2.5 text-slate-500">{c.contact || "—"}</td>
+                    <td className="px-4 py-2.5 text-slate-500">{c.invoice_contact_name || <span className="text-slate-300">—</span>}</td>
+                    <td className="px-4 py-2.5">
+                      {c.invoice_email ? (
+                        <div className="flex flex-col gap-0.5">
+                          {c.invoice_email.split(",").map((e, i) => (
+                            <span key={i} className="text-xs text-blue-600 truncate max-w-[200px]" title={e.trim()}>{e.trim()}</span>
+                          ))}
+                        </div>
+                      ) : (
+                        <span className="text-slate-300">—</span>
+                      )}
+                    </td>
                     <td className="px-4 py-2.5 text-center tabular-nums">{companyContracts.length}</td>
                     <td className="px-2 py-2.5">
                       <button

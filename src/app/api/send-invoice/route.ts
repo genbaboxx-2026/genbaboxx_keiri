@@ -8,7 +8,8 @@ const resend = new Resend(process.env.RESEND_API_KEY);
 
 interface InvoiceRecipient {
   companyName: string;
-  email: string;
+  email?: string; // legacy single email
+  emails?: string[]; // multiple emails
   contactName: string;
   pdfBase64: string; // base64 encoded PDF data
 }
@@ -43,7 +44,14 @@ export async function POST(req: NextRequest) {
     const from = process.env.EMAIL_FROM || `${senderName || "請求書送付"} <onboarding@resend.dev>`;
 
     for (const recipient of recipients) {
-      if (!recipient.email) {
+      // Support both legacy single email and new multiple emails
+      const toEmails = recipient.emails?.length
+        ? recipient.emails
+        : recipient.email
+          ? [recipient.email]
+          : [];
+
+      if (toEmails.length === 0) {
         results.push({
           companyName: recipient.companyName,
           email: "",
@@ -52,6 +60,8 @@ export async function POST(req: NextRequest) {
         });
         continue;
       }
+
+      const emailDisplay = toEmails.join(", ");
 
       try {
         // 企業名ごとにパーソナライズした件名
@@ -63,7 +73,7 @@ export async function POST(req: NextRequest) {
 
         await resend.emails.send({
           from,
-          to: [recipient.email],
+          to: toEmails,
           subject: personalizedSubject,
           text: personalizedBody,
           attachments: [
@@ -77,13 +87,13 @@ export async function POST(req: NextRequest) {
 
         results.push({
           companyName: recipient.companyName,
-          email: recipient.email,
+          email: emailDisplay,
           success: true,
         });
       } catch (e) {
         results.push({
           companyName: recipient.companyName,
-          email: recipient.email,
+          email: emailDisplay,
           success: false,
           error: e instanceof Error ? e.message : "送信失敗",
         });

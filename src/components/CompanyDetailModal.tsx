@@ -182,8 +182,18 @@ export function CompanyDetailModal({
   const [contact, setContact] = useState(company.contact);
   const [note, setNote] = useState(company.note);
   const [invoiceContactName, setInvoiceContactName] = useState(company.invoice_contact_name);
-  const [invoiceEmail, setInvoiceEmail] = useState(company.invoice_email);
+  const [invoiceEmails, setInvoiceEmails] = useState<string[]>(
+    company.invoice_email ? company.invoice_email.split(",").map((e) => e.trim()).filter(Boolean) : [""]
+  );
   const [showProductSelect, setShowProductSelect] = useState(false);
+
+  const updateEmail = (index: number, value: string) => {
+    setInvoiceEmails((prev) => prev.map((e, i) => (i === index ? value : e)));
+  };
+  const addEmail = () => setInvoiceEmails((prev) => [...prev, ""]);
+  const removeEmail = (index: number) => {
+    setInvoiceEmails((prev) => prev.filter((_, i) => i !== index));
+  };
 
   const companyContracts = contracts.filter(
     (c) => c.company_id === company.id && (!productFilter || c.product_type === productFilter)
@@ -200,7 +210,7 @@ export function CompanyDetailModal({
       contact: mode === "master" ? contact : company.contact,
       note: mode === "master" ? note : company.note,
       invoice_contact_name: mode === "master" ? invoiceContactName : company.invoice_contact_name,
-      invoice_email: mode === "master" ? invoiceEmail : company.invoice_email,
+      invoice_email: mode === "master" ? invoiceEmails.map((e) => e.trim()).filter(Boolean).join(",") : company.invoice_email,
     });
   };
 
@@ -275,15 +285,37 @@ export function CompanyDetailModal({
             </div>
             <div>
               <label className="block text-[13px] font-semibold text-slate-600 mb-1.5">
-                メールアドレス
+                メールアドレス（To）
               </label>
-              <input
-                type="email"
-                className="w-full px-3.5 py-2.5 border-[1.5px] border-slate-200 rounded-[10px] text-sm outline-none focus:border-blue-400 bg-white"
-                value={invoiceEmail}
-                onChange={(e) => setInvoiceEmail(e.target.value)}
-                placeholder="keiri@example.com"
-              />
+              <div className="flex flex-col gap-2">
+                {invoiceEmails.map((email, i) => (
+                  <div key={i} className="flex gap-2 items-center">
+                    <input
+                      type="email"
+                      className="flex-1 px-3.5 py-2.5 border-[1.5px] border-slate-200 rounded-[10px] text-sm outline-none focus:border-blue-400 bg-white"
+                      value={email}
+                      onChange={(e) => updateEmail(i, e.target.value)}
+                      placeholder="keiri@example.com"
+                    />
+                    {invoiceEmails.length > 1 && (
+                      <button
+                        type="button"
+                        className="px-2 py-2 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-lg cursor-pointer text-sm"
+                        onClick={() => removeEmail(i)}
+                      >
+                        ✕
+                      </button>
+                    )}
+                  </div>
+                ))}
+                <button
+                  type="button"
+                  className="text-[12px] text-blue-500 hover:text-blue-700 cursor-pointer bg-transparent border-none text-left px-1 font-medium"
+                  onClick={addEmail}
+                >
+                  + アドレスを追加
+                </button>
+              </div>
             </div>
           </div>
         </div>

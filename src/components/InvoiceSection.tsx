@@ -325,8 +325,9 @@ export function InvoiceSection({
 
       for (const inv of invoicesToSend) {
         const co = getCompany(inv.companyId);
-        const email = co?.invoice_email || "";
-        if (!email) {
+        const emails = co?.invoice_email ? co.invoice_email.split(",").map((e) => e.trim()).filter(Boolean) : [];
+        const email = emails.join(", ");
+        if (emails.length === 0) {
           results.push({ companyName: inv.companyName, email: "", success: false, error: "メールアドレス未設定" });
           setSendResults([...results]);
           continue;
@@ -342,7 +343,7 @@ export function InvoiceSection({
             body: JSON.stringify({
               recipients: [{
                 companyName: inv.companyName,
-                email,
+                emails,
                 contactName: co?.invoice_contact_name || "",
                 pdfBase64,
               }],
@@ -689,7 +690,8 @@ export function InvoiceSection({
                       {selectedInvoices.map((inv) => {
                         const co = getCompany(inv.companyId);
                         const contactName = co?.invoice_contact_name || "";
-                        const email = co?.invoice_email || "";
+                        const emails = co?.invoice_email ? co.invoice_email.split(",").map((e: string) => e.trim()).filter(Boolean) : [];
+                        const email = emails.join(", ");
                         const isSendChecked = sendChecked.has(inv.companyId);
                         return (
                           <tr
