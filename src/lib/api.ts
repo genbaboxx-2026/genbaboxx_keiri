@@ -172,6 +172,17 @@ export async function fetchSentStatus(month: string): Promise<Record<string, str
   return map;
 }
 
+/** amountがNULLの送信済みレコードのcompany_idを返す */
+export async function fetchSentWithoutAmount(month: string): Promise<string[]> {
+  const { data, error } = await supabase
+    .from("invoice_sent_status")
+    .select("company_id")
+    .eq("month", month)
+    .is("amount", null);
+  if (error) return [];
+  return (data || []).map((r) => r.company_id);
+}
+
 export async function markAsSent(companyId: string, month: string, amount?: number): Promise<void> {
   const { error } = await supabase
     .from("invoice_sent_status")

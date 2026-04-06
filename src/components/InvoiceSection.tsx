@@ -193,6 +193,21 @@ export function InvoiceSection({
     setInitialized(true);
   }
 
+  // 送信済みだがamountが未保存のレコードをバックフィル
+  useEffect(() => {
+    if (invoices.length === 0) return;
+    import("@/lib/api").then(({ fetchSentWithoutAmount, markAsSent }) => {
+      fetchSentWithoutAmount(selectedMonth).then((companyIds) => {
+        for (const cid of companyIds) {
+          const inv = invoices.find((i) => i.companyId === cid);
+          if (inv) {
+            markAsSent(cid, selectedMonth, inv.subtotal).catch(console.error);
+          }
+        }
+      });
+    });
+  }, [selectedMonth, invoices]);
+
   const handleMonthChange = (m: string) => {
     setSelectedMonth(m);
     setCustomItems({});
