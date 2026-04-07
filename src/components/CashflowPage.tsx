@@ -128,16 +128,6 @@ export function CashflowPage({
     });
   }, []);
 
-  // 送信済み金額を考慮した企業別月次売上
-  const companyRevenueWithSent = useCallback(
-    (companyId: string, month: string): number => {
-      const sent = sentAmounts[month]?.[companyId];
-      if (sent !== undefined) return sent;
-      return companyRevenueForMonth(contracts, companyId, month, isOptimistic);
-    },
-    [contracts, sentAmounts, isOptimistic]
-  );
-
   // 送信済み金額を考慮した月次売上合計
   const revenueWithSent = useCallback(
     (month: string, productFilter?: string): number => {
@@ -498,7 +488,7 @@ export function CashflowPage({
                   contracts={productContracts}
                   displayMonths={displayMonths}
                   revenueFor={revenueWithSent}
-                  companyRevenueOverride={companyRevenueWithSent}
+                  isOptimistic={isOptimistic}
                   currentMonth={currentMonth}
                 />
               );
@@ -781,7 +771,7 @@ export function CashflowPage({
 }
 
 function ProductRows({
-  product, isExpanded, onToggle, companyIds, companies, contracts, displayMonths, revenueFor, companyRevenueOverride, currentMonth,
+  product, isExpanded, onToggle, companyIds, companies, contracts, displayMonths, revenueFor, isOptimistic, currentMonth,
 }: {
   product: (typeof PRODUCTS)[number];
   isExpanded: boolean;
@@ -791,7 +781,7 @@ function ProductRows({
   contracts: Contract[];
   displayMonths: string[];
   revenueFor: (month: string, productFilter?: string) => number;
-  companyRevenueOverride: (companyId: string, month: string) => number;
+  isOptimistic?: boolean;
   currentMonth: string;
 }) {
   return (
@@ -820,7 +810,7 @@ function ProductRows({
               {companyName}
             </td>
             {displayMonths.map((m) => {
-              const v = companyRevenueOverride(cid, m);
+              const v = companyRevenueForMonth(contracts, cid, m, isOptimistic);
               return (
                 <td key={m} className={`px-2 py-1.5 text-right border-b border-slate-50 tabular-nums text-[11px] ${v > 0 ? "text-slate-500" : "text-slate-200"}`}>
                   {v > 0 ? formatNumber(v) : "—"}
