@@ -16,8 +16,9 @@ import {
 } from "@/lib/calc";
 import { Badge } from "./Badge";
 
-/** 送信済み金額のマップ: month → companyId → amount(税別) */
-type SentAmountsMap = Record<string, Record<string, number>>;
+/** 送信済み金額のマップ: month → companyId → { amount(税別), tax(税額) } */
+type SentEntry = { amount: number; tax: number };
+type SentAmountsMap = Record<string, Record<string, SentEntry>>;
 
 interface CashflowPageProps {
   contracts: Contract[];
@@ -121,18 +122,16 @@ export function CashflowPage({
         const map: SentAmountsMap = {};
         for (const row of rows) {
           if (!map[row.month]) map[row.month] = {};
-          map[row.month][row.company_id] = row.amount;
+          map[row.month][row.company_id] = { amount: row.amount, tax: row.tax ?? Math.floor(row.amount * 0.1) };
         }
         setSentAmounts(map);
       });
     });
   }, []);
 
-  // 送信済み金額を考慮した月次売上合計
+  // 送信済み金額を考慮した月次売上合計（税別）
   const revenueWithSent = useCallback(
     (month: string, productFilter?: string): number => {
-      // プロダクトフィルターがある場合は契約ベースの計算を使う
-      // （送信済み金額は全プロダクト合計のため分割できない）
       if (productFilter) {
         return optimisticRevenueFor(month, productFilter);
       }
@@ -142,16 +141,13 @@ export function CashflowPage({
         return optimisticRevenueFor(month);
       }
 
-      // 送信済み企業の金額 + 未送信企業の契約ベース金額
       let total = 0;
       const sentCompanyIds = new Set(Object.keys(sentForMonth));
 
-      // 送信済み企業の金額を加算
-      for (const amount of Object.values(sentForMonth)) {
-        total += amount;
+      for (const entry of Object.values(sentForMonth)) {
+        total += entry.amount;
       }
 
-      // 未送信企業の契約ベース金額を加算
       const unsent = contracts.filter((c) => !sentCompanyIds.has(c.company_id));
       for (const c of unsent) {
         let amt = 0;
@@ -175,6 +171,52 @@ export function CashflowPage({
           if (shiftMonth(ms[0], io) === month) amt += c.initial_fee;
         }
         total += amt;
+      }
+      return total;
+    },
+    [contracts, sentAmounts, optimisticRevenueFor, isOptimistic]
+  );
+
+  // 送信済み金額を考慮した月次売上合計（税込）
+  const revenueWithSentTaxIncl = useCallback(
+    (month: string): number => {
+      const sentForMonth = sentAmounts[month];
+      if (!sentForMonth || Object.keys(sentForMonth).length === 0) {
+        return Math.floor(optimisticRevenueFor(month) * 1.1);
+      }
+
+      let total = 0;
+      const sentCompanyIds = new Set(Object.keys(sentForMonth));
+
+      // 送信済み企業: 小計 + 実際の税額
+      for (const entry of Object.values(sentForMonth)) {
+        total += entry.amount + entry.tax;
+      }
+
+      // 未送信企業: 契約ベース × 1.1
+      const unsent = contracts.filter((c) => !sentCompanyIds.has(c.company_id));
+      for (const c of unsent) {
+        let amt = 0;
+        const bs = makeBillingStart(c.billing_month, c.billing_day);
+        const dur = effectiveDuration(c.billing_month, c.billing_day, c.duration_months, c.contract_status, isOptimistic);
+        const ms = billingMonths(bs, dur);
+        const mo = calcPayOffset(c.monthly_close, c.monthly_pay);
+        const isLump = c.billing_type === "lump_sum";
+        const feeMs = c.fee_months && c.fee_months > 1 ? ms.slice(0, c.fee_months) : ms;
+        if (isLump) {
+          if (ms.length > 0 && shiftMonth(ms[0], mo) === month) amt += c.monthly_fee * c.duration_months;
+        } else {
+          feeMs.forEach((bm) => { if (shiftMonth(bm, mo) === month) amt += c.monthly_fee; });
+        }
+        if (c.has_option) {
+          const oo = calcPayOffset(c.option_close, c.option_pay);
+          ms.forEach((bm) => { if (shiftMonth(bm, oo) === month) amt += c.option_fee; });
+        }
+        if (c.has_initial_fee && ms.length > 0) {
+          const io = calcPayOffset(c.initial_close, c.initial_pay);
+          if (shiftMonth(ms[0], io) === month) amt += c.initial_fee;
+        }
+        total += Math.floor(amt * 1.1);
       }
       return total;
     },
@@ -538,7 +580,7 @@ export function CashflowPage({
                 売上合計<span className="text-[10px] font-normal text-blue-400 ml-1">(税込)</span>
               </td>
               {displayMonths.map((m) => {
-                const v = Math.floor(revenueWithSent(m) * 1.1);
+                const v = revenueWithSentTaxIncl(m);
                 return (
                   <td key={m} className="px-2 py-2 text-right font-extrabold text-[13px] text-blue-800 tabular-nums">
                     {v > 0 ? formatNumber(v) : "—"}
@@ -720,7 +762,7 @@ export function CashflowPage({
             <tr className="bg-slate-100 border-t-2 border-slate-400">
               <td className="px-3.5 py-3 font-extrabold text-sm sticky left-0 bg-slate-100 text-slate-900 z-10">収支<span className="text-[10px] font-normal text-slate-400 ml-1">(税込)</span></td>
               {displayMonths.map((m) => {
-                const rev = Math.floor(revenueWithSent(m) * 1.1);
+                const rev = revenueWithSentTaxIncl(m);
                 const exp = expenseForMonth(m);
                 const diff = rev - exp;
                 return (
@@ -775,7 +817,7 @@ export function CashflowPage({
               {(() => {
                 let cumulative = 0;
                 return displayMonths.map((m) => {
-                  const rev = Math.floor(revenueWithSent(m) * 1.1);
+                  const rev = revenueWithSentTaxIncl(m);
                   const exp = expenseForMonth(m);
                   const adj = adjustments[m] || 0;
                   cumulative += rev - exp + adj;

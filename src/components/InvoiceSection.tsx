@@ -202,7 +202,7 @@ export function InvoiceSection({
       for (const cid of sentCompanyIds) {
         const inv = invoices.find((i) => i.companyId === cid);
         if (inv) {
-          markAsSent(cid, selectedMonth, inv.subtotal).catch(console.error);
+          markAsSent(cid, selectedMonth, inv.subtotal, inv.tax).catch(console.error);
         }
       }
     });
@@ -486,7 +486,7 @@ export function InvoiceSection({
             results.push(data.results[0]);
             if (data.results[0]?.success) {
               import("@/lib/api").then(({ markAsSent }) => {
-                markAsSent(inv.companyId, selectedMonth, inv.subtotal).catch(console.error);
+                markAsSent(inv.companyId, selectedMonth, inv.subtotal, inv.tax).catch(console.error);
               });
               setSentStatus((prev) => ({ ...prev, [inv.companyId]: new Date().toISOString() }));
             }
@@ -651,7 +651,7 @@ export function InvoiceSection({
                             });
                           } else {
                             import("@/lib/api").then(({ markAsSent }) => {
-                              markAsSent(inv.companyId, selectedMonth, inv.subtotal).catch(console.error);
+                              markAsSent(inv.companyId, selectedMonth, inv.subtotal, inv.tax).catch(console.error);
                             });
                             setSentStatus((prev) => ({ ...prev, [inv.companyId]: new Date().toISOString() }));
                           }
