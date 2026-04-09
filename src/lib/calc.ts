@@ -220,7 +220,7 @@ export function getRevenue(
       let amt = 0;
       const mo = calcPayOffset(c.monthly_close, c.monthly_pay);
       const isLump = c.billing_type === "lump_sum";
-      const feeMs = (c.fee_months && c.fee_months > 1) ? ms.slice(0, c.fee_months) : ms;
+      const feeMs = (c.fee_months && c.fee_months > 1 && !(optimistic && c.contract_status === "auto_renewing")) ? ms.slice(0, c.fee_months) : ms;
       if (isLump) {
         // 一括: 支払い月に総額を計上
         if (ms.length > 0 && shiftMonth(ms[0], mo) === month) {

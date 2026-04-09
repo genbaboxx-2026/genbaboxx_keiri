@@ -48,7 +48,7 @@ function companyRevenueForMonth(
       const ms = billingMonths(bs, dur);
       const mo = calcPayOffset(c.monthly_close, c.monthly_pay);
       const isLump = c.billing_type === "lump_sum";
-      const feeMs = c.fee_months && c.fee_months > 1 ? ms.slice(0, c.fee_months) : ms;
+      const feeMs = (c.fee_months && c.fee_months > 1 && !(optimistic && c.contract_status === "auto_renewing")) ? ms.slice(0, c.fee_months) : ms;
       if (isLump) {
         if (ms.length > 0 && shiftMonth(ms[0], mo) === month) amt += c.monthly_fee * c.duration_months;
       } else {
@@ -156,7 +156,7 @@ export function CashflowPage({
         const ms = billingMonths(bs, dur);
         const mo = calcPayOffset(c.monthly_close, c.monthly_pay);
         const isLump = c.billing_type === "lump_sum";
-        const feeMs = c.fee_months && c.fee_months > 1 ? ms.slice(0, c.fee_months) : ms;
+        const feeMs = (c.fee_months && c.fee_months > 1 && !(isOptimistic && c.contract_status === "auto_renewing")) ? ms.slice(0, c.fee_months) : ms;
         if (isLump) {
           if (ms.length > 0 && shiftMonth(ms[0], mo) === month) amt += c.monthly_fee * c.duration_months;
         } else {
@@ -202,7 +202,7 @@ export function CashflowPage({
         const ms = billingMonths(bs, dur);
         const mo = calcPayOffset(c.monthly_close, c.monthly_pay);
         const isLump = c.billing_type === "lump_sum";
-        const feeMs = c.fee_months && c.fee_months > 1 ? ms.slice(0, c.fee_months) : ms;
+        const feeMs = (c.fee_months && c.fee_months > 1 && !(isOptimistic && c.contract_status === "auto_renewing")) ? ms.slice(0, c.fee_months) : ms;
         if (isLump) {
           if (ms.length > 0 && shiftMonth(ms[0], mo) === month) amt += c.monthly_fee * c.duration_months;
         } else {
