@@ -514,75 +514,52 @@ export function CashflowPage({
             </tr>
           </thead>
           <tbody>
-            {/* 売上 */}
-            {PRODUCTS.map((pr) => {
-              const isExpanded = expandedProducts.has(pr.id);
-              const productContracts = contractsFor(pr.id);
-              const companyIds = [...new Set(productContracts.map((c) => c.company_id))];
-              return (
-                <ProductRows
-                  key={pr.id}
-                  product={pr}
-                  isExpanded={isExpanded}
-                  onToggle={() => toggleProduct(pr.id)}
-                  companyIds={companyIds}
-                  companies={companies}
-                  contracts={productContracts}
-                  displayMonths={displayMonths}
-                  revenueFor={revenueWithSent}
-                  isOptimistic={isOptimistic}
-                  currentMonth={currentMonth}
-                />
-              );
-            })}
-
-            {/* カスタム項目（送信済み金額と契約ベースの差分: 交通費等） */}
+            {/* 売上（税込表示） */}
             {(() => {
-              const hasAnyCustom = displayMonths.some((m) => {
-                const diff = revenueWithSent(m) - optimisticRevenueFor(m);
-                return diff !== 0;
+              // 追加項目（送信済み差分）の振り分け先を決定: その他 > NiNKUBOXX > BAKUSOQにはつけない
+              const hasOther = contractsFor("other").length > 0;
+              const hasNinkuboxx = contractsFor("ninkuboxx").length > 0;
+              const extrasTargetProduct = hasOther ? "other" : hasNinkuboxx ? "ninkuboxx" : null;
+
+              return PRODUCTS.map((pr) => {
+                const isExpanded = expandedProducts.has(pr.id);
+                const productContracts = contractsFor(pr.id);
+                const companyIds = [...new Set(productContracts.map((c) => c.company_id))];
+                return (
+                  <ProductRows
+                    key={pr.id}
+                    product={pr}
+                    isExpanded={isExpanded}
+                    onToggle={() => toggleProduct(pr.id)}
+                    companyIds={companyIds}
+                    companies={companies}
+                    contracts={productContracts}
+                    displayMonths={displayMonths}
+                    revenueFor={optimisticRevenueFor}
+                    isOptimistic={isOptimistic}
+                    currentMonth={currentMonth}
+                    extrasForMonth={pr.id === extrasTargetProduct ? (m: string) => {
+                      // 全体の税込合計 - 全製品の契約ベース税込合計 = 追加項目の税込金額
+                      const totalTaxIncl = revenueWithSentTaxIncl(m);
+                      const contractTaxIncl = PRODUCTS.reduce(
+                        (sum, p) => sum + Math.floor(optimisticRevenueFor(m, p.id) * 1.1), 0
+                      );
+                      return totalTaxIncl - contractTaxIncl;
+                    } : undefined}
+                  />
+                );
               });
-              if (!hasAnyCustom) return null;
-              return (
-                <tr className="border-b border-slate-100">
-                  <td className="px-3.5 py-2 sticky left-0 bg-white z-10 font-medium text-slate-500 text-[11px]">
-                    カスタム項目<span className="text-[10px] text-slate-400 ml-1">(交通費等)</span>
-                  </td>
-                  {displayMonths.map((m) => {
-                    const diff = revenueWithSent(m) - optimisticRevenueFor(m);
-                    return (
-                      <td key={m} className={`px-2 py-2 text-right tabular-nums text-[11px] ${diff > 0 ? "text-amber-600" : diff < 0 ? "text-red-500" : "text-slate-200"}`}>
-                        {diff !== 0 ? formatNumber(diff) : "—"}
-                      </td>
-                    );
-                  })}
-                </tr>
-              );
             })()}
 
-            {/* 売上合計(税別) */}
+            {/* 売上合計(税込) */}
             <tr className="bg-slate-50 border-t-2 border-slate-300">
               <td className="px-3.5 py-2 font-extrabold text-sm sticky left-0 bg-slate-50 text-slate-800 z-10">
-                売上合計<span className="text-[10px] font-normal text-slate-400 ml-1">(税別)</span>
-              </td>
-              {displayMonths.map((m) => {
-                const v = revenueWithSent(m);
-                return (
-                  <td key={m} className="px-2 py-2 text-right font-extrabold text-[13px] text-slate-800 tabular-nums">
-                    {v > 0 ? formatNumber(v) : "—"}
-                  </td>
-                );
-              })}
-            </tr>
-            {/* 売上合計(税込) */}
-            <tr className="bg-slate-50">
-              <td className="px-3.5 py-2 font-extrabold text-sm sticky left-0 bg-slate-50 text-blue-800 z-10">
-                売上合計<span className="text-[10px] font-normal text-blue-400 ml-1">(税込)</span>
+                売上合計<span className="text-[10px] font-normal text-slate-400 ml-1">(税込)</span>
               </td>
               {displayMonths.map((m) => {
                 const v = revenueWithSentTaxIncl(m);
                 return (
-                  <td key={m} className="px-2 py-2 text-right font-extrabold text-[13px] text-blue-800 tabular-nums">
+                  <td key={m} className="px-2 py-2 text-right font-extrabold text-[13px] text-slate-800 tabular-nums">
                     {v > 0 ? formatNumber(v) : "—"}
                   </td>
                 );
@@ -837,7 +814,7 @@ export function CashflowPage({
 }
 
 function ProductRows({
-  product, isExpanded, onToggle, companyIds, companies, contracts, displayMonths, revenueFor, isOptimistic, currentMonth,
+  product, isExpanded, onToggle, companyIds, companies, contracts, displayMonths, revenueFor, isOptimistic, currentMonth, extrasForMonth,
 }: {
   product: (typeof PRODUCTS)[number];
   isExpanded: boolean;
@@ -849,6 +826,7 @@ function ProductRows({
   revenueFor: (month: string, productFilter?: string) => number;
   isOptimistic?: boolean;
   currentMonth: string;
+  extrasForMonth?: (month: string) => number;
 }) {
   return (
     <>
@@ -860,7 +838,9 @@ function ProductRows({
           </span>
         </td>
         {displayMonths.map((m) => {
-          const v = revenueFor(m, product.id);
+          const base = Math.floor(revenueFor(m, product.id) * 1.1);
+          const extras = extrasForMonth ? extrasForMonth(m) : 0;
+          const v = base + extras;
           return (
             <td key={m} className={`px-2 py-2 text-right border-b border-slate-100 tabular-nums font-semibold ${v > 0 ? "text-slate-700" : "text-slate-200"}`}>
               {v > 0 ? formatNumber(v) : "—"}
@@ -876,7 +856,7 @@ function ProductRows({
               {companyName}
             </td>
             {displayMonths.map((m) => {
-              const v = companyRevenueForMonth(contracts, cid, m, isOptimistic);
+              const v = Math.floor(companyRevenueForMonth(contracts, cid, m, isOptimistic) * 1.1);
               return (
                 <td key={m} className={`px-2 py-1.5 text-right border-b border-slate-50 tabular-nums text-[11px] ${v > 0 ? "text-slate-500" : "text-slate-200"}`}>
                   {v > 0 ? formatNumber(v) : "—"}
