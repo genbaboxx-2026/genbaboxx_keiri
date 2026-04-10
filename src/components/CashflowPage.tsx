@@ -521,6 +521,15 @@ export function CashflowPage({
               const hasNinkuboxx = contractsFor("ninkuboxx").length > 0;
               const extrasTargetProduct = hasNinkuboxx ? "ninkuboxx" : hasOther ? "other" : null;
 
+              // 企業ごとの追加項目（送信済み税込 - 契約ベース税込）
+              const companyExtras = (month: string, companyId: string): number => {
+                const sent = sentAmounts[month]?.[companyId];
+                if (!sent) return 0;
+                const sentTaxIncl = sent.amount + sent.tax;
+                const contractTaxExcl = companyRevenueForMonth(contracts, companyId, month, isOptimistic);
+                return sentTaxIncl - Math.floor(contractTaxExcl * 1.1);
+              };
+
               return PRODUCTS.map((pr) => {
                 const isExpanded = expandedProducts.has(pr.id);
                 const productContracts = contractsFor(pr.id);
@@ -539,13 +548,13 @@ export function CashflowPage({
                     isOptimistic={isOptimistic}
                     currentMonth={currentMonth}
                     extrasForMonth={pr.id === extrasTargetProduct ? (m: string) => {
-                      // 全体の税込合計 - 全製品の契約ベース税込合計 = 追加項目の税込金額
                       const totalTaxIncl = revenueWithSentTaxIncl(m);
                       const contractTaxIncl = PRODUCTS.reduce(
                         (sum, p) => sum + Math.floor(optimisticRevenueFor(m, p.id) * 1.1), 0
                       );
                       return totalTaxIncl - contractTaxIncl;
                     } : undefined}
+                    extrasForCompany={pr.id === extrasTargetProduct ? companyExtras : undefined}
                   />
                 );
               });
@@ -814,7 +823,7 @@ export function CashflowPage({
 }
 
 function ProductRows({
-  product, isExpanded, onToggle, companyIds, companies, contracts, displayMonths, revenueFor, isOptimistic, currentMonth, extrasForMonth,
+  product, isExpanded, onToggle, companyIds, companies, contracts, displayMonths, revenueFor, isOptimistic, currentMonth, extrasForMonth, extrasForCompany,
 }: {
   product: (typeof PRODUCTS)[number];
   isExpanded: boolean;
@@ -827,6 +836,7 @@ function ProductRows({
   isOptimistic?: boolean;
   currentMonth: string;
   extrasForMonth?: (month: string) => number;
+  extrasForCompany?: (month: string, companyId: string) => number;
 }) {
   return (
     <>
@@ -856,7 +866,9 @@ function ProductRows({
               {companyName}
             </td>
             {displayMonths.map((m) => {
-              const v = Math.floor(companyRevenueForMonth(contracts, cid, m, isOptimistic) * 1.1);
+              const base = Math.floor(companyRevenueForMonth(contracts, cid, m, isOptimistic) * 1.1);
+              const extras = extrasForCompany ? extrasForCompany(m, cid) : 0;
+              const v = base + extras;
               return (
                 <td key={m} className={`px-2 py-1.5 text-right border-b border-slate-50 tabular-nums text-[11px] ${v > 0 ? "text-slate-500" : "text-slate-200"}`}>
                   {v > 0 ? formatNumber(v) : "—"}
