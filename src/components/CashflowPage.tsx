@@ -516,10 +516,13 @@ export function CashflowPage({
           <tbody>
             {/* 売上（税込表示） */}
             {(() => {
-              // 追加項目（送信済み差分）の振り分け先を決定: その他 > NiNKUBOXX > BAKUSOQにはつけない
-              const hasOther = contractsFor("other").length > 0;
-              const hasNinkuboxx = contractsFor("ninkuboxx").length > 0;
-              const extrasTargetProduct = hasNinkuboxx ? "ninkuboxx" : hasOther ? "other" : null;
+              // 企業ごとに追加項目の振り分け先を決定: NB > その他 > BAKUSOQ
+              const companyExtrasTarget = (companyId: string): string => {
+                const companyProducts = new Set(contracts.filter(c => c.company_id === companyId).map(c => c.product_type));
+                if (companyProducts.has("ninkuboxx")) return "ninkuboxx";
+                if (companyProducts.has("other")) return "other";
+                return "bakusoq";
+              };
 
               // 企業ごとの追加項目（送信済み税込 - 契約ベース税込）
               const companyExtras = (month: string, companyId: string): number => {
@@ -547,14 +550,22 @@ export function CashflowPage({
                     revenueFor={optimisticRevenueFor}
                     isOptimistic={isOptimistic}
                     currentMonth={currentMonth}
-                    extrasForMonth={pr.id === extrasTargetProduct ? (m: string) => {
-                      const totalTaxIncl = revenueWithSentTaxIncl(m);
-                      const contractTaxIncl = PRODUCTS.reduce(
-                        (sum, p) => sum + Math.floor(optimisticRevenueFor(m, p.id) * 1.1), 0
-                      );
-                      return totalTaxIncl - contractTaxIncl;
-                    } : undefined}
-                    extrasForCompany={pr.id === extrasTargetProduct ? companyExtras : undefined}
+                    extrasForMonth={(m: string) => {
+                      // この製品が振り分け先の企業の追加項目を合算
+                      const sentForMonth = sentAmounts[m];
+                      if (!sentForMonth) return 0;
+                      let total = 0;
+                      for (const cid of Object.keys(sentForMonth)) {
+                        if (companyExtrasTarget(cid) === pr.id) {
+                          total += companyExtras(m, cid);
+                        }
+                      }
+                      return total;
+                    }}
+                    extrasForCompany={(m: string, cid: string) => {
+                      if (companyExtrasTarget(cid) !== pr.id) return 0;
+                      return companyExtras(m, cid);
+                    }}
                   />
                 );
               });
