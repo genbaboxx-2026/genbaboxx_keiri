@@ -519,7 +519,7 @@ export function CashflowPage({
               // 追加項目（送信済み差分）の振り分け先を決定: その他 > NiNKUBOXX > BAKUSOQにはつけない
               const hasOther = contractsFor("other").length > 0;
               const hasNinkuboxx = contractsFor("ninkuboxx").length > 0;
-              const extrasTargetProduct = hasOther ? "other" : hasNinkuboxx ? "ninkuboxx" : null;
+              const extrasTargetProduct = hasNinkuboxx ? "ninkuboxx" : hasOther ? "other" : null;
 
               return PRODUCTS.map((pr) => {
                 const isExpanded = expandedProducts.has(pr.id);
