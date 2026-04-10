@@ -516,8 +516,16 @@ export function CashflowPage({
           <tbody>
             {/* 売上（税込表示） */}
             {(() => {
-              // 企業ごとに追加項目の振り分け先を決定: NB > その他 > BAKUSOQ
-              const companyExtrasTarget = (companyId: string): string => {
+              // 企業ごと・月ごとに追加項目の振り分け先を決定: NB > その他 > BAKUSOQ
+              // その月に実際に売上がある製品を優先する
+              const companyExtrasTarget = (month: string, companyId: string): string => {
+                const hasNB = companyRevenueForMonth(contractsFor("ninkuboxx"), companyId, month, isOptimistic) > 0;
+                const hasOther = companyRevenueForMonth(contractsFor("other"), companyId, month, isOptimistic) > 0;
+                const hasBakusoq = companyRevenueForMonth(contractsFor("bakusoq"), companyId, month, isOptimistic) > 0;
+                if (hasNB) return "ninkuboxx";
+                if (hasOther) return "other";
+                if (hasBakusoq) return "bakusoq";
+                // フォールバック: 契約ベースで判定
                 const companyProducts = new Set(contracts.filter(c => c.company_id === companyId).map(c => c.product_type));
                 if (companyProducts.has("ninkuboxx")) return "ninkuboxx";
                 if (companyProducts.has("other")) return "other";
@@ -551,19 +559,18 @@ export function CashflowPage({
                     isOptimistic={isOptimistic}
                     currentMonth={currentMonth}
                     extrasForMonth={(m: string) => {
-                      // この製品が振り分け先の企業の追加項目を合算
                       const sentForMonth = sentAmounts[m];
                       if (!sentForMonth) return 0;
                       let total = 0;
                       for (const cid of Object.keys(sentForMonth)) {
-                        if (companyExtrasTarget(cid) === pr.id) {
+                        if (companyExtrasTarget(m, cid) === pr.id) {
                           total += companyExtras(m, cid);
                         }
                       }
                       return total;
                     }}
                     extrasForCompany={(m: string, cid: string) => {
-                      if (companyExtrasTarget(cid) !== pr.id) return 0;
+                      if (companyExtrasTarget(m, cid) !== pr.id) return 0;
                       return companyExtras(m, cid);
                     }}
                   />
