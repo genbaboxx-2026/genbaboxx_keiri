@@ -122,7 +122,7 @@ export function ContractPage({
               + 契約を追加
             </button>
             {addDropdownOpen && selectedProducts.size !== 1 && (
-              <div className="absolute right-0 top-full mt-1 bg-white border border-slate-200 rounded-xl shadow-lg z-20 min-w-[180px]">
+              <div className="absolute right-0 top-full mt-1 bg-white border border-slate-200 rounded-xl shadow-lg z-50 min-w-[180px]">
                 {PRODUCTS.map((p) => (
                   <button
                     key={p.id}
@@ -492,7 +492,7 @@ function ContractDetailView({
             + 契約を追加
           </button>
           {addDropdownOpen && selectedProducts.size !== 1 && (
-            <div className="absolute right-0 top-full mt-1 bg-white border border-slate-200 rounded-xl shadow-lg z-20 min-w-[180px]">
+            <div className="absolute right-0 top-full mt-1 bg-white border border-slate-200 rounded-xl shadow-lg z-50 min-w-[180px]">
               {PRODUCTS.map((p) => (
                 <button
                   key={p.id}
