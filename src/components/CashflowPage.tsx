@@ -869,11 +869,8 @@ function ProductRows({
           const base = Math.floor(revenueFor(m, product.id) * 1.1);
           const extras = extrasForMonth ? extrasForMonth(m) : 0;
           const v = base + extras;
-          // 楽観モード: 悲観ベースの売上がないが楽観で売上がある → 自動更新による延長
-          const pessimisticBase = isOptimistic ? Math.floor(getRevenue(m, contracts, product.id, false) * 1.1) : 0;
-          const isExtension = isOptimistic && v > 0 && pessimisticBase === 0;
           return (
-            <td key={m} className={`px-2 py-2 text-right border-b border-slate-100 tabular-nums font-semibold ${isExtension ? "bg-emerald-50 text-emerald-700" : v > 0 ? "text-slate-700" : "text-slate-200"}`}>
+            <td key={m} className={`px-2 py-2 text-right border-b border-slate-100 tabular-nums font-semibold ${v > 0 ? "text-slate-700" : "text-slate-200"}`}>
               {v > 0 ? formatNumber(v) : "—"}
             </td>
           );
