@@ -401,6 +401,141 @@ export function CashflowPage({
     return activeMonths;
   })();
 
+  // CSV出力
+  const exportCSV = () => {
+    const rows: string[][] = [];
+    const header = ["項目", ...displayMonths.map((m) => {
+      const [y, mo] = m.split("-");
+      return `${parseInt(mo)}月 ${y}`;
+    })];
+    rows.push(header);
+
+    // 企業ごと・月ごとに追加項目の振り分け先を決定
+    const companyExtrasTarget = (month: string, companyId: string): string => {
+      const hasNB = companyRevenueForMonth(contractsFor("ninkuboxx"), companyId, month, isOptimistic) > 0;
+      const hasOther = companyRevenueForMonth(contractsFor("other"), companyId, month, isOptimistic) > 0;
+      const hasBakusoq = companyRevenueForMonth(contractsFor("bakusoq"), companyId, month, isOptimistic) > 0;
+      if (hasNB) return "ninkuboxx";
+      if (hasOther) return "other";
+      if (hasBakusoq) return "bakusoq";
+      const companyProducts = new Set(contracts.filter(c => c.company_id === companyId).map(c => c.product_type));
+      if (companyProducts.has("ninkuboxx")) return "ninkuboxx";
+      if (companyProducts.has("other")) return "other";
+      return "bakusoq";
+    };
+    const companyExtrasCalc = (month: string, companyId: string): number => {
+      const sent = sentAmounts[month]?.[companyId];
+      if (!sent) return 0;
+      const sentTaxIncl = sent.amount + sent.tax;
+      const contractTaxExcl = companyRevenueForMonth(contracts, companyId, month, isOptimistic);
+      return sentTaxIncl - Math.floor(contractTaxExcl * 1.1);
+    };
+
+    // 売上（製品別）
+    for (const pr of PRODUCTS) {
+      const productContracts = contractsFor(pr.id);
+      const extrasForMonth = (m: string) => {
+        const sentForMonth = sentAmounts[m];
+        if (!sentForMonth) return 0;
+        let total = 0;
+        for (const cid of Object.keys(sentForMonth)) {
+          if (companyExtrasTarget(m, cid) === pr.id) total += companyExtrasCalc(m, cid);
+        }
+        return total;
+      };
+      rows.push([
+        pr.label,
+        ...displayMonths.map((m) => {
+          const base = Math.floor(optimisticRevenueFor(m, pr.id) * 1.1);
+          const extras = extrasForMonth(m);
+          return String(base + extras);
+        }),
+      ]);
+
+      // 企業別の内訳
+      const companyIds = [...new Set(productContracts.map((c) => c.company_id))];
+      for (const cid of companyIds) {
+        const companyName = companies.find((c) => c.id === cid)?.name || "不明";
+        rows.push([
+          `  ${companyName}`,
+          ...displayMonths.map((m) => {
+            const base = Math.floor(companyRevenueForMonth(productContracts, cid, m, isOptimistic) * 1.1);
+            const extras = companyExtrasTarget(m, cid) === pr.id ? companyExtrasCalc(m, cid) : 0;
+            return String(base + extras);
+          }),
+        ]);
+      }
+    }
+
+    // 売上合計(税込)
+    rows.push([
+      "売上合計(税込)",
+      ...displayMonths.map((m) => String(revenueWithSentTaxIncl(m))),
+    ]);
+
+    // 空行
+    rows.push([]);
+
+    // 支出行
+    for (const name of expenseNames) {
+      rows.push([
+        name,
+        ...displayMonths.map((m) => {
+          const total = expenses.filter((e) => e.name === name && e.month === m).reduce((s, e) => s + e.amount, 0);
+          return String(total);
+        }),
+      ]);
+    }
+
+    // 支出合計
+    rows.push([
+      "支出合計",
+      ...displayMonths.map((m) => String(expenseForMonth(m))),
+    ]);
+
+    // 収支(税込)
+    rows.push([
+      "収支(税込)",
+      ...displayMonths.map((m) => String(revenueWithSentTaxIncl(m) - expenseForMonth(m))),
+    ]);
+
+    // 調整
+    rows.push([
+      "調整",
+      ...displayMonths.map((m) => String(adjustments[m] || 0)),
+    ]);
+
+    // 累計残高
+    let cumulative = 0;
+    rows.push([
+      "累計残高",
+      ...displayMonths.map((m) => {
+        cumulative += revenueWithSentTaxIncl(m) - expenseForMonth(m) + (adjustments[m] || 0);
+        return String(cumulative);
+      }),
+    ]);
+
+    // BOM付きUTF-8でCSV生成
+    const csvContent = rows.map((row) =>
+      row.map((cell) => {
+        if (cell.includes(",") || cell.includes('"') || cell.includes("\n")) {
+          return `"${cell.replace(/"/g, '""')}"`;
+        }
+        return cell;
+      }).join(",")
+    ).join("\n");
+
+    const bom = "\uFEFF";
+    const blob = new Blob([bom + csvContent], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    const modeLabel = isOptimistic ? "楽観" : "悲観";
+    a.download = `資金繰り表_${modeLabel}_${new Date().toISOString().slice(0, 10)}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
   const summaryCards = [
     { label: "企業数", value: companiesCount, unit: "社" },
     { label: "BAKUSOQ", value: contractsFor("bakusoq").length, unit: "件" },
@@ -464,8 +599,16 @@ export function CashflowPage({
           </select>
         )}
 
+        {/* CSV出力 */}
+        <button
+          className="ml-auto px-3.5 py-1.5 rounded-lg text-[13px] font-semibold cursor-pointer border border-slate-200 bg-white text-slate-600 hover:bg-slate-50 transition-colors"
+          onClick={exportCSV}
+        >
+          CSV出力
+        </button>
+
         {/* 楽観/悲観 切替 */}
-        <div className="ml-auto flex items-center gap-1 bg-slate-100 rounded-lg p-0.5">
+        <div className="flex items-center gap-1 bg-slate-100 rounded-lg p-0.5">
           {(["pessimistic", "optimistic"] as ViewMode[]).map((mode) => {
             const label = mode === "pessimistic" ? "悲観" : "楽観";
             const isActive = viewMode === mode;
