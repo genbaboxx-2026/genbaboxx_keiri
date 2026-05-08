@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef, useMemo, useCallback } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import type { Company, Contract, ProductType, Expense } from "@/lib/database.types";
 import { PRODUCTS } from "@/lib/constants";
 import {
@@ -94,6 +94,49 @@ export function CashflowPage({
   });
   const [editingAdj, setEditingAdj] = useState<string | null>(null);
   const [editAdjValue, setEditAdjValue] = useState("");
+
+  // 金額上書き (productId:companyId:month → 税込金額)
+  const [amountOverrides, setAmountOverrides] = useState<Record<string, number>>(() => {
+    try {
+      const saved = localStorage.getItem("cashflow_amount_overrides");
+      return saved ? JSON.parse(saved) : {};
+    } catch { return {}; }
+  });
+  const saveOverride = (key: string, value: number | null) => {
+    const next = { ...amountOverrides };
+    if (value === null || isNaN(value)) {
+      delete next[key];
+    } else {
+      next[key] = value;
+    }
+    setAmountOverrides(next);
+    localStorage.setItem("cashflow_amount_overrides", JSON.stringify(next));
+  };
+
+  // 振込確認 (productId:companyId:month → true)
+  const [paidStatus, setPaidStatus] = useState<Record<string, boolean>>(() => {
+    try {
+      const saved = localStorage.getItem("cashflow_paid_status");
+      return saved ? JSON.parse(saved) : {};
+    } catch { return {}; }
+  });
+  const togglePaid = (key: string) => {
+    const next = { ...paidStatus };
+    if (next[key]) { delete next[key]; } else { next[key] = true; }
+    setPaidStatus(next);
+    localStorage.setItem("cashflow_paid_status", JSON.stringify(next));
+  };
+
+  // 編集可能な月: 先月・今月・来月
+  const editableMonths = useMemo(() => {
+    const n = new Date();
+    const s = new Set<string>();
+    for (let offset = -1; offset <= 1; offset++) {
+      const d = new Date(n.getFullYear(), n.getMonth() + offset, 1);
+      s.add(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`);
+    }
+    return s;
+  }, []);
 
   // 楽観/悲観モード
   type ViewMode = "pessimistic" | "optimistic";
@@ -224,23 +267,69 @@ export function CashflowPage({
   );
 
   const currentMonth = getCurrentMonth();
-  const scrollRef = useRef<HTMLDivElement>(null);
 
-  // 1ヶ月前の位置へ自動スクロール
-  const prevMonth = (() => {
-    const now = new Date();
-    const d = new Date(now.getFullYear(), now.getMonth() - 1, 1);
-    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
-  })();
+  // 売上合計（上書きを反映）
+  const revenueWithOverrides = useCallback(
+    (month: string): number => {
+      // 上書きがこの月にあるかチェック
+      const overrideKeys = Object.keys(amountOverrides).filter((k) => k.endsWith(`:${month}`));
+      if (overrideKeys.length === 0) return revenueWithSentTaxIncl(month);
 
-  useEffect(() => {
-    const container = scrollRef.current;
-    if (!container) return;
-    const cell = container.querySelector<HTMLElement>("[data-scroll-target]");
-    if (cell) {
-      container.scrollLeft = cell.offsetLeft - 160;
-    }
-  }, [optimisticAllMonths]);
+      // 上書きがある場合: 全製品・全企業を個別に計算し直す
+      let total = 0;
+      const overriddenCompanies = new Set<string>();
+      for (const k of overrideKeys) {
+        const [, cid] = k.split(":");
+        overriddenCompanies.add(cid);
+        total += amountOverrides[k];
+      }
+
+      // 上書きされていない企業は従来の計算
+      for (const c of contracts) {
+        if (overriddenCompanies.has(c.company_id)) continue;
+        // すでに他の製品で計上済みの企業をスキップしないよう、contract単位で計算
+        let amt = 0;
+        const bs = makeBillingStart(c.billing_month, c.billing_day);
+        const dur = effectiveDuration(c.billing_month, c.billing_day, c.duration_months, c.contract_status, isOptimistic);
+        const ms = billingMonths(bs, dur);
+        const mo = calcPayOffset(c.monthly_close, c.monthly_pay);
+        const isLump = c.billing_type === "lump_sum";
+        const feeMs = (c.fee_months && c.fee_months > 1 && !(isOptimistic && c.contract_status === "auto_renewing")) ? ms.slice(0, c.fee_months) : ms;
+        if (isLump) {
+          if (ms.length > 0 && shiftMonth(ms[0], mo) === month) amt += c.monthly_fee * c.duration_months;
+        } else {
+          feeMs.forEach((bm) => { if (shiftMonth(bm, mo) === month) amt += c.monthly_fee; });
+        }
+        if (c.has_option) {
+          const oo = calcPayOffset(c.option_close, c.option_pay);
+          ms.forEach((bm) => { if (shiftMonth(bm, oo) === month) amt += c.option_fee; });
+        }
+        if (c.has_initial_fee && ms.length > 0) {
+          const io = calcPayOffset(c.initial_close, c.initial_pay);
+          if (shiftMonth(ms[0], io) === month) amt += c.initial_fee;
+        }
+        total += Math.floor(amt * 1.1);
+      }
+
+      // 送信済みの企業で上書きされていないもののextras
+      const sentForMonth = sentAmounts[month];
+      if (sentForMonth) {
+        for (const [cid, entry] of Object.entries(sentForMonth)) {
+          if (overriddenCompanies.has(cid)) continue;
+          const sentTaxIncl = entry.amount + entry.tax;
+          const contractTaxExcl = companyRevenueForMonth(contracts, cid, month, isOptimistic);
+          const extras = sentTaxIncl - Math.floor(contractTaxExcl * 1.1);
+          if (extras !== 0) total += extras;
+        }
+      }
+      return total;
+    },
+    [contracts, sentAmounts, amountOverrides, revenueWithSentTaxIncl, isOptimistic]
+  );
+
+  // ページネーション: 1ページあたりの月数
+  const MONTHS_PER_PAGE = 13;
+  const [pageStart, setPageStart] = useState<number>(-1); // -1 = 未初期化
 
   const toggleProduct = (pid: string) => {
     setExpandedProducts((prev) => {
@@ -400,6 +489,27 @@ export function CashflowPage({
     }
     return activeMonths;
   })();
+
+  // ページネーション: 初期位置を1ヶ月前に設定
+  useEffect(() => {
+    if (displayMonths.length === 0) return;
+    const now = new Date();
+    const prevM = `${now.getFullYear()}-${String(now.getMonth()).padStart(2, "0")}`;
+    const idx = displayMonths.indexOf(prevM);
+    if (idx >= 0) {
+      setPageStart(idx);
+    } else {
+      // 1ヶ月前が見つからない場合、現在月の近くへ
+      const curIdx = displayMonths.indexOf(currentMonth);
+      setPageStart(Math.max(0, curIdx >= 0 ? curIdx - 1 : 0));
+    }
+  }, [periodMode, selectedYear, selectedFiscal, viewMode]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // 実際のページ開始位置（未初期化時は0）
+  const effectivePageStart = pageStart < 0 ? 0 : Math.min(pageStart, Math.max(0, displayMonths.length - MONTHS_PER_PAGE));
+  const visibleMonths = displayMonths.slice(effectivePageStart, effectivePageStart + MONTHS_PER_PAGE);
+  const canGoBack = effectivePageStart > 0;
+  const canGoForward = effectivePageStart + MONTHS_PER_PAGE < displayMonths.length;
 
   // CSV出力
   const exportCSV = () => {
@@ -637,17 +747,48 @@ export function CashflowPage({
         </div>
       )}
 
-      <div ref={scrollRef} className="overflow-x-auto rounded-xl border border-slate-200">
+      {/* 月ナビゲーション */}
+      <div className="flex items-center justify-between mb-2">
+        <button
+          className={`px-3 py-1.5 rounded-lg text-[13px] font-semibold border transition-colors cursor-pointer ${
+            canGoBack
+              ? "bg-white text-slate-600 border-slate-200 hover:bg-slate-50"
+              : "bg-slate-50 text-slate-300 border-slate-100 cursor-not-allowed"
+          }`}
+          disabled={!canGoBack}
+          onClick={() => setPageStart(Math.max(0, effectivePageStart - MONTHS_PER_PAGE))}
+        >
+          ← 前の期間
+        </button>
+        <span className="text-[12px] text-slate-400">
+          {visibleMonths.length > 0
+            ? `${visibleMonths[0].split("-")[0]}年${parseInt(visibleMonths[0].split("-")[1])}月 〜 ${visibleMonths[visibleMonths.length - 1].split("-")[0]}年${parseInt(visibleMonths[visibleMonths.length - 1].split("-")[1])}月`
+            : ""}
+          <span className="ml-2 text-slate-300">({effectivePageStart + 1}〜{Math.min(effectivePageStart + MONTHS_PER_PAGE, displayMonths.length)} / {displayMonths.length}ヶ月)</span>
+        </span>
+        <button
+          className={`px-3 py-1.5 rounded-lg text-[13px] font-semibold border transition-colors cursor-pointer ${
+            canGoForward
+              ? "bg-white text-slate-600 border-slate-200 hover:bg-slate-50"
+              : "bg-slate-50 text-slate-300 border-slate-100 cursor-not-allowed"
+          }`}
+          disabled={!canGoForward}
+          onClick={() => setPageStart(effectivePageStart + MONTHS_PER_PAGE)}
+        >
+          次の期間 →
+        </button>
+      </div>
+
+      <div className="rounded-xl border border-slate-200">
         <table className="w-full border-collapse text-xs">
           <thead>
             <tr className="bg-slate-50">
               <th className="px-3.5 py-2.5 text-left font-bold sticky left-0 bg-slate-50 border-b-2 border-slate-200 min-w-[160px] z-10">
                 項目
               </th>
-              {displayMonths.map((m) => (
+              {visibleMonths.map((m) => (
                 <th
                   key={m}
-                  {...(m === prevMonth ? { "data-scroll-target": true } : {})}
                   className={`px-2 py-2.5 text-right font-semibold text-slate-500 border-b-2 border-slate-200 whitespace-nowrap min-w-[90px]`}
                 >
                   {parseInt(m.split("-")[1])}月<br />
@@ -697,7 +838,7 @@ export function CashflowPage({
                     companyIds={companyIds}
                     companies={companies}
                     contracts={productContracts}
-                    displayMonths={displayMonths}
+                    displayMonths={visibleMonths}
                     revenueFor={optimisticRevenueFor}
                     isOptimistic={isOptimistic}
                     currentMonth={currentMonth}
@@ -716,6 +857,11 @@ export function CashflowPage({
                       if (companyExtrasTarget(m, cid) !== pr.id) return 0;
                       return companyExtras(m, cid);
                     }}
+                    amountOverrides={amountOverrides}
+                    onSaveOverride={saveOverride}
+                    paidStatus={paidStatus}
+                    onTogglePaid={togglePaid}
+                    editableMonths={editableMonths}
                   />
                 );
               });
@@ -726,8 +872,8 @@ export function CashflowPage({
               <td className="px-3.5 py-2 font-extrabold text-sm sticky left-0 bg-slate-50 text-slate-800 z-10">
                 売上合計<span className="text-[10px] font-normal text-slate-400 ml-1">(税込)</span>
               </td>
-              {displayMonths.map((m) => {
-                const v = revenueWithSentTaxIncl(m);
+              {visibleMonths.map((m) => {
+                const v = revenueWithOverrides(m);
                 return (
                   <td key={m} className="px-2 py-2 text-right font-extrabold text-[13px] text-slate-800 tabular-nums">
                     {v > 0 ? formatNumber(v) : "—"}
@@ -738,7 +884,7 @@ export function CashflowPage({
 
             {/* スペーサー */}
             <tr>
-              <td colSpan={displayMonths.length + 1} className="h-4 bg-white border-none" />
+              <td colSpan={visibleMonths.length + 1} className="h-4 bg-white border-none" />
             </tr>
 
             {/* 支出ヘッダー */}
@@ -747,7 +893,7 @@ export function CashflowPage({
                 <span className="inline-block w-4 text-[10px]">{expenseExpanded ? "▼" : "▶"}</span>
                 支出
               </td>
-              {displayMonths.map((m) => (
+              {visibleMonths.map((m) => (
                 <td key={m} className="bg-slate-100" />
               ))}
             </tr>
@@ -801,7 +947,7 @@ export function CashflowPage({
                     </div>
                   )}
                 </td>
-                {displayMonths.map((m) => {
+                {visibleMonths.map((m) => {
                   const items = expenses.filter((e) => e.name === name && e.month === m);
                   const total = items.reduce((s, e) => s + e.amount, 0);
                   const isEditing = editingCell?.name === name && editingCell?.month === m;
@@ -849,7 +995,7 @@ export function CashflowPage({
                     + 行を追加
                   </button>
                 </td>
-                {displayMonths.map((m) => (
+                {visibleMonths.map((m) => (
                   <td key={m} />
                 ))}
               </tr>
@@ -886,7 +1032,7 @@ export function CashflowPage({
                     </button>
                   </div>
                 </td>
-                {displayMonths.map((m) => (
+                {visibleMonths.map((m) => (
                   <td key={m} className="border-b border-slate-100" />
                 ))}
               </tr>
@@ -895,7 +1041,7 @@ export function CashflowPage({
             {/* 支出合計 */}
             <tr className="bg-slate-50 border-t-2 border-slate-300">
               <td className="px-3.5 py-3 font-extrabold text-sm sticky left-0 bg-slate-50 text-slate-800 z-10">支出合計</td>
-              {displayMonths.map((m) => {
+              {visibleMonths.map((m) => {
                 const v = expenseForMonth(m);
                 return (
                   <td key={m} className={`px-2 py-3 text-right font-extrabold text-[13px] text-slate-800 tabular-nums`}>
@@ -908,8 +1054,8 @@ export function CashflowPage({
             {/* 収支 */}
             <tr className="bg-slate-100 border-t-2 border-slate-400">
               <td className="px-3.5 py-3 font-extrabold text-sm sticky left-0 bg-slate-100 text-slate-900 z-10">収支<span className="text-[10px] font-normal text-slate-400 ml-1">(税込)</span></td>
-              {displayMonths.map((m) => {
-                const rev = revenueWithSentTaxIncl(m);
+              {visibleMonths.map((m) => {
+                const rev = revenueWithOverrides(m);
                 const exp = expenseForMonth(m);
                 const diff = rev - exp;
                 return (
@@ -923,7 +1069,7 @@ export function CashflowPage({
             {/* 調整 */}
             <tr className="border-b border-slate-200">
               <td className="px-3.5 py-2 font-semibold text-xs sticky left-0 bg-white text-slate-600 z-10">調整</td>
-              {displayMonths.map((m) => {
+              {visibleMonths.map((m) => {
                 const val = adjustments[m] || 0;
                 const isEditing = editingAdj === m;
                 return (
@@ -962,9 +1108,14 @@ export function CashflowPage({
             <tr className="bg-slate-200">
               <td className="px-3.5 py-3 font-extrabold text-sm sticky left-0 bg-slate-200 text-slate-900 z-10">累計残高</td>
               {(() => {
+                // 表示開始より前の月の累計を先に計算
                 let cumulative = 0;
-                return displayMonths.map((m) => {
-                  const rev = revenueWithSentTaxIncl(m);
+                for (let i = 0; i < effectivePageStart; i++) {
+                  const m = displayMonths[i];
+                  cumulative += revenueWithOverrides(m) - expenseForMonth(m) + (adjustments[m] || 0);
+                }
+                return visibleMonths.map((m) => {
+                  const rev = revenueWithOverrides(m);
                   const exp = expenseForMonth(m);
                   const adj = adjustments[m] || 0;
                   cumulative += rev - exp + adj;
@@ -985,6 +1136,7 @@ export function CashflowPage({
 
 function ProductRows({
   product, isExpanded, onToggle, companyIds, companies, contracts, displayMonths, revenueFor, isOptimistic, currentMonth, extrasForMonth, extrasForCompany,
+  amountOverrides, onSaveOverride, paidStatus, onTogglePaid, editableMonths,
 }: {
   product: (typeof PRODUCTS)[number];
   isExpanded: boolean;
@@ -998,7 +1150,56 @@ function ProductRows({
   currentMonth: string;
   extrasForMonth?: (month: string) => number;
   extrasForCompany?: (month: string, companyId: string) => number;
+  amountOverrides?: Record<string, number>;
+  onSaveOverride?: (key: string, value: number | null) => void;
+  paidStatus?: Record<string, boolean>;
+  onTogglePaid?: (key: string) => void;
+  editableMonths?: Set<string>;
 }) {
+  const [editingCell, setEditingCell] = useState<string | null>(null);
+  const [editCellValue, setEditCellValue] = useState("");
+
+  // 企業セルの表示値を取得（上書き優先）
+  const companyValue = (cid: string, m: string) => {
+    const key = `${product.id}:${cid}:${m}`;
+    if (amountOverrides?.[key] !== undefined) return amountOverrides[key];
+    const base = Math.floor(companyRevenueForMonth(contracts, cid, m, isOptimistic) * 1.1);
+    const extras = extrasForCompany ? extrasForCompany(m, cid) : 0;
+    return base + extras;
+  };
+
+  // 製品合計（上書き反映）
+  const productTotal = (m: string) => {
+    let total = 0;
+    for (const cid of companyIds) {
+      total += companyValue(cid, m);
+    }
+    return total;
+  };
+
+  const startCellEdit = (key: string, currentValue: number) => {
+    setEditingCell(key);
+    setEditCellValue(String(currentValue));
+  };
+
+  const commitCellEdit = () => {
+    if (!editingCell || !onSaveOverride) return;
+    const raw = editCellValue.replace(/[^0-9]/g, "");
+    const value = parseInt(raw) || 0;
+    // 元の計算値と同じなら上書き解除
+    const [, cid, m] = editingCell.split(":");
+    const base = Math.floor(companyRevenueForMonth(contracts, cid, m, isOptimistic) * 1.1);
+    const extras = extrasForCompany ? extrasForCompany(m, cid) : 0;
+    const original = base + extras;
+    if (value === original) {
+      onSaveOverride(editingCell, null); // 上書き解除
+    } else {
+      onSaveOverride(editingCell, value);
+    }
+    setEditingCell(null);
+    setEditCellValue("");
+  };
+
   return (
     <>
       <tr className="cursor-pointer hover:bg-slate-50" onClick={onToggle}>
@@ -1009,9 +1210,7 @@ function ProductRows({
           </span>
         </td>
         {displayMonths.map((m) => {
-          const base = Math.floor(revenueFor(m, product.id) * 1.1);
-          const extras = extrasForMonth ? extrasForMonth(m) : 0;
-          const v = base + extras;
+          const v = productTotal(m);
           return (
             <td key={m} className={`px-2 py-2 text-right border-b border-slate-100 tabular-nums font-semibold ${v > 0 ? "text-slate-700" : "text-slate-200"}`}>
               {v > 0 ? formatNumber(v) : "—"}
@@ -1027,14 +1226,60 @@ function ProductRows({
               {companyName}
             </td>
             {displayMonths.map((m) => {
-              const base = Math.floor(companyRevenueForMonth(contracts, cid, m, isOptimistic) * 1.1);
-              const extras = extrasForCompany ? extrasForCompany(m, cid) : 0;
-              const v = base + extras;
+              const key = `${product.id}:${cid}:${m}`;
+              const v = companyValue(cid, m);
+              const hasOverride = amountOverrides?.[key] !== undefined;
               const pessimisticBase = isOptimistic ? Math.floor(companyRevenueForMonth(contracts, cid, m, false) * 1.1) : 0;
               const isExtension = isOptimistic && v > 0 && pessimisticBase === 0;
+              const isEditable = editableMonths?.has(m) && v > 0;
+              const isEditing = editingCell === key;
+              const isCheckable = m <= currentMonth && v > 0;
+              const isPaid = paidStatus?.[key] ?? false;
+              const isUnpaid = isCheckable && !isPaid && m < currentMonth;
+
               return (
-                <td key={m} className={`px-2 py-1.5 text-right border-b border-slate-50 tabular-nums text-[11px] ${isExtension ? "bg-emerald-50 text-emerald-600" : v > 0 ? "text-slate-500" : "text-slate-200"}`}>
-                  {v > 0 ? formatNumber(v) : "—"}
+                <td
+                  key={m}
+                  className={`px-0 py-0 text-right border-b border-slate-50 tabular-nums text-[11px] ${
+                    isUnpaid ? "bg-red-50" : isExtension ? "bg-emerald-50" : ""
+                  }`}
+                >
+                  {isEditing ? (
+                    <input
+                      className="w-full px-2 py-1.5 text-right text-[11px] border-2 border-blue-400 outline-none bg-blue-50"
+                      autoFocus
+                      value={editCellValue}
+                      onChange={(e) => setEditCellValue(e.target.value.replace(/[^0-9]/g, ""))}
+                      onBlur={commitCellEdit}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") commitCellEdit();
+                        if (e.key === "Escape") { setEditingCell(null); setEditCellValue(""); }
+                      }}
+                      onClick={(e) => e.stopPropagation()}
+                    />
+                  ) : (
+                    <div className="flex items-center justify-end gap-1 px-2 py-1.5">
+                      {isCheckable && onTogglePaid && (
+                        <input
+                          type="checkbox"
+                          checked={isPaid}
+                          onChange={(e) => { e.stopPropagation(); onTogglePaid(key); }}
+                          className="w-3 h-3 rounded border-slate-300 text-blue-600 cursor-pointer shrink-0"
+                          title={isPaid ? "振込済み" : "未振込"}
+                        />
+                      )}
+                      <span
+                        className={`${
+                          isExtension ? "text-emerald-600" : isUnpaid ? "text-red-600" : v > 0 ? "text-slate-500" : "text-slate-200"
+                        } ${hasOverride ? "underline decoration-blue-400 decoration-dotted" : ""} ${isEditable ? "cursor-pointer hover:bg-blue-50 rounded px-1 -mx-1" : ""}`}
+                        onClick={(e) => {
+                          if (isEditable) { e.stopPropagation(); startCellEdit(key, v); }
+                        }}
+                      >
+                        {v > 0 ? formatNumber(v) : "—"}
+                      </span>
+                    </div>
+                  )}
                 </td>
               );
             })}
